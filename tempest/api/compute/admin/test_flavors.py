@@ -26,7 +26,7 @@ from tempest.test import attr
 class FlavorsAdminTestJSON(base.BaseComputeAdminTest):
 
     """
-    Tests Flavors API Create and Delete that require admin privileges
+    Tests flavors API Create and Delete that require admin privileges
     """
 
     _interface = 'json'

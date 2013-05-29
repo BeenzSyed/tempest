@@ -95,6 +95,8 @@ from tempest.services.object_storage.object_client import \
     ObjectClientCustomizedHeader
 from tempest.services.orchestration.json.orchestration_client import \
     OrchestrationClient
+from tempest.services.database.json.database_client import  \
+    DatabaseClient
 from tempest.services.volume.json.admin.volume_types_client import \
     VolumeTypesClientJSON
 from tempest.services.volume.json.snapshots_client import SnapshotsClientJSON
@@ -103,6 +105,8 @@ from tempest.services.volume.xml.admin.volume_types_client import \
     VolumeTypesClientXML
 from tempest.services.volume.xml.snapshots_client import SnapshotsClientXML
 from tempest.services.volume.xml.volumes_client import VolumesClientXML
+from tempest.services.database.json.flavors_client import \
+    DatabaseFlavorsClientJSON
 
 LOG = logging.getLogger(__name__)
 
@@ -134,6 +138,10 @@ LIMITS_CLIENTS = {
 FLAVORS_CLIENTS = {
     "json": FlavorsClientJSON,
     "xml": FlavorsClientXML
+}
+
+DB_FLAVORS_CLIENTS = {
+    "json": DatabaseFlavorsClientJSON
 }
 
 EXTENSIONS_CLIENTS = {
@@ -321,6 +329,7 @@ class Manager(object):
         self.custom_object_client = ObjectClientCustomizedHeader(*client_args)
         self.custom_account_client = \
             AccountClientCustomizedHeader(*client_args)
+        self.database_client = DatabaseClient(*client_args)
 
 
 class AltManager(Manager):
@@ -380,3 +389,25 @@ class OrchestrationManager(Manager):
                       conf.identity.admin_password,
                       conf.identity.admin_tenant_name,
                       interface=interface)
+
+
+class DatabaseManager(object):
+    """
+    Database Manager
+    """
+    def __init__(self,
+                 username=None,
+                 password=None,
+                 tenant_name=None,
+                 interface='json'):
+        self.config = config.TempestConfig()
+        # If no creds are provided, we fall back on the defaults
+        # in the config file for the Database API.
+        self.username = username or self.config.identity.username
+        self.password = password or self.config.identity.password
+        self.tenant_name = tenant_name or self.config.identity.tenant_name
+        self.auth_url = self.config.identity.uri
+        client_args = (self.config, self.username, self.password,
+                       self.auth_url, self.tenant_name)
+        self.flavors_client = DB_FLAVORS_CLIENTS[interface](*client_args)
+
