@@ -264,17 +264,10 @@ class RestClient(object):
     def _request(self, method, url,
                  headers=None, body=None):
         """A simple HTTP request interface."""
-        #print headers
         req_url = "%s/%s" % (self.base_url, url)
-        print req_url
         self._log_request(method, req_url, headers, body)
-        #print req_url
-        #print headers
-        #print body
         resp, resp_body = self.http_obj.request(req_url, method,
                                                 headers=headers, body=body)
-        #print "Resp %s" % resp
-        #print "Resp Body %s" % resp_body
         self._log_response(resp, resp_body)
         self.response_checker(method, url, headers, body, resp, resp_body)
 
