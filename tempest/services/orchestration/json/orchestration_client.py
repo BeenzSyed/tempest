@@ -18,6 +18,7 @@
 import json
 import time
 import urllib
+import datetime
 
 from tempest.common import rest_client
 from tempest import exceptions
@@ -56,7 +57,7 @@ class OrchestrationClient(rest_client.RestClient):
             post_body['template'] = template
         if template_url:
             post_body['template_url'] = template_url
-        body = json.dumps(post_body)
+        body = json.dumps(post_body, default=datehandler)
         uri = 'stacks'
         resp, body = self.post(uri, headers=self.headers, body=body)
         return resp, body
@@ -90,10 +91,18 @@ class OrchestrationClient(rest_client.RestClient):
                     stack_identifier=stack_identifier,
                     stack_status=stack_status,
                     stack_status_reason=body['stack_status_reason'])
-
+            print "timeout"
+            print self.build_timeout
             if int(time.time()) - start >= self.build_timeout:
                 message = ('Stack %s failed to reach %s status within '
                            'the required time (%s s).' %
                            (stack_name, status, self.build_timeout))
                 raise exceptions.TimeoutException(message)
             time.sleep(self.build_interval)
+
+def datehandler(obj):
+    if isinstance(obj, datetime.date):
+        return str(obj)
+    else:
+        raise TypeError, 'Object of type %s with value of %s is not ' \
+                         'JSON serializable' % (type(obj), repr(obj))

@@ -14,6 +14,7 @@
 
 import logging
 import time
+import pdb
 
 from tempest import clients
 from tempest.common.utils.data_utils import rand_name
@@ -59,6 +60,11 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         )
 
     def create_stack(self, stack_name, template_data, parameters={}):
+        print "hi"
+        print stack_name
+        print template_data
+        print parameters
+        #pdb.set_trace()
         resp, body = self.client.create_stack(
             stack_name,
             template=template_data,

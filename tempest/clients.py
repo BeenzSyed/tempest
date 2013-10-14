@@ -377,18 +377,30 @@ class ComputeAdminManager(Manager):
                       interface=interface)
 
 
-class OrchestrationManager(Manager):
+class OrchestrationManager(object):
     """
     Manager object that uses the admin credentials for its
     so that heat templates can create users
     """
-    def __init__(self, interface='json'):
-        conf = config.TempestConfig()
-        base = super(OrchestrationManager, self)
-        base.__init__(conf.identity.admin_username,
-                      conf.identity.admin_password,
-                      conf.identity.admin_tenant_name,
-                      interface=interface)
+    def __init__(self,
+                 username=None,
+                 password=None,
+                 tenant_name=None,
+                 interface='json'):
+        self.config = config.TempestConfig()
+        # base = super(OrchestrationManager, self)
+        # base.__init__(conf.identity.admin_username,
+        #               conf.identity.admin_password,
+        #               conf.identity.admin_tenant_name,
+        #               interface=interface)
+        self.username = username or self.config.identity.username
+        self.password = password or self.config.identity.password
+        self.tenant_name = tenant_name or self.config.identity.tenant_name
+        self.auth_url = self.config.identity.uri
+        client_args = (self.config, self.username, self.password,
+                       self.auth_url, self.tenant_name)
+        self.keypairs_client = KEYPAIRS_CLIENTS[interface](*client_args)
+        self.orchestration_client = OrchestrationClient(*client_args)
 
 
 class DatabaseManager(object):

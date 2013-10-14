@@ -103,7 +103,6 @@ class RestClient(object):
         """
         Provides authentication for the target API.
         """
-
         params = {}
         params['headers'] = {'User-Agent': 'Test-Client', 'X-Auth-User': user,
                              'X-Auth-Key': password}
@@ -139,7 +138,7 @@ class RestClient(object):
         resp, resp_body = self.http_obj.request(auth_url, 'POST',
                                                 headers=headers, body=body)
         self._log_response(resp, resp_body)
-
+        #print resp.status
         if resp.status == 200:
             try:
                 auth_data = json.loads(resp_body)['access']
@@ -265,11 +264,17 @@ class RestClient(object):
     def _request(self, method, url,
                  headers=None, body=None):
         """A simple HTTP request interface."""
-
+        #print headers
         req_url = "%s/%s" % (self.base_url, url)
+        print req_url
         self._log_request(method, req_url, headers, body)
+        #print req_url
+        #print headers
+        #print body
         resp, resp_body = self.http_obj.request(req_url, method,
                                                 headers=headers, body=body)
+        #print "Resp %s" % resp
+        #print "Resp Body %s" % resp_body
         self._log_response(resp, resp_body)
         self.response_checker(method, url, headers, body, resp, resp_body)
 
@@ -278,13 +283,18 @@ class RestClient(object):
     def request(self, method, url,
                 headers=None, body=None):
         retry = 0
+        #print self.token
         if (self.token is None) or (self.base_url is None):
             self._set_auth()
 
         if headers is None:
             headers = {}
-        headers['X-Auth-Token'] = self.token
-
+        #headers['X-Auth-Token'] = self.token
+        headers['X-Auth-Token'] = '09abcd1d091241a4b179ef5029662006'
+        print method
+        print url
+        print headers
+        print body
         resp, resp_body = self._request(method, url,
                                         headers=headers, body=body)
 
