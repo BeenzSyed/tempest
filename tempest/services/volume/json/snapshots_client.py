@@ -16,9 +16,9 @@ import json
 import time
 import urllib
 
-from tempest.common import log as logging
 from tempest.common.rest_client import RestClient
 from tempest import exceptions
+from tempest.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
@@ -76,11 +76,19 @@ class SnapshotsClientJSON(RestClient):
         body = json.loads(body)
         return resp, body['snapshot']
 
-    #NOTE(afazekas): just for the wait function
+    def update_snapshot(self, snapshot_id, **kwargs):
+        """Updates a snapshot."""
+        put_body = json.dumps({'snapshot': kwargs})
+        resp, body = self.put('snapshots/%s' % snapshot_id, put_body,
+                              self.headers)
+        body = json.loads(body)
+        return resp, body['snapshot']
+
+    # NOTE(afazekas): just for the wait function
     def _get_snapshot_status(self, snapshot_id):
         resp, body = self.get_snapshot(snapshot_id)
         status = body['status']
-        #NOTE(afazekas): snapshot can reach an "error"
+        # NOTE(afazekas): snapshot can reach an "error"
         # state in a "normal" lifecycle
         if (status == 'error'):
             raise exceptions.SnapshotBuildErrorException(
@@ -88,7 +96,7 @@ class SnapshotsClientJSON(RestClient):
 
         return status
 
-    #NOTE(afazkas): Wait reinvented again. It is not in the correct layer
+    # NOTE(afazkas): Wait reinvented again. It is not in the correct layer
     def wait_for_snapshot_status(self, snapshot_id, status):
         """Waits for a Snapshot to reach a given status."""
         start_time = time.time()

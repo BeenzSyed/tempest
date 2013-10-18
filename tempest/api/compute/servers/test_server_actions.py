@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -27,6 +27,7 @@ from tempest.common.utils.linux.remote_client import RemoteClient
 import tempest.config
 from tempest import exceptions
 from tempest.test import attr
+from tempest.test import skip_because
 
 
 class ServerActionsTestJSON(base.BaseComputeTest):
@@ -35,7 +36,7 @@ class ServerActionsTestJSON(base.BaseComputeTest):
     run_ssh = tempest.config.TempestConfig().compute.run_ssh
 
     def setUp(self):
-        #NOTE(afazekas): Normally we use the same server with all test cases,
+        # NOTE(afazekas): Normally we use the same server with all test cases,
         # but if it has an issue, we build a new one
         super(ServerActionsTestJSON, self).setUp()
         # Check if the server is in a clean state after test
@@ -43,13 +44,13 @@ class ServerActionsTestJSON(base.BaseComputeTest):
             self.client.wait_for_server_status(self.server_id, 'ACTIVE')
         except Exception:
             # Rebuild server if something happened to it during a test
-            self.rebuild_servers()
+            self.rebuild_server()
 
     @classmethod
     def setUpClass(cls):
         super(ServerActionsTestJSON, cls).setUpClass()
         cls.client = cls.servers_client
-        cls.rebuild_servers()
+        cls.rebuild_server()
 
     @testtools.skipUnless(compute.CHANGE_PASSWORD_AVAILABLE,
                           'Change password not available.')
@@ -86,7 +87,7 @@ class ServerActionsTestJSON(base.BaseComputeTest):
             new_boot_time = linux_client.get_boot_time()
             self.assertGreater(new_boot_time, boot_time)
 
-    @testtools.skip('Until Bug #1014647 is dealt with.')
+    @skip_because(bug="1014647")
     @attr(type='smoke')
     def test_reboot_server_soft(self):
         # The server should be signaled to reboot gracefully
@@ -112,22 +113,23 @@ class ServerActionsTestJSON(base.BaseComputeTest):
         meta = {'rebuild': 'server'}
         new_name = rand_name('server')
         file_contents = 'Test server rebuild.'
-        personality = [{'path': '/etc/rebuild.txt',
+        personality = [{'path': 'rebuild.txt',
                        'contents': base64.b64encode(file_contents)}]
         password = 'rebuildPassw0rd'
         resp, rebuilt_server = self.client.rebuild(self.server_id,
                                                    self.image_ref_alt,
-                                                   name=new_name, meta=meta,
+                                                   name=new_name,
+                                                   metadata=meta,
                                                    personality=personality,
                                                    adminPass=password)
 
-        #Verify the properties in the initial response are correct
+        # Verify the properties in the initial response are correct
         self.assertEqual(self.server_id, rebuilt_server['id'])
         rebuilt_image_id = rebuilt_server['image']['id']
         self.assertTrue(self.image_ref_alt.endswith(rebuilt_image_id))
         self.assertEqual(self.flavor_ref, int(rebuilt_server['flavor']['id']))
 
-        #Verify the server properties after the rebuild completes
+        # Verify the server properties after the rebuild completes
         self.client.wait_for_server_status(rebuilt_server['id'], 'ACTIVE')
         resp, server = self.client.get_server(rebuilt_server['id'])
         rebuilt_image_id = rebuilt_server['image']['id']
@@ -167,7 +169,7 @@ class ServerActionsTestJSON(base.BaseComputeTest):
         self.assertEqual(new_flavor_ref, int(server['flavor']['id']))
 
     @testtools.skipIf(not resize_available, 'Resize not available.')
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_resize_server_revert(self):
         # The server's RAM and disk space should return to its original
         # values after a resize is reverted
@@ -195,29 +197,7 @@ class ServerActionsTestJSON(base.BaseComputeTest):
                 required time (%s s).' % (self.server_id, self.build_timeout)
                 raise exceptions.TimeoutException(message)
 
-    @attr(type=['negative', 'gate'])
-    def test_reboot_nonexistent_server_soft(self):
-        # Negative Test: The server reboot on non existent server should return
-        # an error
-        self.assertRaises(exceptions.NotFound, self.client.reboot, 999, 'SOFT')
-
-    @attr(type=['negative', 'gate'])
-    def test_rebuild_nonexistent_server(self):
-        # Negative test: The server rebuild for a non existing server
-        # should not be allowed
-        meta = {'rebuild': 'server'}
-        new_name = rand_name('server')
-        file_contents = 'Test server rebuild.'
-        personality = [{'path': '/etc/rebuild.txt',
-                        'contents': base64.b64encode(file_contents)}]
-        self.assertRaises(exceptions.NotFound,
-                          self.client.rebuild,
-                          999, self.image_ref_alt,
-                          name=new_name, meta=meta,
-                          personality=personality,
-                          adminPass='rebuild')
-
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_get_console_output(self):
         # Positive test:Should be able to GET the console output
         # for a given server_id and number of lines
@@ -225,21 +205,13 @@ class ServerActionsTestJSON(base.BaseComputeTest):
             resp, output = self.servers_client.get_console_output(
                 self.server_id, 10)
             self.assertEqual(200, resp.status)
-            self.assertNotEqual(output, None)
+            self.assertTrue(output, "Console output was empty.")
             lines = len(output.split('\n'))
             self.assertEqual(lines, 10)
         self.wait_for(get_output)
 
-    @attr(type=['negative', 'gate'])
-    def test_get_console_output_invalid_server_id(self):
-        # Negative test: Should not be able to get the console output
-        # for an invalid server_id
-        self.assertRaises(exceptions.NotFound,
-                          self.servers_client.get_console_output,
-                          '!@#$%^&*()', 10)
-
-    @testtools.skip('Until tempest Bug #1014683 is fixed.')
-    @attr(type=['positive', 'gate'])
+    @skip_because(bug="1014683")
+    @attr(type='gate')
     def test_get_console_output_server_id_in_reboot_status(self):
         # Positive test:Should be able to GET the console output
         # for a given server_id in reboot status
@@ -249,17 +221,57 @@ class ServerActionsTestJSON(base.BaseComputeTest):
         resp, output = self.servers_client.get_console_output(self.server_id,
                                                               10)
         self.assertEqual(200, resp.status)
-        self.assertNotEqual(output, None)
+        self.assertIsNotNone(output)
         lines = len(output.split('\n'))
         self.assertEqual(lines, 10)
 
-    @classmethod
-    def rebuild_servers(cls):
-        # Destroy any existing server and creates a new one
-        cls.clear_servers()
-        resp, server = cls.create_server(wait_until='ACTIVE')
-        cls.server_id = server['id']
-        cls.password = server['adminPass']
+    @attr(type='gate')
+    def test_pause_unpause_server(self):
+        resp, server = self.client.pause_server(self.server_id)
+        self.assertEqual(202, resp.status)
+        self.client.wait_for_server_status(self.server_id, 'PAUSED')
+        resp, server = self.client.unpause_server(self.server_id)
+        self.assertEqual(202, resp.status)
+        self.client.wait_for_server_status(self.server_id, 'ACTIVE')
+
+    @attr(type='gate')
+    def test_suspend_resume_server(self):
+        resp, server = self.client.suspend_server(self.server_id)
+        self.assertEqual(202, resp.status)
+        self.client.wait_for_server_status(self.server_id, 'SUSPENDED')
+        resp, server = self.client.resume_server(self.server_id)
+        self.assertEqual(202, resp.status)
+        self.client.wait_for_server_status(self.server_id, 'ACTIVE')
+
+    @attr(type='gate')
+    def test_stop_start_server(self):
+        resp, server = self.servers_client.stop(self.server_id)
+        self.assertEqual(202, resp.status)
+        self.servers_client.wait_for_server_status(self.server_id, 'SHUTOFF')
+        resp, server = self.servers_client.start(self.server_id)
+        self.assertEqual(202, resp.status)
+        self.servers_client.wait_for_server_status(self.server_id, 'ACTIVE')
+
+    @skip_because(bug="1233026")
+    @attr(type='gate')
+    def test_lock_unlock_server(self):
+        # Lock the server,try server stop(exceptions throw),unlock it and retry
+        resp, server = self.servers_client.lock_server(self.server_id)
+        self.assertEqual(202, resp.status)
+        resp, server = self.servers_client.get_server(self.server_id)
+        self.assertEqual(200, resp.status)
+        self.assertEqual(server['status'], 'ACTIVE')
+        # Locked server is not allowed to be stopped by non-admin user
+        self.assertRaises(exceptions.BadRequest,
+                          self.servers_client.stop, self.server_id)
+        resp, server = self.servers_client.unlock_server(self.server_id)
+        self.assertEqual(202, resp.status)
+        resp, server = self.servers_client.stop(self.server_id)
+        self.assertEqual(202, resp.status)
+        self.servers_client.wait_for_server_status(self.server_id, 'SHUTOFF')
+        resp, server = self.servers_client.start(self.server_id)
+        self.assertEqual(202, resp.status)
+        self.servers_client.wait_for_server_status(self.server_id, 'ACTIVE')
 
 
 class ServerActionsTestXML(ServerActionsTestJSON):

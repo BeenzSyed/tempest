@@ -15,11 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import httplib2
 import json
 
 from lxml import etree
 
+from tempest.common import http
 from tempest.common.rest_client import RestClientXML
 from tempest import exceptions
 from tempest.services.compute.xml.common import Document
@@ -159,7 +159,7 @@ class IdentityClientXML(RestClientXML):
         body = self._parse_body(etree.fromstring(body))
         return resp, body
 
-    def create_user(self, name, password, tenant_id, email):
+    def create_user(self, name, password, tenant_id, email, **kwargs):
         """Create a user."""
         create_user = Element("user",
                               xmlns=XMLNS,
@@ -167,8 +167,23 @@ class IdentityClientXML(RestClientXML):
                               password=password,
                               tenantId=tenant_id,
                               email=email)
+        if 'enabled' in kwargs:
+            create_user.add_attr('enabled', str(kwargs['enabled']).lower())
+
         resp, body = self.post('users', str(Document(create_user)),
                                self.headers)
+        body = self._parse_body(etree.fromstring(body))
+        return resp, body
+
+    def update_user(self, user_id, **kwargs):
+        """Updates a user."""
+        if 'enabled' in kwargs:
+            kwargs['enabled'] = str(kwargs['enabled']).lower()
+        update_user = Element("user", xmlns=XMLNS, **kwargs)
+
+        resp, body = self.put('users/%s' % user_id,
+                              str(Document(update_user)),
+                              self.headers)
         body = self._parse_body(etree.fromstring(body))
         return resp, body
 
@@ -275,7 +290,8 @@ class TokenClientXML(RestClientXML):
     def request(self, method, url, headers=None, body=None):
         """A simple HTTP request interface."""
         dscv = self.config.identity.disable_ssl_certificate_validation
-        self.http_obj = httplib2.Http(disable_ssl_certificate_validation=dscv)
+        self.http_obj = http.ClosingHttp(
+            disable_ssl_certificate_validation=dscv)
         if headers is None:
             headers = {}
         self._log_request(method, url, headers, body)

@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,8 +17,10 @@
 
 from tempest.api.compute import base
 from tempest.common.utils.data_utils import rand_name
+from tempest import config
 from tempest import exceptions
 from tempest.test import attr
+from tempest.test import skip_because
 
 
 class QuotasAdminTestJSON(base.BaseComputeAdminTest):
@@ -35,102 +37,80 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
 
         resp, tenants = cls.identity_admin_client.list_tenants()
 
-        #NOTE(afazekas): these test cases should always create and use a new
+        # NOTE(afazekas): these test cases should always create and use a new
         # tenant most of them should be skipped if we can't do that
         if cls.config.compute.allow_tenant_isolation:
-            cls.demo_tenant_id = cls.isolated_creds[0][0]['tenantId']
+            cls.demo_tenant_id = cls.isolated_creds.get_primary_user().get(
+                'tenantId')
         else:
             cls.demo_tenant_id = [tnt['id'] for tnt in tenants if tnt['name']
                                   == cls.config.identity.tenant_name][0]
 
-        cls.default_quota_set = {'injected_file_content_bytes': 10240,
-                                 'metadata_items': 128, 'injected_files': 5,
-                                 'ram': 51200, 'floating_ips': 10,
-                                 'fixed_ips': -1, 'key_pairs': 100,
-                                 'injected_file_path_bytes': 255,
-                                 'instances': 10, 'security_group_rules': 20,
-                                 'cores': 20, 'security_groups': 10}
-
-    @classmethod
-    def tearDownClass(cls):
-        for server in cls.servers:
-            try:
-                cls.servers_client.delete_server(server['id'])
-            except exceptions.NotFound:
-                continue
-        super(QuotasAdminTestJSON, cls).tearDownClass()
+        cls.default_quota_set = set(('injected_file_content_bytes',
+                                     'metadata_items', 'injected_files',
+                                     'ram', 'floating_ips',
+                                     'fixed_ips', 'key_pairs',
+                                     'injected_file_path_bytes',
+                                     'instances', 'security_group_rules',
+                                     'cores', 'security_groups'))
 
     @attr(type='smoke')
     def test_get_default_quotas(self):
         # Admin can get the default resource quota set for a tenant
-        expected_quota_set = self.default_quota_set.copy()
-        expected_quota_set['id'] = self.demo_tenant_id
+        expected_quota_set = self.default_quota_set | set(['id'])
         resp, quota_set = self.client.get_default_quota_set(
             self.demo_tenant_id)
         self.assertEqual(200, resp.status)
-        self.assertEqual(expected_quota_set, quota_set)
+        self.assertEqual(sorted(expected_quota_set),
+                         sorted(quota_set.keys()))
+        self.assertEqual(quota_set['id'], self.demo_tenant_id)
 
     @attr(type='gate')
     def test_update_all_quota_resources_for_tenant(self):
-        self.skipTest("This test require the change in nova component "
-                      "https://review.openstack.org/#/c/25887/, the related "
-                      "bug is https://bugs.launchpad.net/nova/+bug/1160749 "
-                      "once the change is merged I will enable this testcase")
         # Admin can update all the resource quota limits for a tenant
-        new_quota_set = {'force': True,
-                         'injected_file_content_bytes': 20480,
+        resp, default_quota_set = self.client.get_default_quota_set(
+            self.demo_tenant_id)
+        new_quota_set = {'injected_file_content_bytes': 20480,
                          'metadata_items': 256, 'injected_files': 10,
                          'ram': 10240, 'floating_ips': 20, 'fixed_ips': 10,
                          'key_pairs': 200, 'injected_file_path_bytes': 512,
                          'instances': 20, 'security_group_rules': 20,
                          'cores': 2, 'security_groups': 20}
-        try:
-            # Update limits for all quota resources
-            resp, quota_set = self.adm_client.update_quota_set(
-                self.demo_tenant_id,
-                **new_quota_set)
-            self.addCleanup(self.adm_client.update_quota_set,
-                            self.demo_tenant_id, **self.default_quota_set)
-            self.assertEqual(200, resp.status)
-            self.assertEqual(new_quota_set, quota_set)
-        except Exception:
-            self.fail("Admin could not update quota set for the tenant")
-        finally:
-            # Reset quota resource limits to default values
-            resp, quota_set = self.adm_client.update_quota_set(
-                self.demo_tenant_id,
-                **self.default_quota_set)
-            self.assertEqual(200, resp.status, "Failed to reset quota "
-                             "defaults")
+        # Update limits for all quota resources
+        resp, quota_set = self.adm_client.update_quota_set(
+            self.demo_tenant_id,
+            force=True,
+            **new_quota_set)
 
-    #TODO(afazekas): merge these test cases
+        default_quota_set.pop('id')
+        self.addCleanup(self.adm_client.update_quota_set,
+                        self.demo_tenant_id, **default_quota_set)
+        self.assertEqual(200, resp.status)
+        self.assertEqual(new_quota_set, quota_set)
+
+    # TODO(afazekas): merge these test cases
     @attr(type='gate')
     def test_get_updated_quotas(self):
         # Verify that GET shows the updated quota set
-        self.adm_client.update_quota_set(self.demo_tenant_id,
-                                         ram='5120')
-        self.addCleanup(self.adm_client.update_quota_set,
-                        self.demo_tenant_id, **self.default_quota_set)
-        try:
-            resp, quota_set = self.client.get_quota_set(self.demo_tenant_id)
-            self.assertEqual(200, resp.status)
-            self.assertEqual(quota_set['ram'], 5120)
-        except Exception:
-            self.fail("Could not get the update quota limit for resource")
-        finally:
-            # Reset quota resource limits to default values
-            resp, quota_set = self.adm_client.update_quota_set(
-                self.demo_tenant_id,
-                **self.default_quota_set)
-            self.assertEqual(200, resp.status, "Failed to reset quota "
-                             "defaults")
+        tenant_name = rand_name('cpu_quota_tenant_')
+        tenant_desc = tenant_name + '-desc'
+        identity_client = self.os_adm.identity_client
+        _, tenant = identity_client.create_tenant(name=tenant_name,
+                                                  description=tenant_desc)
+        tenant_id = tenant['id']
+        self.addCleanup(identity_client.delete_tenant,
+                        tenant_id)
 
+        self.adm_client.update_quota_set(tenant_id,
+                                         ram='5120')
+        resp, quota_set = self.adm_client.get_quota_set(tenant_id)
+        self.assertEqual(200, resp.status)
+        self.assertEqual(quota_set['ram'], 5120)
+
+    # TODO(afazekas): Add dedicated tenant to the skiped quota tests
+    # it can be moved into the setUpClass as well
     @attr(type='gate')
     def test_create_server_when_cpu_quota_is_full(self):
-        self.skipTest("This test require the change in nova component "
-                      "https://review.openstack.org/#/c/25887/, the related "
-                      "bug is https://bugs.launchpad.net/nova/+bug/1160749 "
-                      "once the change is merged I will enable this testcase")
         # Disallow server creation when tenant's vcpu quota is full
         resp, quota_set = self.client.get_quota_set(self.demo_tenant_id)
         default_vcpu_quota = quota_set['cores']
@@ -146,10 +126,6 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
 
     @attr(type='gate')
     def test_create_server_when_memory_quota_is_full(self):
-        self.skipTest("This test require the change in nova component "
-                      "https://review.openstack.org/#/c/25887/, the related "
-                      "bug is https://bugs.launchpad.net/nova/+bug/1160749 "
-                      "once the change is merged I will enable this testcase")
         # Disallow server creation when tenant's memory quota is full
         resp, quota_set = self.client.get_quota_set(self.demo_tenant_id)
         default_mem_quota = quota_set['ram']
@@ -163,15 +139,16 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
                         ram=default_mem_quota)
         self.assertRaises(exceptions.OverLimit, self.create_server)
 
-#TODO(afazekas): Add test that tried to update the quota_set as a regular user
+    @attr(type='gate')
+    def test_update_quota_normal_user(self):
+        self.assertRaises(exceptions.Unauthorized,
+                          self.client.update_quota_set,
+                          self.demo_tenant_id,
+                          ram=0)
 
     @attr(type=['negative', 'gate'])
     def test_create_server_when_instances_quota_is_full(self):
-        self.skipTest("This test require the change in nova component "
-                      "https://review.openstack.org/#/c/25887/, the related "
-                      "bug is https://bugs.launchpad.net/nova/+bug/1160749 "
-                      "once the change is merged I will enable this testcase")
-        #Once instances quota limit is reached, disallow server creation
+        # Once instances quota limit is reached, disallow server creation
         resp, quota_set = self.client.get_quota_set(self.demo_tenant_id)
         default_instances_quota = quota_set['instances']
         instances_quota = 0  # Set quota to zero to disallow server creation
@@ -183,6 +160,8 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
                         instances=default_instances_quota)
         self.assertRaises(exceptions.OverLimit, self.create_server)
 
+    @skip_because(bug="1186354",
+                  condition=config.TempestConfig().service_available.neutron)
     @attr(type=['negative', 'gate'])
     def test_security_groups_exceed_limit(self):
         # Negative test: Creation Security Groups over limit should FAIL
@@ -193,6 +172,7 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
 
         resp, quota_set =\
             self.adm_client.update_quota_set(self.demo_tenant_id,
+                                             force=True,
                                              security_groups=sg_quota)
 
         self.addCleanup(self.adm_client.update_quota_set,
@@ -204,6 +184,8 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
                           self.sg_client.create_security_group,
                           "sg-overlimit", "sg-desc")
 
+    @skip_because(bug="1186354",
+                  condition=config.TempestConfig().service_available.neutron)
     @attr(type=['negative', 'gate'])
     def test_security_groups_rules_exceed_limit(self):
         # Negative test: Creation of Security Group Rules should FAIL
@@ -216,6 +198,7 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
         resp, quota_set =\
             self.adm_client.update_quota_set(
                 self.demo_tenant_id,
+                force=True,
                 security_group_rules=sg_rules_quota)
 
         self.addCleanup(self.adm_client.update_quota_set,

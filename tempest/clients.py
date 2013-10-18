@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.common import log as logging
 from tempest import config
 from tempest import exceptions
+from tempest.openstack.common import log as logging
 from tempest.services import botoclients
 from tempest.services.compute.json.aggregates_client import \
     AggregatesClientJSON
@@ -30,6 +30,8 @@ from tempest.services.compute.json.flavors_client import FlavorsClientJSON
 from tempest.services.compute.json.floating_ips_client import \
     FloatingIPsClientJSON
 from tempest.services.compute.json.hosts_client import HostsClientJSON
+from tempest.services.compute.json.hypervisor_client import \
+    HypervisorClientJSON
 from tempest.services.compute.json.images_client import ImagesClientJSON
 from tempest.services.compute.json.interfaces_client import \
     InterfacesClientJSON
@@ -52,6 +54,7 @@ from tempest.services.compute.xml.fixed_ips_client import FixedIPsClientXML
 from tempest.services.compute.xml.flavors_client import FlavorsClientXML
 from tempest.services.compute.xml.floating_ips_client import \
     FloatingIPsClientXML
+from tempest.services.compute.xml.hypervisor_client import HypervisorClientXML
 from tempest.services.compute.xml.images_client import ImagesClientXML
 from tempest.services.compute.xml.interfaces_client import \
     InterfacesClientXML
@@ -68,16 +71,22 @@ from tempest.services.compute.xml.volumes_extensions_client import \
     VolumesExtensionsClientXML
 from tempest.services.identity.json.identity_client import IdentityClientJSON
 from tempest.services.identity.json.identity_client import TokenClientJSON
+from tempest.services.identity.v3.json.credentials_client import \
+    CredentialsClientJSON
 from tempest.services.identity.v3.json.endpoints_client import \
     EndPointClientJSON
 from tempest.services.identity.v3.json.identity_client import \
     IdentityV3ClientJSON
+from tempest.services.identity.v3.json.identity_client import V3TokenClientJSON
 from tempest.services.identity.v3.json.policy_client import PolicyClientJSON
 from tempest.services.identity.v3.json.service_client import \
     ServiceClientJSON
+from tempest.services.identity.v3.xml.credentials_client import \
+    CredentialsClientXML
 from tempest.services.identity.v3.xml.endpoints_client import EndPointClientXML
 from tempest.services.identity.v3.xml.identity_client import \
     IdentityV3ClientXML
+from tempest.services.identity.v3.xml.identity_client import V3TokenClientXML
 from tempest.services.identity.v3.xml.policy_client import PolicyClientXML
 from tempest.services.identity.v3.xml.service_client import \
     ServiceClientXML
@@ -85,7 +94,8 @@ from tempest.services.identity.xml.identity_client import IdentityClientXML
 from tempest.services.identity.xml.identity_client import TokenClientXML
 from tempest.services.image.v1.json.image_client import ImageClientJSON
 from tempest.services.image.v2.json.image_client import ImageClientV2JSON
-from tempest.services.network.json.network_client import NetworkClient
+from tempest.services.network.json.network_client import NetworkClientJSON
+from tempest.services.network.xml.network_client import NetworkClientXML
 from tempest.services.object_storage.account_client import AccountClient
 from tempest.services.object_storage.account_client import \
     AccountClientCustomizedHeader
@@ -113,6 +123,11 @@ LOG = logging.getLogger(__name__)
 IMAGES_CLIENTS = {
     "json": ImagesClientJSON,
     "xml": ImagesClientXML,
+}
+
+NETWORKS_CLIENTS = {
+    "json": NetworkClientJSON,
+    "xml": NetworkClientXML,
 }
 
 KEYPAIRS_CLIENTS = {
@@ -239,6 +254,21 @@ POLICY_CLIENT = {
     "xml": PolicyClientXML,
 }
 
+HYPERVISOR_CLIENT = {
+    "json": HypervisorClientJSON,
+    "xml": HypervisorClientXML,
+}
+
+V3_TOKEN_CLIENT = {
+    "json": V3TokenClientJSON,
+    "xml": V3TokenClientXML,
+}
+
+CREDENTIALS_CLIENT = {
+    "json": CredentialsClientJSON,
+    "xml": CredentialsClientXML,
+}
+
 
 class Manager(object):
 
@@ -267,23 +297,31 @@ class Manager(object):
 
         if None in (self.username, self.password, self.tenant_name):
             msg = ("Missing required credentials. "
-                   "username: %(username)s, password: %(password)s, "
-                   "tenant_name: %(tenant_name)s") % locals()
+                   "username: %(u)s, password: %(p)s, "
+                   "tenant_name: %(t)s" %
+                   {'u': username, 'p': password, 't': tenant_name})
             raise exceptions.InvalidConfiguration(msg)
 
         self.auth_url = self.config.identity.uri
+        self.auth_url_v3 = self.config.identity.uri_v3
 
-        if self.config.identity.strategy == 'keystone':
-            client_args = (self.config, self.username, self.password,
-                           self.auth_url, self.tenant_name)
+        client_args = (self.config, self.username, self.password,
+                       self.auth_url, self.tenant_name)
+
+        if self.auth_url_v3:
+            auth_version = 'v3'
+            client_args_v3_auth = (self.config, self.username,
+                                   self.password, self.auth_url_v3,
+                                   self.tenant_name, auth_version)
         else:
-            client_args = (self.config, self.username, self.password,
-                           self.auth_url)
+            client_args_v3_auth = None
 
         try:
             self.servers_client = SERVERS_CLIENTS[interface](*client_args)
+            self.network_client = NETWORKS_CLIENTS[interface](*client_args)
             self.limits_client = LIMITS_CLIENTS[interface](*client_args)
-            self.images_client = IMAGES_CLIENTS[interface](*client_args)
+            if self.config.service_available.glance:
+                self.images_client = IMAGES_CLIENTS[interface](*client_args)
             self.keypairs_client = KEYPAIRS_CLIENTS[interface](*client_args)
             self.quotas_client = QUOTAS_CLIENTS[interface](*client_args)
             self.flavors_client = FLAVORS_CLIENTS[interface](*client_args)
@@ -313,14 +351,25 @@ class Manager(object):
             self.tenant_usages_client = \
                 TENANT_USAGES_CLIENT[interface](*client_args)
             self.policy_client = POLICY_CLIENT[interface](*client_args)
+            self.hypervisor_client = HYPERVISOR_CLIENT[interface](*client_args)
+            self.token_v3_client = V3_TOKEN_CLIENT[interface](*client_args)
+            self.credentials_client = \
+                CREDENTIALS_CLIENT[interface](*client_args)
+
+            if client_args_v3_auth:
+                self.servers_client_v3_auth = SERVERS_CLIENTS[interface](
+                    *client_args_v3_auth)
+            else:
+                self.servers_client_v3_auth = None
+
         except KeyError:
             msg = "Unsupported interface type `%s'" % interface
             raise exceptions.InvalidConfiguration(msg)
-        self.network_client = NetworkClient(*client_args)
         self.hosts_client = HostsClientJSON(*client_args)
         self.account_client = AccountClient(*client_args)
-        self.image_client = ImageClientJSON(*client_args)
-        self.image_client_v2 = ImageClientV2JSON(*client_args)
+        if self.config.service_available.glance:
+            self.image_client = ImageClientJSON(*client_args)
+            self.image_client_v2 = ImageClientV2JSON(*client_args)
         self.container_client = ContainerClient(*client_args)
         self.object_client = ObjectClient(*client_args)
         self.orchestration_client = OrchestrationClient(*client_args)
@@ -422,4 +471,12 @@ class DatabaseManager(object):
         client_args = (self.config, self.username, self.password,
                        self.auth_url, self.tenant_name)
         self.flavors_client = DB_FLAVORS_CLIENTS[interface](*client_args)
+
+    # def __init__(self, interface='json'):
+    #     conf = config.TempestConfig()
+    #     base = super(OrchestrationManager, self)
+    #     base.__init__(conf.identity.admin_username,
+    #                   conf.identity.admin_password,
+    #                   conf.identity.tenant_name,
+    #                   interface=interface)
 

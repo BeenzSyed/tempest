@@ -12,11 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import testtools
-
 from tempest.api.volume import base
-from tempest.common import log as logging
 from tempest.common.utils.data_utils import rand_name
+from tempest.openstack.common import log as logging
 from tempest.test import attr
 
 LOG = logging.getLogger(__name__)
@@ -40,7 +38,7 @@ class VolumesSnapshotTest(base.BaseVolumeTest):
         super(VolumesSnapshotTest, cls).tearDownClass()
 
     @attr(type='gate')
-    def test_snapshot_create_get_list_delete(self):
+    def test_snapshot_create_get_list_update_delete(self):
         # Create a snapshot
         s_name = rand_name('snap')
         snapshot = self.create_snapshot(self.volume_origin['id'],
@@ -59,6 +57,24 @@ class VolumesSnapshotTest(base.BaseVolumeTest):
         self.assertEqual(200, resp.status)
         snaps_data = [(f['id'], f['display_name']) for f in snaps_list]
         self.assertIn(tracking_data, snaps_data)
+
+        # Updates snapshot with new values
+        new_s_name = rand_name('new-snap')
+        new_desc = 'This is the new description of snapshot.'
+        resp, update_snapshot = \
+            self.snapshots_client.update_snapshot(snapshot['id'],
+                                                  display_name=new_s_name,
+                                                  display_description=new_desc)
+        # Assert response body for update_snapshot method
+        self.assertEqual(200, resp.status)
+        self.assertEqual(new_s_name, update_snapshot['display_name'])
+        self.assertEqual(new_desc, update_snapshot['display_description'])
+        # Assert response body for get_snapshot method
+        resp, updated_snapshot = \
+            self.snapshots_client.get_snapshot(snapshot['id'])
+        self.assertEqual(200, resp.status)
+        self.assertEqual(new_s_name, updated_snapshot['display_name'])
+        self.assertEqual(new_desc, updated_snapshot['display_description'])
 
         # Delete the snapshot
         self.snapshots_client.delete_snapshot(snapshot['id'])
@@ -82,6 +98,5 @@ class VolumesSnapshotTest(base.BaseVolumeTest):
         self.clear_snapshots()
 
 
-@testtools.skip("Until Bug #1177610 is resolved.")
 class VolumesSnapshotTestXML(VolumesSnapshotTest):
     _interface = "xml"

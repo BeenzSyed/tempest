@@ -20,38 +20,28 @@ from tempest import exceptions
 from tempest.test import attr
 
 
-class FixedIPsBase(base.BaseComputeAdminTest):
+class FixedIPsTestJson(base.BaseComputeAdminTest):
     _interface = 'json'
-    ip = None
 
     @classmethod
     def setUpClass(cls):
-        super(FixedIPsBase, cls).setUpClass()
-        # NOTE(maurosr): The idea here is: the server creation is just an
-        # auxiliary element to the ip details or reservation, there was no way
-        # (at least none in my mind) to get an valid and existing ip except
-        # by creating a server and using its ip. So the intention is to create
-        # fewer server possible (one) and use it to both: json and xml tests.
-        # This decreased time to run both tests, in my test machine, from 53
-        # secs to 29 (agains 23 secs when running only json tests)
-        if cls.ip is None:
-            cls.client = cls.os_adm.fixed_ips_client
-            cls.non_admin_client = cls.fixed_ips_client
-            resp, server = cls.create_server(wait_until='ACTIVE')
-            resp, server = cls.servers_client.get_server(server['id'])
-            for ip_set in server['addresses']:
-                for ip in server['addresses'][ip_set]:
-                    if ip['OS-EXT-IPS:type'] == 'fixed':
-                        cls.ip = ip['addr']
-                        break
-                if cls.ip:
+        super(FixedIPsTestJson, cls).setUpClass()
+        if cls.config.service_available.neutron:
+            msg = ("%s skipped as neutron is available" % cls.__name__)
+            raise cls.skipException(msg)
+        cls.client = cls.os_adm.fixed_ips_client
+        cls.non_admin_client = cls.fixed_ips_client
+        resp, server = cls.create_server(wait_until='ACTIVE')
+        resp, server = cls.servers_client.get_server(server['id'])
+        for ip_set in server['addresses']:
+            for ip in server['addresses'][ip_set]:
+                if ip['OS-EXT-IPS:type'] == 'fixed':
+                    cls.ip = ip['addr']
                     break
+            if cls.ip:
+                break
 
-
-class FixedIPsTestJson(FixedIPsBase):
-    _interface = 'json'
-
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_fixed_ip_details(self):
         resp, fixed_ip = self.client.get_fixed_ip_details(self.ip)
         self.assertEqual(fixed_ip['address'], self.ip)
@@ -61,13 +51,13 @@ class FixedIPsTestJson(FixedIPsBase):
         self.assertRaises(exceptions.Unauthorized,
                           self.non_admin_client.get_fixed_ip_details, self.ip)
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_set_reserve(self):
         body = {"reserve": "None"}
         resp, body = self.client.reserve_fixed_ip(self.ip, body)
         self.assertEqual(resp.status, 202)
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_set_unreserve(self):
         body = {"unreserve": "None"}
         resp, body = self.client.reserve_fixed_ip(self.ip, body)

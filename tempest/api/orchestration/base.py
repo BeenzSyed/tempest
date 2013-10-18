@@ -12,12 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
 import time
 import pdb
 
 from tempest import clients
 from tempest.common.utils.data_utils import rand_name
+from tempest.openstack.common import log as logging
 import tempest.test
 
 
@@ -29,16 +29,29 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
-
+        super(BaseOrchestrationTest, cls).setUpClass()
         os = clients.OrchestrationManager()
         cls.orchestration_cfg = os.config.orchestration
-        if not cls.orchestration_cfg.heat_available:
+        cls.compute_cfg = os.config.compute
+        if not os.config.service_available.heat:
             raise cls.skipException("Heat support is required")
+        cls.build_timeout = cls.orchestration_cfg.build_timeout
+        cls.build_interval = cls.orchestration_cfg.build_interval
 
         cls.os = os
         cls.orchestration_client = os.orchestration_client
+        cls.servers_client = os.servers_client
         cls.keypairs_client = os.keypairs_client
+        cls.network_client = os.network_client
         cls.stacks = []
+        cls.keypairs = []
+
+    @classmethod
+    def _get_default_network(cls):
+        resp, networks = cls.network_client.list_networks()
+        for net in networks['networks']:
+            if net['name'] == cls.compute_cfg.fixed_network_name:
+                return net
 
     @classmethod
     def _get_identity_admin_client(cls):
@@ -59,21 +72,21 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
             cls.config.identity.uri
         )
 
-    def create_stack(self, stack_name, template_data, parameters={}):
-        parameters = {
-            'InstanceType': self.orchestration_cfg.instance_type,
-            'ImageId': self.orchestration_cfg.image_ref,
-            'key_name': "keypairqe"
-        }
-        resp, body = self.client.create_stack(
+    @classmethod
+    def create_stack(cls, stack_name, template_data, parameters={}):
+        # parameters = {
+        #     'InstanceType': self.orchestration_cfg.instance_type,
+        #     'ImageId': self.orchestration_cfg.image_ref,
+        #     'key_name': "keypairqe"
+        # }
+        resp, body = cls.client.create_stack(
             stack_name,
             #template_url='https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template',
             template=template_data,
             parameters=parameters)
-        self.assertEqual('201', resp['status'])
         stack_id = resp['location'].split('/')[-1]
         stack_identifier = '%s/%s' % (stack_name, stack_id)
-        self.stacks.append(stack_identifier)
+        cls.stacks.append(stack_identifier)
         return stack_identifier
 
     @classmethod
@@ -91,15 +104,26 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
             except Exception:
                 pass
 
-    def _create_keypair(self, namestart='keypair-heat-'):
-        kp_name = rand_name(namestart)
-        resp, body = self.keypairs_client.create_keypair(kp_name)
-        self.assertEqual(body['name'], kp_name)
+    @classmethod
+    def _create_keypair(cls, name_start='keypair-heat-'):
+        kp_name = rand_name(name_start)
+        resp, body = cls.keypairs_client.create_keypair(kp_name)
+        cls.keypairs.append(kp_name)
         return body
+
+    @classmethod
+    def clear_keypairs(cls):
+        for kp_name in cls.keypairs:
+            try:
+                cls.keypairs_client.delete_keypair(kp_name)
+            except Exception:
+                pass
 
     @classmethod
     def tearDownClass(cls):
         cls.clear_stacks()
+        cls.clear_keypairs()
+        super(BaseOrchestrationTest, cls).tearDownClass()
 
     def wait_for(self, condition):
         """Repeatedly calls condition() until a timeout."""
@@ -115,3 +139,9 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
                 condition()
                 return
             time.sleep(self.build_interval)
+
+    @staticmethod
+    def stack_output(stack, output_key):
+        """Return a stack output value for a give key."""
+        return next((o['output_value'] for o in stack['outputs']
+                    if o['output_key'] == output_key), None)

@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -22,7 +22,7 @@ import re
 import boto
 import boto.s3.key
 
-from tempest.common import log as logging
+from tempest.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 

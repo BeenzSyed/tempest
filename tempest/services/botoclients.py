@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -111,7 +111,10 @@ class APIClientEC2(BotoClientBase):
         aws_secret = config.boto.aws_secret
         purl = urlparse.urlparse(config.boto.ec2_url)
 
-        region = boto.ec2.regioninfo.RegionInfo(name=config.identity.region,
+        region_name = config.compute.region
+        if not region_name:
+            region_name = config.identity.region
+        region = boto.ec2.regioninfo.RegionInfo(name=region_name,
                                                 endpoint=purl.hostname)
         port = purl.port
         if port is None:
@@ -132,6 +135,7 @@ class APIClientEC2(BotoClientBase):
     ALLOWED_METHODS = set(('create_key_pair', 'get_key_pair',
                            'delete_key_pair', 'import_key_pair',
                            'get_all_key_pairs',
+                           'get_all_tags',
                            'create_image', 'get_image',
                            'register_image', 'deregister_image',
                            'get_all_images', 'get_image_attribute',
@@ -179,7 +183,7 @@ class APIClientEC2(BotoClientBase):
         :return: Returns with the first available zone name
         """
         for zone in self.get_all_zones():
-            #NOTE(afazekas): zone.region_name was None
+            # NOTE(afazekas): zone.region_name was None
             if (zone.state == "available" and
                 zone.region.name == self.connection_data["region"].name):
                 return zone.name

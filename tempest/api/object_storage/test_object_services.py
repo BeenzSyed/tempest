@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,15 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-
-import testtools
+import hashlib
 
 from tempest.api.object_storage import base
 from tempest.common.utils.data_utils import arbitrary_string
 from tempest.common.utils.data_utils import rand_name
-from tempest import exceptions
 from tempest.test import attr
+from tempest.test import HTTP_SUCCESS
 
 
 class ObjectTest(base.BaseObjectTest):
@@ -48,6 +46,7 @@ class ObjectTest(base.BaseObjectTest):
         cls.delete_containers(cls.containers)
         # delete the user setup created
         cls.data.teardown_all()
+        super(ObjectTest, cls).tearDownClass()
 
     @attr(type='smoke')
     def test_create_object(self):
@@ -73,7 +72,7 @@ class ObjectTest(base.BaseObjectTest):
         # delete object
         resp, _ = self.object_client.delete_object(self.container_name,
                                                    object_name)
-        self.assertEqual(resp['status'], '204')
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
 
     @attr(type='smoke')
     def test_object_metadata(self):
@@ -90,12 +89,12 @@ class ObjectTest(base.BaseObjectTest):
         orig_metadata = {meta_key: meta_value}
         resp, _ = self.object_client.update_object_metadata(
             self.container_name, object_name, orig_metadata)
-        self.assertEqual(resp['status'], '202')
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
 
         # get object metadata
         resp, resp_metadata = self.object_client.list_object_metadata(
             self.container_name, object_name)
-        self.assertEqual(resp['status'], '200')
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
         actual_meta_key = 'x-object-meta-' + meta_key
         self.assertTrue(actual_meta_key in resp)
         self.assertEqual(resp[actual_meta_key], meta_value)
@@ -112,7 +111,7 @@ class ObjectTest(base.BaseObjectTest):
         # get object
         resp, body = self.object_client.get_object(self.container_name,
                                                    object_name)
-        self.assertEqual(resp['status'], '200')
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
         self.assertEqual(body, data)
 
     @attr(type='smoke')
@@ -210,149 +209,37 @@ class ObjectTest(base.BaseObjectTest):
         resp, _ = self.object_client.update_object_metadata(src_container_name,
                                                             object_name,
                                                             orig_metadata)
-        self.assertEqual(resp['status'], '202')
-        try:
-            # copy object from source container to destination container
-            resp, _ = self.object_client.copy_object_across_containers(
-                src_container_name, object_name, dst_container_name,
-                object_name)
-            self.assertEqual(resp['status'], '201')
-
-            # check if object is present in destination container
-            resp, body = self.object_client.get_object(dst_container_name,
-                                                       object_name)
-            self.assertEqual(body, data)
-            actual_meta_key = 'x-object-meta-' + meta_key
-            self.assertTrue(actual_meta_key in resp)
-            self.assertEqual(resp[actual_meta_key], meta_value)
-
-        except Exception as e:
-            self.fail("Got exception :%s ; while copying"
-                      " object across containers" % e)
-
-    @attr(type=['negative', 'gate'])
-    def test_write_object_without_using_creds(self):
-        # trying to create object with empty headers
-        object_name = rand_name(name='Object')
-        data = arbitrary_string(size=len(object_name),
-                                base_text=object_name)
-        obj_headers = {'Content-Type': 'application/json',
-                       'Accept': 'application/json'}
-        self.assertRaises(exceptions.Unauthorized,
-                          self.custom_object_client.create_object,
-                          self.container_name, object_name, data,
-                          metadata=obj_headers)
-
-    @attr(type=['negative', 'gate'])
-    def test_delete_object_without_using_creds(self):
-        # create object
-        object_name = rand_name(name='Object')
-        data = arbitrary_string(size=len(object_name),
-                                base_text=object_name)
-        resp, _ = self.object_client.create_object(self.container_name,
-                                                   object_name, data)
-        # trying to delete object with empty headers
-        self.assertRaises(exceptions.Unauthorized,
-                          self.custom_object_client.delete_object,
-                          self.container_name, object_name)
-
-    @attr(type=['negative', 'gate'])
-    def test_write_object_with_non_authorized_user(self):
-        # attempt to upload another file using non-authorized user
-        object_name = rand_name(name='Object')
-        data = arbitrary_string(size=len(object_name) * 5,
-                                base_text=object_name)
-
-        # trying to create object with non-authorized user
-        self.assertRaises(exceptions.Unauthorized,
-                          self.custom_object_client.create_object,
-                          self.container_name, object_name, data,
-                          metadata=self.custom_headers)
-
-    @attr(type=['negative', 'gate'])
-    def test_read_object_with_non_authorized_user(self):
-        object_name = rand_name(name='Object')
-        data = arbitrary_string(size=len(object_name) * 5,
-                                base_text=object_name)
-        resp, body = self.object_client.create_object(
-            self.container_name, object_name, data)
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
+        # copy object from source container to destination container
+        resp, _ = self.object_client.copy_object_across_containers(
+            src_container_name, object_name, dst_container_name,
+            object_name)
         self.assertEqual(resp['status'], '201')
+        # check if object is present in destination container
+        resp, body = self.object_client.get_object(dst_container_name,
+                                                   object_name)
+        self.assertEqual(body, data)
+        actual_meta_key = 'x-object-meta-' + meta_key
+        self.assertTrue(actual_meta_key in resp)
+        self.assertEqual(resp[actual_meta_key], meta_value)
 
-        # trying to get object with non authorized user token
-        self.assertRaises(exceptions.Unauthorized,
-                          self.custom_object_client.get_object,
-                          self.container_name, object_name,
-                          metadata=self.custom_headers)
-
-    @attr(type=['negative', 'gate'])
-    def test_delete_object_with_non_authorized_user(self):
-        object_name = rand_name(name='Object')
-        data = arbitrary_string(size=len(object_name) * 5,
-                                base_text=object_name)
-        resp, body = self.object_client.create_object(
-            self.container_name, object_name, data)
-        self.assertEqual(resp['status'], '201')
-        # trying to delete object with non-authorized user token
-        self.assertRaises(exceptions.Unauthorized,
-                          self.custom_object_client.delete_object,
-                          self.container_name, object_name,
-                          metadata=self.custom_headers)
-
-    @testtools.skip('Until Bug #1097137 is resolved.')
-    @attr(type=['positive', 'gate'])
-    def test_get_object_using_temp_url(self):
-        # access object using temporary URL within expiration time
-
-        try:
-            # update account metadata
-            # flag to check if account metadata got updated
-            flag = False
-            key = 'Meta'
-            metadata = {'Temp-URL-Key': key}
-            resp, _ = self.account_client.create_account_metadata(
-                metadata=metadata)
-            self.assertEqual(resp['status'], '204')
-            flag = True
-            resp, _ = self.account_client.list_account_metadata()
-            self.assertIn('x-account-meta-temp-url-key', resp)
-            self.assertEqual(resp['x-account-meta-temp-url-key'], key)
-
-            # create object
-            object_name = rand_name(name='ObjectTemp')
-            data = arbitrary_string(size=len(object_name),
-                                    base_text=object_name)
-            self.object_client.create_object(self.container_name,
-                                             object_name, data)
-            expires = int(time.time() + 10)
-
-            # trying to get object using temp url with in expiry time
-            _, body = self.object_client.get_object_using_temp_url(
-                self.container_name, object_name,
-                expires, key)
-            self.assertEqual(body, data)
-        finally:
-            if flag:
-                resp, _ = self.account_client.delete_account_metadata(
-                    metadata=metadata)
-                resp, _ = self.account_client.list_account_metadata()
-                self.assertNotIn('x-account-meta-temp-url-key', resp)
-
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_object_upload_in_segments(self):
         # create object
         object_name = rand_name(name='LObject')
-        data = arbitrary_string(size=len(object_name),
-                                base_text=object_name)
+        data = arbitrary_string()
         segments = 10
-        self.object_client.create_object(self.container_name,
-                                         object_name, data)
-        # uploading 10 segments
-        for i in range(segments):
+        data_segments = [data + str(i) for i in xrange(segments)]
+        # uploading segments
+        for i in xrange(segments):
             resp, _ = self.object_client.create_object_segments(
-                self.container_name, object_name, i, data)
-        # creating a manifest file (metadata update)
+                self.container_name, object_name, i, data_segments[i])
+            self.assertEqual(resp['status'], '201')
+        # creating a manifest file
         metadata = {'X-Object-Manifest': '%s/%s/'
                     % (self.container_name, object_name)}
+        self.object_client.create_object(self.container_name,
+                                         object_name, data='')
         resp, _ = self.object_client.update_object_metadata(
             self.container_name, object_name, metadata, metadata_prefix='')
         resp, _ = self.object_client.list_object_metadata(
@@ -364,7 +251,31 @@ class ObjectTest(base.BaseObjectTest):
         # downloading the object
         resp, body = self.object_client.get_object(
             self.container_name, object_name)
-        self.assertEqual(data * segments, body)
+        self.assertEqual(''.join(data_segments), body)
+
+    @attr(type='gate')
+    def test_get_object_if_different(self):
+        # http://en.wikipedia.org/wiki/HTTP_ETag
+        # Make a conditional request for an object using the If-None-Match
+        # header, it should get downloaded only if the local file is different,
+        # otherwise the response code should be 304 Not Modified
+        object_name = rand_name(name='TestObject')
+        data = arbitrary_string()
+        self.object_client.create_object(self.container_name,
+                                         object_name, data)
+        # local copy is identical, no download
+        md5 = hashlib.md5(data).hexdigest()
+        headers = {'If-None-Match': md5}
+        url = "%s/%s" % (self.container_name, object_name)
+        resp, _ = self.object_client.get(url, headers=headers)
+        self.assertEqual(resp['status'], '304')
+
+        # local copy is different, download
+        local_data = "something different"
+        md5 = hashlib.md5(local_data).hexdigest()
+        headers = {'If-None-Match': md5}
+        resp, body = self.object_client.get(url, headers=headers)
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
 
 
 class PublicObjectTest(base.BaseObjectTest):
@@ -386,7 +297,7 @@ class PublicObjectTest(base.BaseObjectTest):
         cont_headers = {'X-Container-Read': '.r:*,.rlistings'}
         resp_meta, body = self.container_client.update_container_metadata(
             self.container_name, metadata=cont_headers, metadata_prefix='')
-        self.assertEqual(resp_meta['status'], '204')
+        self.assertIn(int(resp_meta['status']), HTTP_SUCCESS)
         # create object
         object_name = rand_name(name='Object')
         data = arbitrary_string(size=len(object_name),
@@ -398,7 +309,7 @@ class PublicObjectTest(base.BaseObjectTest):
         # list container metadata
         resp_meta, _ = self.container_client.list_container_metadata(
             self.container_name)
-        self.assertEqual(resp_meta['status'], '204')
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
         self.assertIn('x-container-read', resp_meta)
         self.assertEqual(resp_meta['x-container-read'], '.r:*,.rlistings')
 
@@ -411,104 +322,32 @@ class PublicObjectTest(base.BaseObjectTest):
     def test_access_public_object_with_another_user_creds(self):
         # make container public-readable and access an object in it using
         # another user's credentials
-        try:
-            cont_headers = {'X-Container-Read': '.r:*,.rlistings'}
-            resp_meta, body = self.container_client.update_container_metadata(
-                self.container_name, metadata=cont_headers,
-                metadata_prefix='')
-            self.assertEqual(resp_meta['status'], '204')
-            # create object
-            object_name = rand_name(name='Object')
-            data = arbitrary_string(size=len(object_name) * 1,
-                                    base_text=object_name)
-            resp, _ = self.object_client.create_object(self.container_name,
-                                                       object_name, data)
-            self.assertEqual(resp['status'], '201')
+        cont_headers = {'X-Container-Read': '.r:*,.rlistings'}
+        resp_meta, body = self.container_client.update_container_metadata(
+            self.container_name, metadata=cont_headers,
+            metadata_prefix='')
+        self.assertIn(int(resp_meta['status']), HTTP_SUCCESS)
 
-            # list container metadata
-            resp, _ = self.container_client.list_container_metadata(
-                self.container_name)
-            self.assertEqual(resp['status'], '204')
-            self.assertIn('x-container-read', resp)
-            self.assertEqual(resp['x-container-read'], '.r:*,.rlistings')
+        # create object
+        object_name = rand_name(name='Object')
+        data = arbitrary_string(size=len(object_name) * 1,
+                                base_text=object_name)
+        resp, _ = self.object_client.create_object(self.container_name,
+                                                   object_name, data)
+        self.assertEqual(resp['status'], '201')
 
-            # get auth token of alternative user
-            token = self.identity_client_alt.get_auth()
-            headers = {'X-Auth-Token': token}
-            # access object using alternate user creds
-            resp, body = self.custom_object_client.get_object(
-                self.container_name, object_name,
-                metadata=headers)
-            self.assertEqual(body, data)
+        # list container metadata
+        resp, _ = self.container_client.list_container_metadata(
+            self.container_name)
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
+        self.assertIn('x-container-read', resp)
+        self.assertEqual(resp['x-container-read'], '.r:*,.rlistings')
 
-        except Exception as e:
-            self.fail("Failed to get public readable object with another"
-                      " user creds raised exception is %s" % e)
-
-    @testtools.skip('Until Bug #1020722 is resolved.')
-    @attr(type='smoke')
-    def test_write_public_object_without_using_creds(self):
-        # make container public-writable, and create object anonymously, e.g.
-        # without using credentials
-        try:
-            # update container metadata to make publicly writable
-            cont_headers = {'X-Container-Write': '-*'}
-            resp_meta, body = self.container_client.update_container_metadata(
-                self.container_name, metadata=cont_headers, metadata_prefix='')
-            self.assertEqual(resp_meta['status'], '204')
-            # list container metadata
-            resp, _ = self.container_client.list_container_metadata(
-                self.container_name)
-            self.assertEqual(resp['status'], '204')
-            self.assertIn('x-container-write', resp)
-            self.assertEqual(resp['x-container-write'], '-*')
-
-            object_name = rand_name(name='Object')
-            data = arbitrary_string(size=len(object_name),
-                                    base_text=object_name)
-            headers = {'Content-Type': 'application/json',
-                       'Accept': 'application/json'}
-            # create object as anonymous user
-            resp, body = self.custom_object_client.create_object(
-                self.container_name, object_name, data, metadata=headers)
-            self.assertEqual(resp['status'], '201')
-
-        except Exception as e:
-            self.fail("Failed to create public writable object without using"
-                      " creds raised exception is %s" % e)
-
-    @testtools.skip('Until Bug #1020722 is resolved.')
-    @attr(type='smoke')
-    def test_write_public_with_another_user_creds(self):
-        # make container public-writable, and create object with another user's
-        # credentials
-        try:
-            # update container metadata to make it publicly writable
-            cont_headers = {'X-Container-Write': '-*'}
-            resp_meta, body = self.container_client.update_container_metadata(
-                self.container_name, metadata=cont_headers,
-                metadata_prefix='')
-            self.assertEqual(resp_meta['status'], '204')
-            # list container metadata
-            resp, _ = self.container_client.list_container_metadata(
-                self.container_name)
-            self.assertEqual(resp['status'], '204')
-            self.assertIn('x-container-write', resp)
-            self.assertEqual(resp['x-container-write'], '-*')
-
-            # trying to get auth token of alternative user
-            token = self.identity_client_alt.get_auth()
-            headers = {'Content-Type': 'application/json',
-                       'Accept': 'application/json',
-                       'X-Auth-Token': token}
-
-            # trying to create an object with another user's creds
-            object_name = rand_name(name='Object')
-            data = arbitrary_string(size=len(object_name),
-                                    base_text=object_name)
-            resp, body = self.custom_object_client.create_object(
-                self.container_name, object_name, data, metadata=headers)
-            self.assertEqual(resp['status'], '201')
-        except Exception as e:
-            self.fail("Failed to create public writable object with another"
-                      " user creds raised exception is %s" % e)
+        # get auth token of alternative user
+        token = self.identity_client_alt.get_auth()
+        headers = {'X-Auth-Token': token}
+        # access object using alternate user creds
+        resp, body = self.custom_object_client.get_object(
+            self.container_name, object_name,
+            metadata=headers)
+        self.assertEqual(body, data)

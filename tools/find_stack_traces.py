@@ -65,7 +65,9 @@ class StackTrace(object):
 
 def hunt_for_stacktrace(url):
     """Return TRACE or ERROR lines out of logs."""
-    page = urllib2.urlopen(url)
+    req = urllib2.Request(url)
+    req.add_header('Accept-Encoding', 'gzip')
+    page = urllib2.urlopen(req)
     buf = StringIO.StringIO(page.read())
     f = gzip.GzipFile(fileobj=buf)
     content = f.read()
@@ -110,7 +112,7 @@ def collect_logs(url):
 
 
 def usage():
-    print """
+    print("""
 Usage: find_stack_traces.py <logurl>
 
 Hunts for stack traces in a devstack run. Must provide it a base log url
@@ -118,20 +120,20 @@ from a tempest devstack run. Should start with http and end with /logs/.
 
 Returns a report listing stack traces out of the various files where
 they are found.
-"""
+""")
     sys.exit(0)
 
 
 def print_stats(items, fname, verbose=False):
     errors = len(filter(lambda x: x.level == "ERROR", items))
     traces = len(filter(lambda x: x.level == "TRACE", items))
-    print "%d ERRORS found in %s" % (errors, fname)
-    print "%d TRACES found in %s" % (traces, fname)
+    print("%d ERRORS found in %s" % (errors, fname))
+    print("%d TRACES found in %s" % (traces, fname))
 
     if verbose:
         for item in items:
-            print item
-        print "\n\n"
+            print(item)
+        print("\n\n")
 
 
 def main():

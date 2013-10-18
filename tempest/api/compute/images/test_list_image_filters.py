@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,9 +17,12 @@
 
 from tempest.api.compute import base
 from tempest.common.utils.data_utils import parse_image_id
-from tempest.common.utils.data_utils import rand_name
 from tempest import exceptions
+from tempest.openstack.common import log as logging
 from tempest.test import attr
+
+
+LOG = logging.getLogger(__name__)
 
 
 class ListImageFiltersTestJSON(base.BaseComputeTest):
@@ -28,7 +31,11 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
     @classmethod
     def setUpClass(cls):
         super(ListImageFiltersTestJSON, cls).setUpClass()
+        if not cls.config.service_available.glance:
+            skip_msg = ("%s skipped as glance is not available" % cls.__name__)
+            raise cls.skipException(skip_msg)
         cls.client = cls.images_client
+        cls.image_ids = []
 
         try:
             resp, cls.server1 = cls.create_server()
@@ -38,45 +45,28 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
                                                       'ACTIVE')
 
             # Create images to be used in the filter tests
-            image1_name = rand_name('image')
-            resp, body = cls.client.create_image(cls.server1['id'],
-                                                 image1_name)
+            resp, body = cls.create_image_from_server(cls.server1['id'])
             cls.image1_id = parse_image_id(resp['location'])
-            cls.client.wait_for_image_resp_code(cls.image1_id, 200)
             cls.client.wait_for_image_status(cls.image1_id, 'ACTIVE')
             resp, cls.image1 = cls.client.get_image(cls.image1_id)
 
             # Servers have a hidden property for when they are being imaged
             # Performing back-to-back create image calls on a single
             # server will sometimes cause failures
-            image3_name = rand_name('image')
-            resp, body = cls.client.create_image(cls.server2['id'],
-                                                 image3_name)
+            resp, body = cls.create_image_from_server(cls.server2['id'])
             cls.image3_id = parse_image_id(resp['location'])
-            cls.client.wait_for_image_resp_code(cls.image3_id, 200)
             cls.client.wait_for_image_status(cls.image3_id, 'ACTIVE')
             resp, cls.image3 = cls.client.get_image(cls.image3_id)
 
-            image2_name = rand_name('image')
-            resp, body = cls.client.create_image(cls.server1['id'],
-                                                 image2_name)
+            resp, body = cls.create_image_from_server(cls.server1['id'])
             cls.image2_id = parse_image_id(resp['location'])
-            cls.client.wait_for_image_resp_code(cls.image2_id, 200)
+
             cls.client.wait_for_image_status(cls.image2_id, 'ACTIVE')
             resp, cls.image2 = cls.client.get_image(cls.image2_id)
-        except Exception:
-            cls.clear_servers()
-            cls.client.delete_image(cls.image1_id)
-            cls.client.delete_image(cls.image2_id)
-            cls.client.delete_image(cls.image3_id)
+        except Exception as exc:
+            LOG.exception(exc)
+            cls.tearDownClass()
             raise
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.client.delete_image(cls.image1_id)
-        cls.client.delete_image(cls.image2_id)
-        cls.client.delete_image(cls.image3_id)
-        super(ListImageFiltersTestJSON, cls).tearDownClass()
 
     @attr(type=['negative', 'gate'])
     def test_get_image_not_existing(self):
@@ -84,7 +74,7 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
         self.assertRaises(exceptions.NotFound, self.client.get_image,
                           "nonexistingimageid")
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_filter_by_status(self):
         # The list of images should contain only images with the
         # provided status
@@ -95,7 +85,7 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
         self.assertTrue(any([i for i in images if i['id'] == self.image2_id]))
         self.assertTrue(any([i for i in images if i['id'] == self.image3_id]))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_filter_by_name(self):
         # List of all images should contain the expected images filtered
         # by name
@@ -106,7 +96,7 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
         self.assertFalse(any([i for i in images if i['id'] == self.image2_id]))
         self.assertFalse(any([i for i in images if i['id'] == self.image3_id]))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_filter_by_server_id(self):
         # The images should contain images filtered by server id
         params = {'server': self.server1['id']}
@@ -118,7 +108,7 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
         self.assertTrue(any([i for i in images if i['id'] == self.image2_id]))
         self.assertFalse(any([i for i in images if i['id'] == self.image3_id]))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_filter_by_server_ref(self):
         # The list of servers should be filtered by server ref
         server_links = self.server2['links']
@@ -135,7 +125,7 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
             self.assertTrue(any([i for i in images
                                  if i['id'] == self.image3_id]))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_filter_by_type(self):
         # The list of servers should be filtered by image type
         params = {'type': 'snapshot'}
@@ -146,27 +136,27 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
         self.assertTrue(any([i for i in images if i['id'] == self.image3_id]))
         self.assertFalse(any([i for i in images if i['id'] == self.image_ref]))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_limit_results(self):
         # Verify only the expected number of results are returned
         params = {'limit': '1'}
         resp, images = self.client.list_images(params)
-        #when _interface='xml', one element for images_links in images
-        #ref: Question #224349
+        # when _interface='xml', one element for images_links in images
+        # ref: Question #224349
         self.assertEqual(1, len([x for x in images if 'id' in x]))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_filter_by_changes_since(self):
         # Verify only updated images are returned in the detailed list
 
-        #Becoming ACTIVE will modify the updated time
-        #Filter by the image's created time
+        # Becoming ACTIVE will modify the updated time
+        # Filter by the image's created time
         params = {'changes-since': self.image3['created']}
         resp, images = self.client.list_images(params)
         found = any([i for i in images if i['id'] == self.image3_id])
         self.assertTrue(found)
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_with_detail_filter_by_status(self):
         # Detailed list of all images should only contain images
         # with the provided status
@@ -177,7 +167,7 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
         self.assertTrue(any([i for i in images if i['id'] == self.image2_id]))
         self.assertTrue(any([i for i in images if i['id'] == self.image3_id]))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_with_detail_filter_by_name(self):
         # Detailed list of all images should contain the expected
         # images filtered by name
@@ -188,7 +178,7 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
         self.assertFalse(any([i for i in images if i['id'] == self.image2_id]))
         self.assertFalse(any([i for i in images if i['id'] == self.image3_id]))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_with_detail_limit_results(self):
         # Verify only the expected number of results (with full details)
         # are returned
@@ -196,7 +186,7 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
         resp, images = self.client.list_images_with_detail(params)
         self.assertEqual(1, len(images))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_with_detail_filter_by_server_ref(self):
         # Detailed list of servers should be filtered by server ref
         server_links = self.server2['links']
@@ -213,7 +203,7 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
             self.assertTrue(any([i for i in images
                                  if i['id'] == self.image3_id]))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_with_detail_filter_by_type(self):
         # The detailed list of servers should be filtered by image type
         params = {'type': 'snapshot'}
@@ -225,19 +215,19 @@ class ListImageFiltersTestJSON(base.BaseComputeTest):
         self.assertTrue(any([i for i in images if i['id'] == self.image3_id]))
         self.assertFalse(any([i for i in images if i['id'] == self.image_ref]))
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_images_with_detail_filter_by_changes_since(self):
         # Verify an update image is returned
 
-        #Becoming ACTIVE will modify the updated time
-        #Filter by the image's created time
+        # Becoming ACTIVE will modify the updated time
+        # Filter by the image's created time
         params = {'changes-since': self.image1['created']}
         resp, images = self.client.list_images_with_detail(params)
         self.assertTrue(any([i for i in images if i['id'] == self.image1_id]))
 
     @attr(type=['negative', 'gate'])
     def test_get_nonexistant_image(self):
-        # Negative test: GET on non existant image should fail
+        # Negative test: GET on non-existent image should fail
         self.assertRaises(exceptions.NotFound, self.client.get_image, 999)
 
 

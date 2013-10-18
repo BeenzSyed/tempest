@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -28,10 +28,10 @@ from boto import s3
 import keystoneclient.exceptions
 
 import tempest.clients
-from tempest.common import log as logging
 from tempest.common.utils.file_utils import have_effective_read_access
 import tempest.config
 from tempest import exceptions
+from tempest.openstack.common import log as logging
 import tempest.test
 from tempest.thirdparty.boto.utils.wait import re_search_wait
 from tempest.thirdparty.boto.utils.wait import state_wait
@@ -58,8 +58,9 @@ def decision_maker():
 
     A_I_IMAGES_READY = all_read(ami_path, aki_path, ari_path)
     boto_logger = logging.getLogger('boto')
-    level = boto_logger.level
-    boto_logger.setLevel(orig_logging.CRITICAL)  # suppress logging for these
+    level = boto_logger.logger.level
+    boto_logger.logger.setLevel(orig_logging.CRITICAL)  # suppress logging
+                                                        # for these
 
     def _cred_sub_check(connection_data):
         if not id_matcher.match(connection_data["aws_access_key_id"]):
@@ -99,7 +100,7 @@ def decision_maker():
     except keystoneclient.exceptions.Unauthorized:
         S3_CAN_CONNECT_ERROR = "AWS credentials not set," +\
                                " faild to get them even by keystoneclient"
-    boto_logger.setLevel(level)
+    boto_logger.logger.setLevel(level)
     return {'A_I_IMAGES_READY': A_I_IMAGES_READY,
             'S3_CAN_CONNECT_ERROR': S3_CAN_CONNECT_ERROR,
             'EC2_CAN_CONNECT_ERROR': EC2_CAN_CONNECT_ERROR}
@@ -169,7 +170,7 @@ def _add_matcher_class(error_cls, error_data, base=BotoExceptionMatcher):
             add_cls = getattr(add_cls, part)
 
 
-#TODO(afazekas): classmethod handling
+# TODO(afazekas): classmethod handling
 def friendly_function_name_simple(call_able):
     name = ""
     if hasattr(call_able, "im_class"):
@@ -196,6 +197,7 @@ class BotoTestCase(tempest.test.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
+        super(BotoTestCase, cls).setUpClass()
         # The trash contains cleanup functions and paramaters in tuples
         # (function, *args, **kwargs)
         cls._resource_trash_bin = {}
@@ -223,7 +225,7 @@ class BotoTestCase(tempest.test.BaseTestCase):
         """Cancel Clean up request."""
         del cls._resource_trash_bin[key]
 
-    #TODO(afazekas): Add "with" context handling
+    # TODO(afazekas): Add "with" context handling
     def assertBotoError(self, excMatcher, callableObj,
                         *args, **kwargs):
         """Example usage:
@@ -260,6 +262,10 @@ class BotoTestCase(tempest.test.BaseTestCase):
                 LOG.exception(exc)
             finally:
                 del cls._resource_trash_bin[key]
+        super(BotoTestCase, cls).tearDownClass()
+        # NOTE(afazekas): let the super called even on exceptions
+        # The real exceptions already logged, if the super throws another,
+        # does not causes hidden issues
         if fail_count:
             raise exceptions.TearDownException(num=fail_count)
 
@@ -271,7 +277,7 @@ class BotoTestCase(tempest.test.BaseTestCase):
     s3_error_code.server = ServerError()
     s3_error_code.client = ClientError()
     valid_image_state = set(('available', 'pending', 'failed'))
-    #NOTE(afazekas): 'paused' is not valid status in EC2, but it does not have
+    # NOTE(afazekas): 'paused' is not valid status in EC2, but it does not have
     # a good mapping, because it uses memory, but not really a running machine
     valid_instance_state = set(('pending', 'running', 'shutting-down',
                                 'terminated', 'stopping', 'stopped', 'paused'))
@@ -379,7 +385,7 @@ class BotoTestCase(tempest.test.BaseTestCase):
     def assertAddressReleasedWait(self, address):
 
         def _address_delete():
-            #NOTE(afazekas): the filter gives back IP
+            # NOTE(afazekas): the filter gives back IP
             # even if it is not associated to my tenant
             if (address.public_ip not in map(lambda a: a.public_ip,
                 self.ec2_client.get_all_addresses())):
@@ -447,7 +453,7 @@ class BotoTestCase(tempest.test.BaseTestCase):
                 if cls.ec2_error_code.\
                         client.InvalidInstanceID.NotFound.match(exc):
                     return "_GONE"
-                #NOTE(afazekas): incorrect code,
+                # NOTE(afazekas): incorrect code,
                 # but the resource must be destoreyd
                 if exc.error_code == "InstanceNotFound":
                     return "_GONE"
@@ -464,7 +470,7 @@ class BotoTestCase(tempest.test.BaseTestCase):
         if exc_num:
             raise exceptions.TearDownException(num=exc_num)
 
-    #NOTE(afazekas): The incorrect ErrorCodes makes very, very difficult
+    # NOTE(afazekas): The incorrect ErrorCodes makes very, very difficult
     # to write better teardown
 
     @classmethod
@@ -472,7 +478,7 @@ class BotoTestCase(tempest.test.BaseTestCase):
         """Delete group.
            Use just for teardown!
         """
-        #NOTE(afazekas): should wait/try until all related instance terminates
+        # NOTE(afazekas): should wait/try until all related instance terminates
         group.delete()
 
     @classmethod
@@ -486,7 +492,7 @@ class BotoTestCase(tempest.test.BaseTestCase):
             LOG.critical("%s Volume has %s snapshot(s)", volume.id,
                          map(snaps.id, snaps))
 
-        #Note(afazekas): detaching/attching not valid EC2 status
+        # NOTE(afazekas): detaching/attching not valid EC2 status
         def _volume_state():
             volume.update(validate=True)
             try:
@@ -494,7 +500,7 @@ class BotoTestCase(tempest.test.BaseTestCase):
                     volume.detach(force=True)
             except BaseException as exc:
                 LOG.exception(exc)
-                #exc_num += 1 "nonlocal" not in python2
+                # exc_num += 1 "nonlocal" not in python2
             return volume.status
 
         try:

@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.common import log as logging
-from tempest.common.utils.data_utils import rand_name
+from tempest.openstack.common import log as logging
 from tempest.scenario import manager
+from tempest.test import services
 
 LOG = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ class TestServerAdvancedOps(manager.OfficialClientTest):
     This test case stresses some advanced server instance operations:
 
      * Resizing an instance
+     * Sequence suspend resume
     """
 
     @classmethod
@@ -44,29 +45,10 @@ class TestServerAdvancedOps(manager.OfficialClientTest):
             msg = "Skipping test - flavor_ref and flavor_ref_alt are identical"
             raise cls.skipException(msg)
 
-    @classmethod
-    def tearDownClass(cls):
-        for thing in cls.resources:
-            thing.delete()
-
+    @services('compute')
     def test_resize_server_confirm(self):
         # We create an instance for use in this test
-        i_name = rand_name('instance')
-        flavor_id = self.config.compute.flavor_ref
-        base_image_id = self.config.compute.image_ref
-        self.instance = self.compute_client.servers.create(
-            i_name, base_image_id, flavor_id)
-        try:
-            self.assertEqual(self.instance.name, i_name)
-            self.set_resource('instance', self.instance)
-        except AttributeError:
-            self.fail("Instance not successfully created.")
-
-        self.assertEqual(self.instance.status, 'BUILD')
-        instance_id = self.get_resource('instance').id
-        self.status_timeout(
-            self.compute_client.servers, instance_id, 'ACTIVE')
-        instance = self.get_resource('instance')
+        instance = self.create_server()
         instance_id = instance.id
         resize_flavor = self.config.compute.flavor_ref_alt
         LOG.debug("Resizing instance %s from flavor %s to flavor %s",
@@ -77,5 +59,32 @@ class TestServerAdvancedOps(manager.OfficialClientTest):
 
         LOG.debug("Confirming resize of instance %s", instance_id)
         instance.confirm_resize()
+
         self.status_timeout(
             self.compute_client.servers, instance_id, 'ACTIVE')
+
+    @services('compute')
+    def test_server_sequence_suspend_resume(self):
+        # We create an instance for use in this test
+        instance = self.create_server()
+        instance_id = instance.id
+        LOG.debug("Suspending instance %s. Current status: %s",
+                  instance_id, instance.status)
+        instance.suspend()
+        self.status_timeout(self.compute_client.servers, instance_id,
+                            'SUSPENDED')
+        LOG.debug("Resuming instance %s. Current status: %s",
+                  instance_id, instance.status)
+        instance.resume()
+        self.status_timeout(self.compute_client.servers, instance_id,
+                            'ACTIVE')
+        LOG.debug("Suspending instance %s. Current status: %s",
+                  instance_id, instance.status)
+        instance.suspend()
+        self.status_timeout(self.compute_client.servers, instance_id,
+                            'SUSPENDED')
+        LOG.debug("Resuming instance %s. Current status: %s",
+                  instance_id, instance.status)
+        instance.resume()
+        self.status_timeout(self.compute_client.servers, instance_id,
+                            'ACTIVE')

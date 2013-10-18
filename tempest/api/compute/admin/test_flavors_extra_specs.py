@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,6 +17,8 @@
 
 from tempest.api import compute
 from tempest.api.compute import base
+from tempest.common.utils.data_utils import rand_int_id
+from tempest.common.utils.data_utils import rand_name
 from tempest import exceptions
 from tempest.test import attr
 
@@ -39,15 +41,15 @@ class FlavorsExtraSpecsTestJSON(base.BaseComputeAdminTest):
             raise cls.skipException(msg)
 
         cls.client = cls.os_adm.flavors_client
-        flavor_name = 'test_flavor2'
+        flavor_name = rand_name('test_flavor')
         ram = 512
         vcpus = 1
         disk = 10
         ephemeral = 10
-        cls.new_flavor_id = 12345
+        cls.new_flavor_id = rand_int_id(start=1000)
         swap = 1024
         rxtx = 1
-        #Create a flavor so as to set/get/unset extra specs
+        # Create a flavor so as to set/get/unset extra specs
         resp, cls.flavor = cls.client.create_flavor(flavor_name,
                                                     ram, vcpus,
                                                     disk,
@@ -58,32 +60,33 @@ class FlavorsExtraSpecsTestJSON(base.BaseComputeAdminTest):
     @classmethod
     def tearDownClass(cls):
         resp, body = cls.client.delete_flavor(cls.flavor['id'])
+        cls.client.wait_for_resource_deletion(cls.flavor['id'])
         super(FlavorsExtraSpecsTestJSON, cls).tearDownClass()
 
     @attr(type='gate')
     def test_flavor_set_get_unset_keys(self):
-        #Test to SET, GET UNSET flavor extra spec as a user
-        #with admin privileges.
-        #Assigning extra specs values that are to be set
+        # Test to SET, GET UNSET flavor extra spec as a user
+        # with admin privileges.
+        # Assigning extra specs values that are to be set
         specs = {"key1": "value1", "key2": "value2"}
-        #SET extra specs to the flavor created in setUp
+        # SET extra specs to the flavor created in setUp
         set_resp, set_body = \
             self.client.set_flavor_extra_spec(self.flavor['id'], specs)
         self.assertEqual(set_resp.status, 200)
         self.assertEqual(set_body, specs)
-        #GET extra specs and verify
+        # GET extra specs and verify
         get_resp, get_body = \
             self.client.get_flavor_extra_spec(self.flavor['id'])
         self.assertEqual(get_resp.status, 200)
         self.assertEqual(get_body, specs)
-        #UNSET extra specs that were set in this test
+        # UNSET extra specs that were set in this test
         unset_resp, _ = \
             self.client.unset_flavor_extra_spec(self.flavor['id'], "key1")
         self.assertEqual(unset_resp.status, 200)
 
     @attr(type=['negative', 'gate'])
     def test_flavor_non_admin_set_keys(self):
-        #Test to SET flavor extra spec as a user without admin privileges.
+        # Test to SET flavor extra spec as a user without admin privileges.
         specs = {"key1": "value1", "key2": "value2"}
         self.assertRaises(exceptions.Unauthorized,
                           self.flavors_client.set_flavor_extra_spec,
@@ -99,7 +102,7 @@ class FlavorsExtraSpecsTestJSON(base.BaseComputeAdminTest):
             self.flavor['id'])
         self.assertEqual(resp.status, 200)
         for key in specs:
-            self.assertEquals(body[key], specs[key])
+            self.assertEqual(body[key], specs[key])
 
     @attr(type=['negative', 'gate'])
     def test_flavor_non_admin_unset_keys(self):
@@ -111,6 +114,14 @@ class FlavorsExtraSpecsTestJSON(base.BaseComputeAdminTest):
                           self.flavors_client.unset_flavor_extra_spec,
                           self.flavor['id'],
                           'key1')
+
+    @attr(type=['negative', 'gate'])
+    def test_flavor_unset_nonexistent_key(self):
+        nonexistent_key = rand_name('flavor_key')
+        self.assertRaises(exceptions.NotFound,
+                          self.client.unset_flavor_extra_spec,
+                          self.flavor['id'],
+                          nonexistent_key)
 
 
 class FlavorsExtraSpecsTestXML(FlavorsExtraSpecsTestJSON):

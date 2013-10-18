@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -72,27 +72,13 @@ class ImagesClientJSON(RestClient):
     def get_image(self, image_id):
         """Returns the details of a single image."""
         resp, body = self.get("images/%s" % str(image_id))
+        self.expected_success(200, resp)
         body = json.loads(body)
         return resp, body['image']
 
     def delete_image(self, image_id):
         """Deletes the provided image."""
         return self.delete("images/%s" % str(image_id))
-
-    def wait_for_image_resp_code(self, image_id, code):
-        """
-        Waits until the HTTP response code for the request matches the
-        expected value
-        """
-        resp, body = self.get("images/%s" % str(image_id))
-        start = int(time.time())
-
-        while resp.status != code:
-            time.sleep(self.build_interval)
-            resp, body = self.get("images/%s" % str(image_id))
-
-            if int(time.time()) - start >= self.build_timeout:
-                raise exceptions.TimeoutException
 
     def wait_for_image_status(self, image_id, status):
         """Waits for an image to reach a given status."""
@@ -150,3 +136,10 @@ class ImagesClientJSON(RestClient):
         resp, body = self.delete("images/%s/metadata/%s" %
                                  (str(image_id), key))
         return resp, body
+
+    def is_resource_deleted(self, id):
+        try:
+            self.get_image(id)
+        except exceptions.NotFound:
+            return True
+        return False

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -28,7 +28,7 @@ import re
 from launchpadlib import launchpad
 
 BASEDIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-TESTDIR = os.path.join(BASEDIR, 'tempest', 'tests')
+TESTDIR = os.path.join(BASEDIR, 'tempest')
 LPCACHEDIR = os.path.expanduser('~/.launchpadlib/cache')
 
 
@@ -61,8 +61,8 @@ def find_skips_in_file(path):
     """
     Return the skip tuples in a test file
     """
-    BUG_RE = re.compile(r'.*skip\(.*bug:*\s*\#*(\d+)', re.IGNORECASE)
-    DEF_RE = re.compile(r'.*def (\w+)\(')
+    BUG_RE = re.compile(r'\s*@.*skip_because\(bug=[\'"](\d+)[\'"]')
+    DEF_RE = re.compile(r'\s*def (\w+)\(')
     bug_found = False
     results = []
     lines = open(path, 'rb').readlines()
@@ -118,8 +118,8 @@ if __name__ == '__main__':
 
     unskips = sorted(set(unskips))
     if unskips:
-        print "The following bugs have been fixed and the corresponding skips"
-        print "should be removed from the test cases:"
-        print
+        print("The following bugs have been fixed and the corresponding skips")
+        print("should be removed from the test cases:")
+        print()
         for bug in unskips:
-            print "  %7s" % bug
+            print("  %7s" % bug)

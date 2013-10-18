@@ -12,50 +12,37 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import importlib
-import logging
 import multiprocessing
+import os
+import signal
 import time
 
 from tempest import clients
 from tempest.common import ssh
 from tempest.common.utils.data_utils import rand_name
 from tempest import exceptions
+from tempest.openstack.common import importutils
+from tempest.openstack.common import log as logging
 from tempest.stress import cleanup
 
 admin_manager = clients.AdminManager()
 
-# setup logging to file
-logging.basicConfig(
-    format='%(asctime)s %(process)d %(name)-20s %(levelname)-8s %(message)s',
-    datefmt='%m-%d %H:%M:%S',
-    filename="stress.debug.log",
-    filemode="w",
-    level=logging.DEBUG,
-)
-
-# define a Handler which writes INFO messages or higher to the sys.stdout
-_console = logging.StreamHandler()
-_console.setLevel(logging.INFO)
-# set a format which is simpler for console use
-format_str = '%(asctime)s %(process)d %(name)-20s: %(levelname)-8s %(message)s'
-_formatter = logging.Formatter(format_str)
-# tell the handler to use this format
-_console.setFormatter(_formatter)
-# add the handler to the root logger
-logger = logging.getLogger('tempest.stress')
-logger.addHandler(_console)
+LOG = logging.getLogger(__name__)
+processes = []
 
 
 def do_ssh(command, host):
     username = admin_manager.config.stress.target_ssh_user
     key_filename = admin_manager.config.stress.target_private_key_path
     if not (username and key_filename):
+        LOG.error('username and key_filename should not be empty')
         return None
     ssh_client = ssh.Client(host, username, key_filename=key_filename)
     try:
         return ssh_client.exec_command(command)
     except exceptions.SSHExecCommandFailed:
+        LOG.error('do_ssh raise exception. command:%s, host:%s.'
+                  % (command, host))
         return None
 
 
@@ -78,45 +65,71 @@ def _get_compute_nodes(controller):
     return nodes
 
 
-def _error_in_logs(logfiles, nodes):
+def _has_error_in_logs(logfiles, nodes, stop_on_error=False):
     """
     Detect errors in the nova log files on the controller and compute nodes.
     """
     grep = 'egrep "ERROR|TRACE" %s' % logfiles
+    ret = False
     for node in nodes:
         errors = do_ssh(grep, node)
-        if not errors:
-            return None
         if len(errors) > 0:
-            logger.error('%s: %s' % (node, errors))
-            return errors
-    return None
+            LOG.error('%s: %s' % (node, errors))
+            ret = True
+            if stop_on_error:
+                break
+    return ret
 
 
-def get_action_function(path):
-    (module_part, _, function) = path.rpartition('.')
-    return getattr(importlib.import_module(module_part), function)
+def sigchld_handler(signal, frame):
+    """
+    Signal handler (only active if stop_on_error is True).
+    """
+    terminate_all_processes()
 
 
-def stress_openstack(tests, duration):
+def terminate_all_processes():
+    """
+    Goes through the process list and terminates all child processes.
+    """
+    log_check_interval = int(admin_manager.config.stress.log_check_interval)
+    for process in processes:
+        if process['process'].is_alive():
+            try:
+                process['process'].terminate()
+            except Exception:
+                pass
+    time.sleep(log_check_interval)
+    for process in processes:
+        if process['process'].is_alive():
+            try:
+                pid = process['process'].pid
+                LOG.warn("Process %d hangs. Send SIGKILL." % pid)
+                os.kill(pid, signal.SIGKILL)
+            except Exception:
+                pass
+        process['process'].join()
+
+
+def stress_openstack(tests, duration, max_runs=None, stop_on_error=False):
     """
     Workload driver. Executes an action function against a nova-cluster.
-
     """
     logfiles = admin_manager.config.stress.target_logfiles
     log_check_interval = int(admin_manager.config.stress.log_check_interval)
+    default_thread_num = int(admin_manager.config.stress.
+                             default_thread_number_per_action)
     if logfiles:
         controller = admin_manager.config.stress.target_controller
         computes = _get_compute_nodes(controller)
         for node in computes:
             do_ssh("rm -f %s" % logfiles, node)
-    processes = []
     for test in tests:
         if test.get('use_admin', False):
             manager = admin_manager
         else:
             manager = clients.Manager()
-        for _ in xrange(test.get('threads', 1)):
+        for p_number in xrange(test.get('threads', default_thread_num)):
             if test.get('use_isolated_tenants', False):
                 username = rand_name("stress_user")
                 tenant_name = rand_name("stress_tenant")
@@ -130,27 +143,87 @@ def stress_openstack(tests, duration):
                 manager = clients.Manager(username=username,
                                           password="pass",
                                           tenant_name=tenant_name)
-            target = get_action_function(test['action'])
-            p = multiprocessing.Process(target=target,
-                                        args=(manager, logger),
-                                        kwargs=test.get('kwargs', {}))
-            processes.append(p)
+
+            test_obj = importutils.import_class(test['action'])
+            test_run = test_obj(manager, max_runs, stop_on_error)
+
+            kwargs = test.get('kwargs', {})
+            test_run.setUp(**dict(kwargs.iteritems()))
+
+            LOG.debug("calling Target Object %s" %
+                      test_run.__class__.__name__)
+
+            mp_manager = multiprocessing.Manager()
+            shared_statistic = mp_manager.dict()
+            shared_statistic['runs'] = 0
+            shared_statistic['fails'] = 0
+
+            p = multiprocessing.Process(target=test_run.execute,
+                                        args=(shared_statistic,))
+
+            process = {'process': p,
+                       'p_number': p_number,
+                       'action': test_run.action,
+                       'statistic': shared_statistic}
+
+            processes.append(process)
             p.start()
+    if stop_on_error:
+        # NOTE(mkoderer): only the parent should register the handler
+        signal.signal(signal.SIGCHLD, sigchld_handler)
     end_time = time.time() + duration
     had_errors = False
     while True:
-        remaining = end_time - time.time()
-        if remaining <= 0:
-            break
+        if max_runs is None:
+            remaining = end_time - time.time()
+            if remaining <= 0:
+                break
+        else:
+            remaining = log_check_interval
+            all_proc_term = True
+            for process in processes:
+                if process['process'].is_alive():
+                    all_proc_term = False
+                    break
+            if all_proc_term:
+                break
+
         time.sleep(min(remaining, log_check_interval))
+        if stop_on_error:
+            for process in processes:
+                if process['statistic']['fails'] > 0:
+                    break
+
         if not logfiles:
             continue
-        errors = _error_in_logs(logfiles, computes)
-        if errors:
+        if _has_error_in_logs(logfiles, computes, stop_on_error):
             had_errors = True
             break
-    for p in processes:
-        p.terminate()
+
+    terminate_all_processes()
+
+    sum_fails = 0
+    sum_runs = 0
+
+    LOG.info("Statistics (per process):")
+    for process in processes:
+        if process['statistic']['fails'] > 0:
+            had_errors = True
+        sum_runs += process['statistic']['runs']
+        sum_fails += process['statistic']['fails']
+        LOG.info(" Process %d (%s): Run %d actions (%d failed)" %
+                 (process['p_number'],
+                  process['action'],
+                  process['statistic']['runs'],
+                     process['statistic']['fails']))
+    LOG.info("Summary:")
+    LOG.info("Run %d actions (%d failed)" %
+             (sum_runs, sum_fails))
+
     if not had_errors:
-        logger.info("cleaning up")
+        LOG.info("cleaning up")
         cleanup.cleanup()
+    if had_errors:
+        return 1
+    else:
+        return 0

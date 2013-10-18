@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -29,41 +29,41 @@ class KeyPairsTestJSON(base.BaseComputeTest):
         super(KeyPairsTestJSON, cls).setUpClass()
         cls.client = cls.keypairs_client
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_keypairs_create_list_delete(self):
         # Keypairs created should be available in the response list
-        #Create 3 keypairs
+        # Create 3 keypairs
         key_list = list()
         for i in range(3):
             k_name = rand_name('keypair-')
             resp, keypair = self.client.create_keypair(k_name)
-            #Need to pop these keys so that our compare doesn't fail later,
-            #as the keypair dicts from list API doesn't have them.
+            # Need to pop these keys so that our compare doesn't fail later,
+            # as the keypair dicts from list API doesn't have them.
             keypair.pop('private_key')
             keypair.pop('user_id')
             self.assertEqual(200, resp.status)
             key_list.append(keypair)
-        #Fetch all keypairs and verify the list
-        #has all created keypairs
+        # Fetch all keypairs and verify the list
+        # has all created keypairs
         resp, fetched_list = self.client.list_keypairs()
         self.assertEqual(200, resp.status)
-        #We need to remove the extra 'keypair' element in the
-        #returned dict. See comment in keypairs_client.list_keypairs()
+        # We need to remove the extra 'keypair' element in the
+        # returned dict. See comment in keypairs_client.list_keypairs()
         new_list = list()
         for keypair in fetched_list:
             new_list.append(keypair['keypair'])
         fetched_list = new_list
-        #Now check if all the created keypairs are in the fetched list
+        # Now check if all the created keypairs are in the fetched list
         missing_kps = [kp for kp in key_list if kp not in fetched_list]
         self.assertFalse(missing_kps,
                          "Failed to find keypairs %s in fetched list"
                          % ', '.join(m_key['name'] for m_key in missing_kps))
-        #Delete all the keypairs created
+        # Delete all the keypairs created
         for keypair in key_list:
             resp, _ = self.client.delete_keypair(keypair['name'])
             self.assertEqual(202, resp.status)
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_keypair_create_delete(self):
         # Keypair should be created, verified and deleted
         k_name = rand_name('keypair-')
@@ -79,30 +79,24 @@ class KeyPairsTestJSON(base.BaseComputeTest):
         resp, _ = self.client.delete_keypair(k_name)
         self.assertEqual(202, resp.status)
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_get_keypair_detail(self):
         # Keypair should be created, Got details by name and deleted
         k_name = rand_name('keypair-')
         resp, keypair = self.client.create_keypair(k_name)
-        try:
-            resp, keypair_detail = self.client.get_keypair(k_name)
-            self.assertEqual(200, resp.status)
-            self.assertTrue('name' in keypair_detail)
-            self.assertTrue('public_key' in keypair_detail)
-            self.assertEqual(keypair_detail['name'], k_name,
-                             "The created keypair name is not equal "
-                             "to requested name")
-            public_key = keypair_detail['public_key']
-            self.assertTrue(public_key is not None,
-                            "Field public_key is empty or not found.")
-        except Exception:
-            self.fail("GET keypair details requested by keypair name "
-                      "has failed")
-        finally:
-            resp, _ = self.client.delete_keypair(k_name)
-            self.assertEqual(202, resp.status)
+        self.addCleanup(self.client.delete_keypair, k_name)
+        resp, keypair_detail = self.client.get_keypair(k_name)
+        self.assertEqual(200, resp.status)
+        self.assertIn('name', keypair_detail)
+        self.assertIn('public_key', keypair_detail)
+        self.assertEqual(keypair_detail['name'], k_name,
+                         "The created keypair name is not equal "
+                         "to requested name")
+        public_key = keypair_detail['public_key']
+        self.assertTrue(public_key is not None,
+                        "Field public_key is empty or not found.")
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_keypair_create_with_pub_key(self):
         # Keypair should be created with a given public key
         k_name = rand_name('keypair-')
@@ -163,8 +157,8 @@ class KeyPairsTestJSON(base.BaseComputeTest):
         k_name = rand_name('keypair-')
         resp, _ = self.client.create_keypair(k_name)
         self.assertEqual(200, resp.status)
-        #Now try the same keyname to ceate another key
-        self.assertRaises(exceptions.Duplicate, self.client.create_keypair,
+        # Now try the same keyname to create another key
+        self.assertRaises(exceptions.Conflict, self.client.create_keypair,
                           k_name)
         resp, _ = self.client.delete_keypair(k_name)
         self.assertEqual(202, resp.status)

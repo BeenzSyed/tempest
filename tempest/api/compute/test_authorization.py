@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,7 +21,10 @@ from tempest import clients
 from tempest.common.utils.data_utils import parse_image_id
 from tempest.common.utils.data_utils import rand_name
 from tempest import exceptions
+from tempest.openstack.common import log as logging
 from tempest.test import attr
+
+LOG = logging.getLogger(__name__)
 
 
 class AuthorizationTestJSON(base.BaseComputeTest):
@@ -41,7 +44,7 @@ class AuthorizationTestJSON(base.BaseComputeTest):
         cls.security_client = cls.os.security_groups_client
 
         if cls.config.compute.allow_tenant_isolation:
-            creds = cls._get_isolated_creds()
+            creds = cls.isolated_creds.get_alt_creds()
             username, tenant_name, password = creds
             cls.alt_manager = clients.Manager(username=username,
                                               password=password,
@@ -62,7 +65,6 @@ class AuthorizationTestJSON(base.BaseComputeTest):
         name = rand_name('image')
         resp, body = cls.client.create_image(server['id'], name)
         image_id = parse_image_id(resp['location'])
-        cls.images_client.wait_for_image_resp_code(image_id, 200)
         cls.images_client.wait_for_image_status(image_id, 'ACTIVE')
         resp, cls.image = cls.images_client.get_image(image_id)
 
@@ -126,7 +128,7 @@ class AuthorizationTestJSON(base.BaseComputeTest):
     def test_list_servers_with_alternate_tenant(self):
         # A list on servers from one tenant should not
         # show on alternate tenant
-        #Listing servers from alternate tenant
+        # Listing servers from alternate tenant
         alt_server_ids = []
         resp, body = self.alt_client.list_servers()
         alt_server_ids = [s['id'] for s in body['servers']]
@@ -188,7 +190,7 @@ class AuthorizationTestJSON(base.BaseComputeTest):
     def test_create_keypair_in_analt_user_tenant(self):
         # A create keypair request should fail if the tenant id does not match
         # the current user
-        #POST keypair with other user tenant
+        # POST keypair with other user tenant
         k_name = rand_name('keypair-')
         self.alt_keypairs_client._set_auth()
         self.saved_base_url = self.alt_keypairs_client.base_url
@@ -204,7 +206,7 @@ class AuthorizationTestJSON(base.BaseComputeTest):
             self.alt_keypairs_client.base_url = self.saved_base_url
             if (resp['status'] is not None):
                 resp, _ = self.alt_keypairs_client.delete_keypair(k_name)
-                self.fail("Create keypair request should not happen "
+                LOG.error("Create keypair request should not happen "
                           "if the tenant id does not match the current user")
 
     @attr(type='gate')
@@ -238,7 +240,7 @@ class AuthorizationTestJSON(base.BaseComputeTest):
     def test_create_security_group_in_analt_user_tenant(self):
         # A create security group request should fail if the tenant id does not
         # match the current user
-        #POST security group with other user tenant
+        # POST security group with other user tenant
         s_name = rand_name('security-')
         s_description = rand_name('security')
         self.saved_base_url = self.alt_security_client.base_url
@@ -255,7 +257,7 @@ class AuthorizationTestJSON(base.BaseComputeTest):
             self.alt_security_client.base_url = self.saved_base_url
             if resp['status'] is not None:
                 self.alt_security_client.delete_security_group(resp['id'])
-                self.fail("Create Security Group request should not happen if"
+                LOG.error("Create Security Group request should not happen if"
                           "the tenant id does not match the current user")
 
     @attr(type='gate')
@@ -276,7 +278,7 @@ class AuthorizationTestJSON(base.BaseComputeTest):
     def test_create_security_group_rule_in_analt_user_tenant(self):
         # A create security group rule request should fail if the tenant id
         # does not match the current user
-        #POST security group rule with other user tenant
+        # POST security group rule with other user tenant
         parent_group_id = self.security_group['id']
         ip_protocol = 'icmp'
         from_port = -1
@@ -297,7 +299,7 @@ class AuthorizationTestJSON(base.BaseComputeTest):
             self.alt_security_client.base_url = self.saved_base_url
             if resp['status'] is not None:
                 self.alt_security_client.delete_security_group_rule(resp['id'])
-                self.fail("Create security group rule request should not "
+                LOG.error("Create security group rule request should not "
                           "happen if the tenant id does not match the"
                           " current user")
 

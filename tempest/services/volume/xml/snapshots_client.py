@@ -17,9 +17,9 @@ import urllib
 
 from lxml import etree
 
-from tempest.common import log as logging
 from tempest.common.rest_client import RestClientXML
 from tempest import exceptions
+from tempest.openstack.common import log as logging
 from tempest.services.compute.xml.common import Document
 from tempest.services.compute.xml.common import Element
 from tempest.services.compute.xml.common import xml_to_json
@@ -48,7 +48,10 @@ class SnapshotsClientXML(RestClientXML):
 
         resp, body = self.get(url, self.headers)
         body = etree.fromstring(body)
-        return resp, xml_to_json(body)
+        snapshots = []
+        for snap in body:
+            snapshots.append(xml_to_json(snap))
+        return resp, snapshots
 
     def list_snapshots_with_detail(self, params=None):
         """List all the details of snapshot."""
@@ -60,7 +63,9 @@ class SnapshotsClientXML(RestClientXML):
         resp, body = self.get(url, self.headers)
         body = etree.fromstring(body)
         snapshots = []
-        return resp, snapshots(xml_to_json(body))
+        for snap in body:
+            snapshots.append(xml_to_json(snap))
+        return resp, snapshots
 
     def get_snapshot(self, snapshot_id):
         """Returns the details of a single snapshot."""
@@ -76,7 +81,7 @@ class SnapshotsClientXML(RestClientXML):
         display_name: Optional snapshot Name.
         display_description: User friendly snapshot description.
         """
-        #NOTE(afazekas): it should use the volume namaspace
+        # NOTE(afazekas): it should use the volume namespace
         snapshot = Element("snapshot", xmlns=XMLNS_11, volume_id=volume_id)
         for key, value in kwargs.items():
             snapshot.add_attr(key, value)
@@ -85,11 +90,21 @@ class SnapshotsClientXML(RestClientXML):
         body = xml_to_json(etree.fromstring(body))
         return resp, body
 
-    #NOTE(afazekas): just for the wait function
+    def update_snapshot(self, snapshot_id, **kwargs):
+        """Updates a snapshot."""
+        put_body = Element("snapshot", xmlns=XMLNS_11, **kwargs)
+
+        resp, body = self.put('snapshots/%s' % snapshot_id,
+                              str(Document(put_body)),
+                              self.headers)
+        body = xml_to_json(etree.fromstring(body))
+        return resp, body
+
+    # NOTE(afazekas): just for the wait function
     def _get_snapshot_status(self, snapshot_id):
         resp, body = self.get_snapshot(snapshot_id)
         status = body['status']
-        #NOTE(afazekas): snapshot can reach an "error"
+        # NOTE(afazekas): snapshot can reach an "error"
         # state in a "normal" lifecycle
         if (status == 'error'):
             raise exceptions.SnapshotBuildErrorException(
@@ -97,7 +112,7 @@ class SnapshotsClientXML(RestClientXML):
 
         return status
 
-    #NOTE(afazkas): Wait reinvented again. It is not in the correct layer
+    # NOTE(afazkas): Wait reinvented again. It is not in the correct layer
     def wait_for_snapshot_status(self, snapshot_id, status):
         """Waits for a Snapshot to reach a given status."""
         start_time = time.time()

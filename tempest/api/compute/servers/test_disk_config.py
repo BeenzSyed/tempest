@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -33,13 +33,13 @@ class ServerDiskConfigTestJSON(base.BaseComputeTest):
         super(ServerDiskConfigTestJSON, cls).setUpClass()
         cls.client = cls.os.servers_client
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_rebuild_server_with_manual_disk_config(self):
         # A server should be rebuilt using the manual disk config option
         resp, server = self.create_server(disk_config='AUTO',
                                           wait_until='ACTIVE')
 
-        #Verify the specified attributes are set correctly
+        # Verify the specified attributes are set correctly
         resp, server = self.client.get_server(server['id'])
         self.assertEqual('AUTO', server['OS-DCF:diskConfig'])
 
@@ -47,23 +47,23 @@ class ServerDiskConfigTestJSON(base.BaseComputeTest):
                                            self.image_ref_alt,
                                            disk_config='MANUAL')
 
-        #Wait for the server to become active
+        # Wait for the server to become active
         self.client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        #Verify the specified attributes are set correctly
+        # Verify the specified attributes are set correctly
         resp, server = self.client.get_server(server['id'])
         self.assertEqual('MANUAL', server['OS-DCF:diskConfig'])
 
-        #Delete the server
+        # Delete the server
         resp, body = self.client.delete_server(server['id'])
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_rebuild_server_with_auto_disk_config(self):
         # A server should be rebuilt using the auto disk config option
         resp, server = self.create_server(disk_config='MANUAL',
                                           wait_until='ACTIVE')
 
-        #Verify the specified attributes are set correctly
+        # Verify the specified attributes are set correctly
         resp, server = self.client.get_server(server['id'])
         self.assertEqual('MANUAL', server['OS-DCF:diskConfig'])
 
@@ -71,24 +71,24 @@ class ServerDiskConfigTestJSON(base.BaseComputeTest):
                                            self.image_ref_alt,
                                            disk_config='AUTO')
 
-        #Wait for the server to become active
+        # Wait for the server to become active
         self.client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        #Verify the specified attributes are set correctly
+        # Verify the specified attributes are set correctly
         resp, server = self.client.get_server(server['id'])
         self.assertEqual('AUTO', server['OS-DCF:diskConfig'])
 
-        #Delete the server
+        # Delete the server
         resp, body = self.client.delete_server(server['id'])
 
     @testtools.skipUnless(compute.RESIZE_AVAILABLE, 'Resize not available.')
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_resize_server_from_manual_to_auto(self):
         # A server should be resized from manual to auto disk config
         resp, server = self.create_server(disk_config='MANUAL',
                                           wait_until='ACTIVE')
 
-        #Resize with auto option
+        # Resize with auto option
         self.client.resize(server['id'], self.flavor_ref_alt,
                            disk_config='AUTO')
         self.client.wait_for_server_status(server['id'], 'VERIFY_RESIZE')
@@ -98,17 +98,17 @@ class ServerDiskConfigTestJSON(base.BaseComputeTest):
         resp, server = self.client.get_server(server['id'])
         self.assertEqual('AUTO', server['OS-DCF:diskConfig'])
 
-        #Delete the server
+        # Delete the server
         resp, body = self.client.delete_server(server['id'])
 
     @testtools.skipUnless(compute.RESIZE_AVAILABLE, 'Resize not available.')
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_resize_server_from_auto_to_manual(self):
         # A server should be resized from auto to manual disk config
         resp, server = self.create_server(disk_config='AUTO',
                                           wait_until='ACTIVE')
 
-        #Resize with manual option
+        # Resize with manual option
         self.client.resize(server['id'], self.flavor_ref_alt,
                            disk_config='MANUAL')
         self.client.wait_for_server_status(server['id'], 'VERIFY_RESIZE')
@@ -118,7 +118,7 @@ class ServerDiskConfigTestJSON(base.BaseComputeTest):
         resp, server = self.client.get_server(server['id'])
         self.assertEqual('MANUAL', server['OS-DCF:diskConfig'])
 
-        #Delete the server
+        # Delete the server
         resp, body = self.client.delete_server(server['id'])
 
 

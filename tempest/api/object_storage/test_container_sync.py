@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,11 +17,10 @@
 
 import time
 
-import testtools
-
 from tempest.api.object_storage import base
 from tempest.common.utils.data_utils import rand_name
 from tempest.test import attr
+from tempest.test import skip_because
 
 
 class ContainerSyncTest(base.BaseObjectTest):
@@ -50,9 +49,10 @@ class ContainerSyncTest(base.BaseObjectTest):
     def tearDownClass(cls):
         for client in cls.clients.values():
             cls.delete_containers(cls.containers, client[0], client[1])
+        super(ContainerSyncTest, cls).tearDownClass()
 
-    @testtools.skip('Until Bug #1093743 is resolved.')
-    @attr(type=['positive', 'gate'])
+    @skip_because(bug="1093743")
+    @attr(type='gate')
     def test_container_synchronization(self):
         # container to container synchronization
         # to allow/accept sync requests to/from other accounts
@@ -67,9 +67,9 @@ class ContainerSyncTest(base.BaseObjectTest):
                        (cont_client[1].base_url, str(cont[1]))}
             resp, body = \
                 cont_client[0].put(str(cont[0]), body=None, headers=headers)
-            self.assertTrue(resp['status'] in ('202', '201'),
-                            'Error installing X-Container-Sync-To '
-                            'for the container "%s"' % (cont[0]))
+            self.assertIn(resp['status'], ('202', '201'),
+                          'Error installing X-Container-Sync-To '
+                          'for the container "%s"' % (cont[0]))
             # create object in container
             object_name = rand_name(name='TestSyncObject')
             data = object_name[::-1]  # arbitrary_string()

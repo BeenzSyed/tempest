@@ -15,11 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
 import re
 import subprocess
 
 import tempest.cli
+from tempest.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class SimpleReadOnlyGlanceClientTest(tempest.cli.ClientTestBase):
     def test_glance_help(self):
         help_text = self.glance('help')
         lines = help_text.split('\n')
-        self.assertTrue(lines[0].startswith('usage: glance'))
+        self.assertFirstLineStartsWith(lines, 'usage: glance')
 
         commands = []
         cmds_start = lines.index('Positional arguments:')

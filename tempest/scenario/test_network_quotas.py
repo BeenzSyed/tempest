@@ -15,8 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from quantumclient.common import exceptions as exc
+from neutronclient.common import exceptions as exc
+
 from tempest.scenario.manager import NetworkScenarioTest
+from tempest.test import services
 
 MAX_REASONABLE_ITERATIONS = 51  # more than enough. Default for port is 50.
 
@@ -41,6 +43,7 @@ class TestNetworkQuotaBasic(NetworkScenarioTest):
         cls.subnets = []
         cls.ports = []
 
+    @services('network')
     def test_create_network_until_quota_hit(self):
         hit_limit = False
         for n in xrange(MAX_REASONABLE_ITERATIONS):
@@ -48,13 +51,14 @@ class TestNetworkQuotaBasic(NetworkScenarioTest):
                 self.networks.append(
                     self._create_network(self.tenant_id,
                                          namestart='network-quotatest-'))
-            except exc.QuantumClientException as e:
+            except exc.NeutronClientException as e:
                 if (e.status_code != 409):
                     raise
                 hit_limit = True
                 break
         self.assertTrue(hit_limit, "Failed: Did not hit quota limit !")
 
+    @services('network')
     def test_create_subnet_until_quota_hit(self):
         if not self.networks:
             self.networks.append(
@@ -66,13 +70,14 @@ class TestNetworkQuotaBasic(NetworkScenarioTest):
                 self.subnets.append(
                     self._create_subnet(self.networks[0],
                                         namestart='subnet-quotatest-'))
-            except exc.QuantumClientException as e:
+            except exc.NeutronClientException as e:
                 if (e.status_code != 409):
                     raise
                 hit_limit = True
                 break
         self.assertTrue(hit_limit, "Failed: Did not hit quota limit !")
 
+    @services('network')
     def test_create_ports_until_quota_hit(self):
         if not self.networks:
             self.networks.append(
@@ -84,7 +89,7 @@ class TestNetworkQuotaBasic(NetworkScenarioTest):
                 self.ports.append(
                     self._create_port(self.networks[0],
                                       namestart='port-quotatest-'))
-            except exc.QuantumClientException as e:
+            except exc.NeutronClientException as e:
                 if (e.status_code != 409):
                     raise
                 hit_limit = True

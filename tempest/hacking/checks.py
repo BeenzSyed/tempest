@@ -17,26 +17,11 @@
 import re
 
 
-PYTHON_CLIENTS = ['cinder', 'glance', 'keystone', 'nova', 'swift', 'quantum']
+PYTHON_CLIENTS = ['cinder', 'glance', 'keystone', 'nova', 'swift', 'neutron']
 
-SKIP_DECORATOR_RE = re.compile(r'\s*@testtools.skip\((.*)\)')
-SKIP_STR_RE = re.compile(r'.*Bug #\d+.*')
 PYTHON_CLIENT_RE = re.compile('import (%s)client' % '|'.join(PYTHON_CLIENTS))
-
-
-def skip_bugs(physical_line):
-    """Check skip lines for proper bug entries
-
-    T101: skips must contain "Bug #<bug_number>"
-    """
-
-    res = SKIP_DECORATOR_RE.match(physical_line)
-    if res:
-        content = res.group(1)
-        res = SKIP_STR_RE.match(content)
-        if not res:
-            return (physical_line.find(content),
-                    'T101: skips must contain "Bug #<bug_number>"')
+TEST_DEFINITION = re.compile(r'^\s*def test.*')
+SCENARIO_DECORATOR = re.compile(r'\s*@.*services\(')
 
 
 def import_no_clients_in_api(physical_line, filename):
@@ -53,6 +38,20 @@ def import_no_clients_in_api(physical_line, filename):
                      " in tempest/api/* tests"))
 
 
+def scenario_tests_need_service_tags(physical_line, filename,
+                                     previous_logical):
+    """Check that scenario tests have service tags
+
+    T104: Scenario tests require a services decorator
+    """
+
+    if 'tempest/scenario' in filename:
+        if TEST_DEFINITION.match(physical_line):
+            if not SCENARIO_DECORATOR.match(previous_logical):
+                return (physical_line.find('def'),
+                        "T104: Scenario tests require a service decorator")
+
+
 def factory(register):
-    register(skip_bugs)
     register(import_no_clients_in_api)
+    register(scenario_tests_need_service_tags)

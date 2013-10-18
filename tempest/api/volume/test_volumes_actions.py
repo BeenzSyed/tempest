@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,6 +18,8 @@
 from tempest.api.volume.base import BaseVolumeTest
 from tempest.common.utils.data_utils import rand_name
 from tempest.test import attr
+from tempest.test import services
+from tempest.test import stresstest
 
 
 class VolumesActionsTest(BaseVolumeTest):
@@ -27,11 +29,11 @@ class VolumesActionsTest(BaseVolumeTest):
     def setUpClass(cls):
         super(VolumesActionsTest, cls).setUpClass()
         cls.client = cls.volumes_client
-        cls.servers_client = cls.servers_client
+        cls.image_client = cls.os.image_client
 
         # Create a test shared instance and volume for attach/detach tests
-        srv_name = rand_name('Instance-')
-        vol_name = rand_name('Volume-')
+        srv_name = rand_name(cls.__name__ + '-Instance-')
+        vol_name = rand_name(cls.__name__ + '-Volume-')
         resp, cls.server = cls.servers_client.create_server(srv_name,
                                                             cls.image_ref,
                                                             cls.flavor_ref)
@@ -52,44 +54,64 @@ class VolumesActionsTest(BaseVolumeTest):
 
         super(VolumesActionsTest, cls).tearDownClass()
 
-    @attr(type=['smoke'])
+    @stresstest(class_setup_per='process')
+    @attr(type='smoke')
+    @services('compute')
     def test_attach_detach_volume_to_instance(self):
         # Volume is attached and detached successfully from an instance
-        try:
-            mountpoint = '/dev/vdc'
-            resp, body = self.client.attach_volume(self.volume['id'],
-                                                   self.server['id'],
-                                                   mountpoint)
-            self.assertEqual(202, resp.status)
-            self.client.wait_for_volume_status(self.volume['id'], 'in-use')
-        except Exception:
-            self.fail("Could not attach volume to instance")
-        finally:
-            # Detach the volume from the instance
-            resp, body = self.client.detach_volume(self.volume['id'])
-            self.assertEqual(202, resp.status)
-            self.client.wait_for_volume_status(self.volume['id'], 'available')
+        mountpoint = '/dev/vdc'
+        resp, body = self.client.attach_volume(self.volume['id'],
+                                               self.server['id'],
+                                               mountpoint)
+        self.assertEqual(202, resp.status)
+        self.client.wait_for_volume_status(self.volume['id'], 'in-use')
+        resp, body = self.client.detach_volume(self.volume['id'])
+        self.assertEqual(202, resp.status)
+        self.client.wait_for_volume_status(self.volume['id'], 'available')
 
+    @stresstest(class_setup_per='process')
     @attr(type='gate')
+    @services('compute')
     def test_get_volume_attachment(self):
         # Verify that a volume's attachment information is retrieved
         mountpoint = '/dev/vdc'
         resp, body = self.client.attach_volume(self.volume['id'],
                                                self.server['id'],
                                                mountpoint)
-        self.client.wait_for_volume_status(self.volume['id'], 'in-use')
         self.assertEqual(202, resp.status)
-        try:
-            resp, volume = self.client.get_volume(self.volume['id'])
-            self.assertEqual(200, resp.status)
-            self.assertTrue('attachments' in volume)
-            attachment = volume['attachments'][0]
-            self.assertEqual(mountpoint, attachment['device'])
-            self.assertEqual(self.server['id'], attachment['server_id'])
-            self.assertEqual(self.volume['id'], attachment['id'])
-            self.assertEqual(self.volume['id'], attachment['volume_id'])
-        except Exception:
-            self.fail("Could not get attachment details from volume")
-        finally:
-            self.client.detach_volume(self.volume['id'])
-            self.client.wait_for_volume_status(self.volume['id'], 'available')
+        self.client.wait_for_volume_status(self.volume['id'], 'in-use')
+        # NOTE(gfidente): added in reverse order because functions will be
+        # called in reverse order to the order they are added (LIFO)
+        self.addCleanup(self.client.wait_for_volume_status,
+                        self.volume['id'],
+                        'available')
+        self.addCleanup(self.client.detach_volume, self.volume['id'])
+        resp, volume = self.client.get_volume(self.volume['id'])
+        self.assertEqual(200, resp.status)
+        self.assertIn('attachments', volume)
+        attachment = self.client.get_attachment_from_volume(volume)
+        self.assertEqual(mountpoint, attachment['device'])
+        self.assertEqual(self.server['id'], attachment['server_id'])
+        self.assertEqual(self.volume['id'], attachment['id'])
+        self.assertEqual(self.volume['id'], attachment['volume_id'])
+
+    @attr(type='gate')
+    @services('image')
+    def test_volume_upload(self):
+        # NOTE(gfidente): the volume uploaded in Glance comes from setUpClass,
+        # it is shared with the other tests. After it is uploaded in Glance,
+        # there is no way to delete it from Cinder, so we delete it from Glance
+        # using the Glance image_client and from Cinder via tearDownClass.
+        image_name = rand_name('Image-')
+        resp, body = self.client.upload_volume(self.volume['id'],
+                                               image_name,
+                                               self.config.volume.disk_format)
+        image_id = body["image_id"]
+        self.addCleanup(self.image_client.delete_image, image_id)
+        self.assertEqual(202, resp.status)
+        self.image_client.wait_for_image_status(image_id, 'active')
+        self.client.wait_for_volume_status(self.volume['id'], 'available')
+
+
+class VolumesActionsTestXML(VolumesActionsTest):
+    _interface = "xml"

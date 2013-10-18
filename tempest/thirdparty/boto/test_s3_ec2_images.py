@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,14 +17,11 @@
 
 import os
 
-import testtools
-
 from tempest import clients
 from tempest.common.utils.data_utils import rand_name
 from tempest.test import attr
 from tempest.thirdparty.boto.test import BotoTestCase
 from tempest.thirdparty.boto.utils.s3 import s3_upload_dir
-from tempest.thirdparty.boto.utils.wait import state_wait
 
 
 class S3ImagesTest(BotoTestCase):
@@ -53,8 +50,6 @@ class S3ImagesTest(BotoTestCase):
                                cls.bucket_name)
         s3_upload_dir(bucket, cls.materials_path)
 
-    #Note(afazekas): Without the normal status change test!
-    # otherwise I would skip it too
     @attr(type='smoke')
     def test_register_get_deregister_ami_image(self):
         # Register and deregister ami image
@@ -64,7 +59,7 @@ class S3ImagesTest(BotoTestCase):
         image["image_id"] = self.images_client.register_image(
             name=image["name"],
             image_location=image["location"])
-        #Note(afazekas): delete_snapshot=True might trigger boto lib? bug
+        # NOTE(afazekas): delete_snapshot=True might trigger boto lib? bug
         image["cleanUp"] = self.addResourceCleanUp(
             self.images_client.deregister_image,
             image["image_id"])
@@ -73,20 +68,16 @@ class S3ImagesTest(BotoTestCase):
         self.assertTrue(retrieved_image.name == image["name"])
         self.assertTrue(retrieved_image.id == image["image_id"])
         if retrieved_image.state != "available":
-            def _state():
-                retr = self.images_client.get_image(image["image_id"])
-                return retr.state
-            state = state_wait(_state, "available")
-        self.assertEqual("available", state)
+            self.assertImageStateWait(retrieved_image, "available")
         self.images_client.deregister_image(image["image_id"])
-        #TODO(afazekas): double deregister ?
+        self.assertNotIn(image["image_id"], str(
+            self.images_client.get_all_images()))
         self.cancelResourceCleanUp(image["cleanUp"])
 
-    @testtools.skip("Skipped until the Bug #1074904 is resolved")
     def test_register_get_deregister_aki_image(self):
         # Register and deregister aki image
         image = {"name": rand_name("aki-name-"),
-                 "location": self.bucket_name + "/" + self.ari_manifest,
+                 "location": self.bucket_name + "/" + self.aki_manifest,
                  "type": "aki"}
         image["image_id"] = self.images_client.register_image(
             name=image["name"],
@@ -102,12 +93,10 @@ class S3ImagesTest(BotoTestCase):
         if retrieved_image.state != "available":
             self.assertImageStateWait(retrieved_image, "available")
         self.images_client.deregister_image(image["image_id"])
-        #TODO(afazekas): verify deregister in  a better way
-        retrieved_image = self.images_client.get_image(image["image_id"])
-        self.assertIn(retrieved_image.state, self.valid_image_state)
+        self.assertNotIn(image["image_id"], str(
+            self.images_client.get_all_images()))
         self.cancelResourceCleanUp(image["cleanUp"])
 
-    @testtools.skip("Skipped until the Bug #1074908 and #1074904 is resolved")
     def test_register_get_deregister_ari_image(self):
         # Register and deregister ari image
         image = {"name": rand_name("ari-name-"),
@@ -130,4 +119,4 @@ class S3ImagesTest(BotoTestCase):
         self.images_client.deregister_image(image["image_id"])
         self.cancelResourceCleanUp(image["cleanUp"])
 
-#TODO(afazekas): less copy-paste style
+# TODO(afazekas): less copy-paste style

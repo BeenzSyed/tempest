@@ -17,9 +17,9 @@
 
 """Collection of utilities for parsing CLI clients output."""
 
-
-import logging
 import re
+
+from tempest.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
@@ -133,6 +133,10 @@ def table(output_lines):
     if not isinstance(output_lines, list):
         output_lines = output_lines.split('\n')
 
+    if not output_lines[-1]:
+        # skip last line if empty (just newline at the end)
+        output_lines = output_lines[:-1]
+
     for line in output_lines:
         if delimiter_line.match(line):
             columns = _table_columns(line)
@@ -154,7 +158,7 @@ def table(output_lines):
 def _table_columns(first_table_row):
     """Find column ranges in output line.
 
-    Return list of touples (start,end) for each column
+    Return list of tuples (start,end) for each column
     detected by plus (+) characters in delimiter line.
     """
     positions = []

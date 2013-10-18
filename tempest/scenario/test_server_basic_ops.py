@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.common import log as logging
 from tempest.common.utils.data_utils import rand_name
+from tempest.openstack.common import log as logging
 from tempest.scenario import manager
+from tempest.test import services
 
 LOG = logging.getLogger(__name__)
 
@@ -36,72 +37,27 @@ class TestServerBasicOps(manager.OfficialClientTest):
      * Terminate the instance
     """
 
-    def create_keypair(self):
-        kp_name = rand_name('keypair-smoke')
-        self.keypair = self.compute_client.keypairs.create(kp_name)
-        try:
-            self.assertEqual(self.keypair.id, kp_name)
-            self.set_resource('keypair', self.keypair)
-        except AttributeError:
-            self.fail("Keypair object not successfully created.")
+    def add_keypair(self):
+        self.keypair = self.create_keypair()
 
     def create_security_group(self):
         sg_name = rand_name('secgroup-smoke')
         sg_desc = sg_name + " description"
         self.secgroup = self.compute_client.security_groups.create(sg_name,
                                                                    sg_desc)
-        try:
-            self.assertEqual(self.secgroup.name, sg_name)
-            self.assertEqual(self.secgroup.description, sg_desc)
-            self.set_resource('secgroup', self.secgroup)
-        except AttributeError:
-            self.fail("SecurityGroup object not successfully created.")
+        self.assertEqual(self.secgroup.name, sg_name)
+        self.assertEqual(self.secgroup.description, sg_desc)
+        self.set_resource('secgroup', self.secgroup)
 
         # Add rules to the security group
-        rulesets = [
-            {
-                'ip_protocol': 'tcp',
-                'from_port': 1,
-                'to_port': 65535,
-                'cidr': '0.0.0.0/0',
-                'group_id': self.secgroup.id
-            },
-            {
-                'ip_protocol': 'icmp',
-                'from_port': -1,
-                'to_port': -1,
-                'cidr': '0.0.0.0/0',
-                'group_id': self.secgroup.id
-            }
-        ]
-        for ruleset in rulesets:
-            try:
-                self.compute_client.security_group_rules.create(
-                    self.secgroup.id, **ruleset)
-            except Exception:
-                self.fail("Failed to create rule in security group.")
+        self.create_loginable_secgroup_rule(secgroup_id=self.secgroup.id)
 
     def boot_instance(self):
-        i_name = rand_name('instance')
-        flavor_id = self.config.compute.flavor_ref
-        base_image_id = self.config.compute.image_ref
         create_kwargs = {
-            'key_name': self.get_resource('keypair').id
+            'key_name': self.keypair.id
         }
-        self.instance = self.compute_client.servers.create(
-            i_name, base_image_id, flavor_id, **create_kwargs)
-        try:
-            self.assertEqual(self.instance.name, i_name)
-            self.set_resource('instance', self.instance)
-        except AttributeError:
-            self.fail("Instance not successfully created.")
-
-        self.assertEqual(self.instance.status, 'BUILD')
-
-    def wait_on_active(self):
-        instance_id = self.get_resource('instance').id
-        self.status_timeout(
-            self.compute_client.servers, instance_id, 'ACTIVE')
+        instance = self.create_server(create_kwargs=create_kwargs)
+        self.set_resource('instance', instance)
 
     def pause_server(self):
         instance = self.get_resource('instance')
@@ -144,11 +100,11 @@ class TestServerBasicOps(manager.OfficialClientTest):
         instance.delete()
         self.remove_resource('instance')
 
+    @services('compute', 'network')
     def test_server_basicops(self):
-        self.create_keypair()
+        self.add_keypair()
         self.create_security_group()
         self.boot_instance()
-        self.wait_on_active()
         self.pause_server()
         self.unpause_server()
         self.suspend_server()

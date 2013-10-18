@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,9 +18,8 @@
 import time
 
 from tempest import clients
-from tempest.common import log as logging
-from tempest.common.utils.data_utils import rand_name
-from tempest import exceptions
+from tempest.common import isolated_creds
+from tempest.openstack.common import log as logging
 import tempest.test
 
 LOG = logging.getLogger(__name__)
@@ -32,10 +31,15 @@ class BaseVolumeTest(tempest.test.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.isolated_creds = []
+        super(BaseVolumeTest, cls).setUpClass()
+        cls.isolated_creds = isolated_creds.IsolatedCreds(cls.__name__)
+
+        if not cls.config.service_available.cinder:
+            skip_msg = ("%s skipped as Cinder is not available" % cls.__name__)
+            raise cls.skipException(skip_msg)
 
         if cls.config.compute.allow_tenant_isolation:
-            creds = cls._get_isolated_creds()
+            creds = cls.isolated_creds.get_primary_creds()
             username, tenant_name, password = creds
             os = clients.Manager(username=username,
                                  password=password,
@@ -55,72 +59,18 @@ class BaseVolumeTest(tempest.test.BaseTestCase):
         cls.snapshots = []
         cls.volumes = []
 
-        skip_msg = ("%s skipped as Cinder endpoint is not available" %
-                    cls.__name__)
-        try:
-            cls.volumes_client.keystone_auth(cls.os.username,
-                                             cls.os.password,
-                                             cls.os.auth_url,
-                                             cls.volumes_client.service,
-                                             cls.os.tenant_name)
-        except exceptions.EndpointNotFound:
-            cls.clear_isolated_creds()
-            raise cls.skipException(skip_msg)
-
-    @classmethod
-    def _get_identity_admin_client(cls):
-        """
-        Returns an instance of the Identity Admin API client
-        """
-        os = clients.ComputeAdminManager()
-        return os.identity_client
-
-    @classmethod
-    def _get_isolated_creds(cls):
-        """
-        Creates a new set of user/tenant/password credentials for a
-        **regular** user of the Volume API so that a test case can
-        operate in an isolated tenant container.
-        """
-        admin_client = cls._get_identity_admin_client()
-        rand_name_root = rand_name(cls.__name__)
-        if cls.isolated_creds:
-            # Main user already created. Create the alt one...
-            rand_name_root += '-alt'
-        username = rand_name_root + "-user"
-        email = rand_name_root + "@example.com"
-        tenant_name = rand_name_root + "-tenant"
-        tenant_desc = tenant_name + "-desc"
-        password = "pass"
-
-        resp, tenant = admin_client.create_tenant(name=tenant_name,
-                                                  description=tenant_desc)
-        resp, user = admin_client.create_user(username,
-                                              password,
-                                              tenant['id'],
-                                              email)
-        # Store the complete creds (including UUID ids...) for later
-        # but return just the username, tenant_name, password tuple
-        # that the various clients will use.
-        cls.isolated_creds.append((user, tenant))
-
-        return username, tenant_name, password
-
-    @classmethod
-    def clear_isolated_creds(cls):
-        if not cls.isolated_creds:
-            return
-        admin_client = cls._get_identity_admin_client()
-
-        for user, tenant in cls.isolated_creds:
-            admin_client.delete_user(user['id'])
-            admin_client.delete_tenant(tenant['id'])
+        cls.volumes_client.keystone_auth(cls.os.username,
+                                         cls.os.password,
+                                         cls.os.auth_url,
+                                         cls.volumes_client.service,
+                                         cls.os.tenant_name)
 
     @classmethod
     def tearDownClass(cls):
         cls.clear_snapshots()
         cls.clear_volumes()
-        cls.clear_isolated_creds()
+        cls.isolated_creds.clear_isolated_creds()
+        super(BaseVolumeTest, cls).tearDownClass()
 
     @classmethod
     def create_snapshot(cls, volume_id=1, **kwargs):
@@ -128,12 +78,12 @@ class BaseVolumeTest(tempest.test.BaseTestCase):
         resp, snapshot = cls.snapshots_client.create_snapshot(volume_id,
                                                               **kwargs)
         assert 200 == resp.status
+        cls.snapshots.append(snapshot)
         cls.snapshots_client.wait_for_snapshot_status(snapshot['id'],
                                                       'available')
-        cls.snapshots.append(snapshot)
         return snapshot
 
-    #NOTE(afazekas): these create_* and clean_* could be defined
+    # NOTE(afazekas): these create_* and clean_* could be defined
     # only in a single location in the source, and could be more general.
 
     @classmethod
@@ -141,8 +91,8 @@ class BaseVolumeTest(tempest.test.BaseTestCase):
         """Wrapper utility that returns a test volume."""
         resp, volume = cls.volumes_client.create_volume(size, **kwargs)
         assert 200 == resp.status
-        cls.volumes_client.wait_for_volume_status(volume['id'], 'available')
         cls.volumes.append(volume)
+        cls.volumes_client.wait_for_volume_status(volume['id'], 'available')
         return volume
 
     @classmethod
@@ -201,6 +151,13 @@ class BaseVolumeAdminTest(BaseVolumeTest):
             msg = ("Missing Volume Admin API credentials "
                    "in configuration.")
             raise cls.skipException(msg)
-
-        cls.os_adm = clients.AdminManager(interface=cls._interface)
+        if cls.config.compute.allow_tenant_isolation:
+            creds = cls.isolated_creds.get_admin_creds()
+            admin_username, admin_tenant_name, admin_password = creds
+            cls.os_adm = clients.Manager(username=admin_username,
+                                         password=admin_password,
+                                         tenant_name=admin_tenant_name,
+                                         interface=cls._interface)
+        else:
+            cls.os_adm = clients.AdminManager(interface=cls._interface)
         cls.client = cls.os_adm.volume_types_client

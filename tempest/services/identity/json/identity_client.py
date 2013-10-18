@@ -1,6 +1,20 @@
-import httplib2
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 import json
 
+from tempest.common import http
 from tempest.common.rest_client import RestClient
 from tempest import exceptions
 
@@ -125,7 +139,7 @@ class IdentityClientJSON(RestClient):
         body = json.loads(body)
         return resp, body['tenant']
 
-    def create_user(self, name, password, tenant_id, email):
+    def create_user(self, name, password, tenant_id, email, **kwargs):
         """Create a user."""
         post_body = {
             'name': name,
@@ -133,8 +147,18 @@ class IdentityClientJSON(RestClient):
             'tenantId': tenant_id,
             'email': email
         }
+        if kwargs.get('enabled') is not None:
+            post_body['enabled'] = kwargs.get('enabled')
         post_body = json.dumps({'user': post_body})
         resp, body = self.post('users', post_body, self.headers)
+        body = json.loads(body)
+        return resp, body['user']
+
+    def update_user(self, user_id, **kwargs):
+        """Updates a user."""
+        put_body = json.dumps({'user': kwargs})
+        resp, body = self.put('users/%s' % user_id, put_body,
+                              self.headers)
         body = json.loads(body)
         return resp, body['user']
 
@@ -246,7 +270,8 @@ class TokenClientJSON(RestClient):
     def request(self, method, url, headers=None, body=None):
         """A simple HTTP request interface."""
         dscv = self.config.identity.disable_ssl_certificate_validation
-        self.http_obj = httplib2.Http(disable_ssl_certificate_validation=dscv)
+        self.http_obj = http.ClosingHttp(
+            disable_ssl_certificate_validation=dscv)
         if headers is None:
             headers = {}
 

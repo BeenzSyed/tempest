@@ -4,7 +4,7 @@
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 # flake8: noqa
-# Copyright 2010 OpenStack, LLC
+# Copyright 2010 OpenStack Foundation
 # Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -56,14 +56,14 @@ def print_help():
 
     Also, make test will automatically use the virtualenv.
     """
-    print help
+    print(help)
 
 
 def main(argv):
     root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     venv = os.path.join(root, '.venv')
-    pip_requires = os.path.join(root, 'tools', 'pip-requires')
-    test_requires = os.path.join(root, 'tools', 'test-requires')
+    pip_requires = os.path.join(root, 'requirements.txt')
+    test_requires = os.path.join(root, 'test-requirements.txt')
     py_version = "python%s.%s" % (sys.version_info[0], sys.version_info[1])
     project = 'Tempest'
     install = install_venv.InstallVenv(root, venv, pip_requires, test_requires,

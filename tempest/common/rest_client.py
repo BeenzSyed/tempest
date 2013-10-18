@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
+# Copyright 2013 IBM Corp.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,38 +18,52 @@
 
 import collections
 import hashlib
-import httplib2
 import json
 from lxml import etree
 import re
 import time
 
-from tempest.common import log as logging
+from tempest.common import http
 from tempest import exceptions
+from tempest.openstack.common import log as logging
 from tempest.services.compute.xml.common import xml_to_json
 
 # redrive rate limited calls at most twice
 MAX_RECURSION_DEPTH = 2
 TOKEN_CHARS_RE = re.compile('^[-A-Za-z0-9+/=]*$')
 
+# All the successful HTTP status codes from RFC 2616
+HTTP_SUCCESS = (200, 201, 202, 203, 204, 205, 206)
+
 
 class RestClient(object):
     TYPE = "json"
     LOG = logging.getLogger(__name__)
 
-    def __init__(self, config, user, password, auth_url, tenant_name=None):
+    def __init__(self, config, user, password, auth_url, tenant_name=None,
+                 auth_version='v2'):
         self.config = config
         self.user = user
         self.password = password
         self.auth_url = auth_url
         self.tenant_name = tenant_name
+        self.auth_version = auth_version
 
         self.service = None
         self.token = None
         self.base_url = None
-        self.region = {'compute': self.config.identity.region}
+        self.region = {}
+        for cfgname in dir(self.config):
+            # Find all config.FOO.catalog_type and assume FOO is a service.
+            cfg = getattr(self.config, cfgname)
+            catalog_type = getattr(cfg, 'catalog_type', None)
+            if not catalog_type:
+                continue
+            service_region = getattr(cfg, 'region', None)
+            if not service_region:
+                service_region = self.config.identity.region
+            self.region[catalog_type] = service_region
         self.endpoint_url = 'publicURL'
-        self.strategy = self.config.identity.strategy
         self.headers = {'Content-Type': 'application/%s' % self.TYPE,
                         'Accept': 'application/%s' % self.TYPE}
         self.build_interval = config.compute.build_interval
@@ -62,23 +77,37 @@ class RestClient(object):
                                        'retry-after', 'server',
                                        'vary', 'www-authenticate'))
         dscv = self.config.identity.disable_ssl_certificate_validation
-        self.http_obj = httplib2.Http(disable_ssl_certificate_validation=dscv)
+        self.http_obj = http.ClosingHttp(
+            disable_ssl_certificate_validation=dscv)
+
+    def __str__(self):
+        STRING_LIMIT = 80
+        str_format = ("config:%s, user:%s, password:%s, "
+                      "auth_url:%s, tenant_name:%s, auth_version:%s, "
+                      "service:%s, base_url:%s, region:%s, "
+                      "endpoint_url:%s, build_interval:%s, build_timeout:%s"
+                      "\ntoken:%s..., \nheaders:%s...")
+        return str_format % (self.config, self.user, self.password,
+                             self.auth_url, self.tenant_name,
+                             self.auth_version, self.service,
+                             self.base_url, self.region, self.endpoint_url,
+                             self.build_interval, self.build_timeout,
+                             str(self.token)[0:STRING_LIMIT],
+                             str(self.headers)[0:STRING_LIMIT])
 
     def _set_auth(self):
         """
         Sets the token and base_url used in requests based on the strategy type
         """
 
-        if self.strategy == 'keystone':
-            self.token, self.base_url = self.keystone_auth(self.user,
-                                                           self.password,
-                                                           self.auth_url,
-                                                           self.service,
-                                                           self.tenant_name)
+        if self.auth_version == 'v3':
+            auth_func = self.identity_auth_v3
         else:
-            self.token, self.base_url = self.basic_auth(self.user,
-                                                        self.password,
-                                                        self.auth_url)
+            auth_func = self.keystone_auth
+
+        self.token, self.base_url = (
+            auth_func(self.user, self.password, self.auth_url,
+                      self.service, self.tenant_name))
 
     def clear_auth(self):
         """
@@ -115,7 +144,7 @@ class RestClient(object):
 
     def keystone_auth(self, user, password, auth_url, service, tenant_name):
         """
-        Provides authentication via Keystone.
+        Provides authentication via Keystone using v2 identity API.
         """
 
         # Normalize URI to ensure /tokens is in it.
@@ -143,8 +172,8 @@ class RestClient(object):
             try:
                 auth_data = json.loads(resp_body)['access']
                 token = auth_data['token']['id']
-            except Exception, e:
-                print "Failed to obtain token for user: %s" % e
+            except Exception as e:
+                print("Failed to obtain token for user: %s" % e)
                 raise
 
             mgmt_url = None
@@ -165,9 +194,108 @@ class RestClient(object):
 
         elif resp.status == 401:
             raise exceptions.AuthenticationFailure(user=user,
-                                                   password=password)
+                                                   password=password,
+                                                   tenant=tenant_name)
         raise exceptions.IdentityError('Unexpected status code {0}'.format(
             resp.status))
+
+    def identity_auth_v3(self, user, password, auth_url, service,
+                         project_name, domain_id='default'):
+        """Provides authentication using Identity API v3."""
+
+        req_url = auth_url.rstrip('/') + '/auth/tokens'
+
+        creds = {
+            "auth": {
+                "identity": {
+                    "methods": ["password"],
+                    "password": {
+                        "user": {
+                            "name": user, "password": password,
+                            "domain": {"id": domain_id}
+                        }
+                    }
+                },
+                "scope": {
+                    "project": {
+                        "domain": {"id": domain_id},
+                        "name": project_name
+                    }
+                }
+            }
+        }
+
+        headers = {'Content-Type': 'application/json'}
+        body = json.dumps(creds)
+        resp, body = self.http_obj.request(req_url, 'POST',
+                                           headers=headers, body=body)
+
+        if resp.status == 201:
+            try:
+                token = resp['x-subject-token']
+            except Exception:
+                self.LOG.exception("Failed to obtain token using V3"
+                                   " authentication (auth URL is '%s')" %
+                                   req_url)
+                raise
+
+            catalog = json.loads(body)['token']['catalog']
+
+            mgmt_url = None
+            for service_info in catalog:
+                if service_info['type'] != service:
+                    continue  # this isn't the entry for us.
+
+                endpoints = service_info['endpoints']
+
+                # Look for an endpoint in the region if configured.
+                if service in self.region:
+                    region = self.region[service]
+
+                    for ep in endpoints:
+                        if ep['region'] != region:
+                            continue
+
+                        mgmt_url = ep['url']
+                        # FIXME(blk-u): this isn't handling endpoint type
+                        # (public, internal, admin).
+                        break
+
+                if not mgmt_url:
+                    # Didn't find endpoint for region, use the first.
+
+                    ep = endpoints[0]
+                    mgmt_url = ep['url']
+                    # FIXME(blk-u): this isn't handling endpoint type
+                    # (public, internal, admin).
+
+                break
+
+            return token, mgmt_url
+
+        elif resp.status == 401:
+            raise exceptions.AuthenticationFailure(user=user,
+                                                   password=password)
+        else:
+            self.LOG.error("Failed to obtain token using V3 authentication"
+                           " (auth URL is '%s'), the response status is %s" %
+                           (req_url, resp.status))
+            raise exceptions.AuthenticationFailure(user=user,
+                                                   password=password)
+
+    def expected_success(self, expected_code, read_code):
+        assert_msg = ("This function only allowed to use for HTTP status"
+                      "codes which explicitly defined in the RFC 2616. {0}"
+                      " is not a defined Success Code!").format(expected_code)
+        assert expected_code in HTTP_SUCCESS, assert_msg
+
+        # NOTE(afazekas): the http status code above 400 is processed by
+        # the _error_checker method
+        if read_code < 400 and read_code != expected_code:
+                pattern = """Unexpected http success status code {0},
+                             The expected status code is {1}"""
+                details = pattern.format(read_code, expected_code)
+                raise exceptions.InvalidHttpSuccessCode(details)
 
     def post(self, url, body, headers):
         return self.request('POST', url, headers, body)
@@ -220,6 +348,12 @@ class RestClient(object):
         self.LOG.info("Response Status: " + status)
         headers = resp.copy()
         del headers['status']
+        if headers.get('x-compute-request-id'):
+            self.LOG.info("Nova request id: %s" %
+                          headers.pop('x-compute-request-id'))
+        elif headers.get('x-openstack-request-id'):
+            self.LOG.info("Glance request id %s" %
+                          headers.pop('x-openstack-request-id'))
         if len(headers):
             self.LOG.debug('Response Headers: ' + str(headers))
         if resp_body:
@@ -237,7 +371,7 @@ class RestClient(object):
         if (resp.status in set((204, 205, 304)) or resp.status < 200 or
                 method.upper() == 'HEAD') and resp_body:
             raise exceptions.ResponseWithNonEmptyBody(status=resp.status)
-        #NOTE(afazekas):
+        # NOTE(afazekas):
         # If the HTTP Status Code is 205
         #   'The response MUST NOT include an entity.'
         # A HTTP entity has an entity-body and an 'entity-header'.
@@ -250,7 +384,7 @@ class RestClient(object):
             0 != len(set(resp.keys()) - set(('status',)) -
                      self.response_header_lc - self.general_header_lc)):
                         raise exceptions.ResponseWithEntity()
-        #NOTE(afazekas)
+        # NOTE(afazekas)
         # Now the swift sometimes (delete not empty container)
         # returns with non json error response, we can create new rest class
         # for swift.
@@ -334,8 +468,8 @@ class RestClient(object):
         # NOTE(mtreinish): This is for compatibility with Glance and swift
         # APIs. These are the return content types that Glance api v1
         # (and occasionally swift) are using.
-        TXT_ENC = ['text/plain; charset=UTF-8', 'text/html; charset=UTF-8',
-                   'text/plain; charset=utf-8']
+        TXT_ENC = ['text/plain', 'text/plain; charset=UTF-8',
+                   'text/html; charset=UTF-8', 'text/plain; charset=utf-8']
         XML_ENC = ['application/xml', 'application/xml; charset=UTF-8']
 
         if ctype in JSON_ENC or ctype in XML_ENC:
@@ -359,7 +493,7 @@ class RestClient(object):
         if resp.status == 409:
             if parse_resp:
                 resp_body = self._parse_resp(resp_body)
-            raise exceptions.Duplicate(resp_body)
+            raise exceptions.Conflict(resp_body)
 
         if resp.status == 413:
             if parse_resp:
@@ -378,8 +512,8 @@ class RestClient(object):
             message = resp_body
             if parse_resp:
                 resp_body = self._parse_resp(resp_body)
-                #I'm seeing both computeFault and cloudServersFault come back.
-                #Will file a bug to fix, but leave as is for now.
+                # I'm seeing both computeFault and cloudServersFault come back.
+                # Will file a bug to fix, but leave as is for now.
                 if 'cloudServersFault' in resp_body:
                     message = resp_body['cloudServersFault']['message']
                 elif 'computeFault' in resp_body:
@@ -390,7 +524,7 @@ class RestClient(object):
                 elif 'message' in resp_body:
                     message = resp_body['message']
 
-            raise exceptions.ComputeFault(message)
+            raise exceptions.ServerFault(message)
 
         if resp.status >= 400:
             if parse_resp:

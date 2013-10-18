@@ -16,5 +16,4 @@
 
 from tempest.stress import cleanup
 
-
 cleanup.cleanup()

@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -48,6 +48,11 @@ class FlavorsClientXML(RestClientXML):
 
             if k == '{%s}ephemeral' % XMLNS_OS_FLV_EXT_DATA:
                 k = 'OS-FLV-EXT-DATA:ephemeral'
+
+            if k == 'extra_specs':
+                k = 'OS-FLV-WITH-EXT-SPECS:extra_specs'
+                flavor[k] = dict(v)
+                continue
 
             try:
                 v = int(v)
@@ -117,9 +122,9 @@ class FlavorsClientXML(RestClientXML):
         return self.delete("flavors/%s" % str(flavor_id), self.headers)
 
     def is_resource_deleted(self, id):
-        #Did not use get_flavor_details(id) for verification as it gives
-        #200 ok even for deleted id. LP #981263
-        #we can remove the loop here and use get by ID when bug gets sortedout
+        # Did not use get_flavor_details(id) for verification as it gives
+        # 200 ok even for deleted id. LP #981263
+        # we can remove the loop here and use get by ID when bug gets sortedout
         resp, flavors = self.list_flavors_with_detail()
         for flavor in flavors:
             if flavor['id'] == id:

@@ -21,9 +21,10 @@ import urllib
 
 from lxml import etree
 
-from tempest.common import log as logging
 from tempest.common.rest_client import RestClientXML
+from tempest.common import waiters
 from tempest import exceptions
+from tempest.openstack.common import log as logging
 from tempest.services.compute.xml.common import Document
 from tempest.services.compute.xml.common import Element
 from tempest.services.compute.xml.common import Text
@@ -46,9 +47,14 @@ def _translate_ip_xml_json(ip):
     # expanded xml namespace.
     type_ns_prefix = ('{http://docs.openstack.org/compute/ext/extended_ips/'
                       'api/v1.1}type')
+    mac_ns_prefix = ('{http://docs.openstack.org/compute/ext/extended_ips_mac'
+                     '/api/v1.1}mac_addr')
+
     if type_ns_prefix in ip:
-        ip['OS-EXT-IPS:type'] = ip[type_ns_prefix]
-        ip.pop(type_ns_prefix)
+        ip['OS-EXT-IPS:type'] = ip.pop(type_ns_prefix)
+
+    if mac_ns_prefix in ip:
+        ip['OS-EXT-IPS-MAC:mac_addr'] = ip.pop(mac_ns_prefix)
     return ip
 
 
@@ -101,19 +107,45 @@ def _translate_server_xml_to_json(xml_dom):
         json['addresses'] = json_addresses
     else:
         json = xml_to_json(xml_dom)
-    diskConfig = '{http://docs.openstack.org/compute/ext/disk_config/api/v1.1'\
-                 '}diskConfig'
+    diskConfig = ('{http://docs.openstack.org'
+                  '/compute/ext/disk_config/api/v1.1}diskConfig')
+    terminated_at = ('{http://docs.openstack.org/'
+                     'compute/ext/server_usage/api/v1.1}terminated_at')
+    launched_at = ('{http://docs.openstack.org'
+                   '/compute/ext/server_usage/api/v1.1}launched_at')
+    power_state = ('{http://docs.openstack.org'
+                   '/compute/ext/extended_status/api/v1.1}power_state')
+    availability_zone = ('{http://docs.openstack.org'
+                         '/compute/ext/extended_availability_zone/api/v2}'
+                         'availability_zone')
+    vm_state = ('{http://docs.openstack.org'
+                '/compute/ext/extended_status/api/v1.1}vm_state')
+    task_state = ('{http://docs.openstack.org'
+                  '/compute/ext/extended_status/api/v1.1}task_state')
     if diskConfig in json:
-        json['OS-DCF:diskConfig'] = json[diskConfig]
-        del json[diskConfig]
+        json['OS-DCF:diskConfig'] = json.pop(diskConfig)
+    if terminated_at in json:
+        json['OS-SRV-USG:terminated_at'] = json.pop(terminated_at)
+    if launched_at in json:
+        json['OS-SRV-USG:launched_at'] = json.pop(launched_at)
+    if power_state in json:
+        json['OS-EXT-STS:power_state'] = json.pop(power_state)
+    if availability_zone in json:
+        json['OS-EXT-AZ:availability_zone'] = json.pop(availability_zone)
+    if vm_state in json:
+        json['OS-EXT-STS:vm_state'] = json.pop(vm_state)
+    if task_state in json:
+        json['OS-EXT-STS:task_state'] = json.pop(task_state)
     return json
 
 
 class ServersClientXML(RestClientXML):
 
-    def __init__(self, config, username, password, auth_url, tenant_name=None):
+    def __init__(self, config, username, password, auth_url, tenant_name=None,
+                 auth_version='v2'):
         super(ServersClientXML, self).__init__(config, username, password,
-                                               auth_url, tenant_name)
+                                               auth_url, tenant_name,
+                                               auth_version=auth_version)
         self.service = self.config.compute.catalog_type
 
     def _parse_key_value(self, node):
@@ -160,6 +192,34 @@ class ServersClientXML(RestClientXML):
         resp, body = self.get("servers/%s" % str(server_id), self.headers)
         server = self._parse_server(etree.fromstring(body))
         return resp, server
+
+    def lock_server(self, server_id, **kwargs):
+        """Locks the given server."""
+        return self.action(server_id, 'lock', None, **kwargs)
+
+    def unlock_server(self, server_id, **kwargs):
+        """Unlocks the given server."""
+        return self.action(server_id, 'unlock', None, **kwargs)
+
+    def suspend_server(self, server_id, **kwargs):
+        """Suspends the provided server."""
+        return self.action(server_id, 'suspend', None, **kwargs)
+
+    def resume_server(self, server_id, **kwargs):
+        """Un-suspends the provided server."""
+        return self.action(server_id, 'resume', None, **kwargs)
+
+    def pause_server(self, server_id, **kwargs):
+        """Pauses the provided server."""
+        return self.action(server_id, 'pause', None, **kwargs)
+
+    def unpause_server(self, server_id, **kwargs):
+        """Un-pauses the provided server."""
+        return self.action(server_id, 'unpause', None, **kwargs)
+
+    def reset_state(self, server_id, state='error'):
+        """Resets the state of a server to active/error."""
+        return self.action(server_id, 'os-resetState', None, state=state)
 
     def delete_server(self, server_id):
         """Deletes the given server."""
@@ -289,26 +349,7 @@ class ServersClientXML(RestClientXML):
 
     def wait_for_server_status(self, server_id, status):
         """Waits for a server to reach a given status."""
-        resp, body = self.get_server(server_id)
-        server_status = body['status']
-        start = int(time.time())
-
-        while(server_status != status):
-            time.sleep(self.build_interval)
-            resp, body = self.get_server(server_id)
-            server_status = body['status']
-
-            if server_status == 'ERROR':
-                raise exceptions.BuildErrorException(server_id=server_id)
-
-            timed_out = int(time.time()) - start >= self.build_timeout
-
-            if server_status != status and timed_out:
-                message = ('Server %s failed to reach %s status within the '
-                           'required time (%s s).' %
-                           (server_id, status, self.build_timeout))
-                message += ' Current status: %s.' % server_status
-                raise exceptions.TimeoutException(message)
+        return waiters.wait_for_server_status(self, server_id, status)
 
     def wait_for_server_termination(self, server_id, ignore_error=False):
         """Waits for server to reach termination."""
@@ -332,7 +373,7 @@ class ServersClientXML(RestClientXML):
         addrs = []
         for child in node.getchildren():
             addrs.append({'version': int(child.get('version')),
-                         'addr': child.get('version')})
+                         'addr': child.get('addr')})
         return {node.get('id'): addrs}
 
     def list_addresses(self, server_id):
@@ -419,6 +460,12 @@ class ServersClientXML(RestClientXML):
     def revert_resize(self, server_id, **kwargs):
         return self.action(server_id, 'revertResize', None, **kwargs)
 
+    def stop(self, server_id, **kwargs):
+        return self.action(server_id, 'os-stop', None, **kwargs)
+
+    def start(self, server_id, **kwargs):
+        return self.action(server_id, 'os-start', None, **kwargs)
+
     def create_image(self, server_id, name):
         return self.action(server_id, 'createImage', None, name=name)
 
@@ -447,14 +494,15 @@ class ServersClientXML(RestClientXML):
         body = self._parse_key_value(etree.fromstring(body))
         return resp, body
 
-    def set_server_metadata(self, server_id, meta):
+    def set_server_metadata(self, server_id, meta, no_metadata_field=False):
         doc = Document()
-        metadata = Element("metadata")
-        doc.append(metadata)
-        for k, v in meta.items():
-            meta_element = Element("meta", key=k)
-            meta_element.append(Text(v))
-            metadata.append(meta_element)
+        if not no_metadata_field:
+            metadata = Element("metadata")
+            doc.append(metadata)
+            for k, v in meta.items():
+                meta_element = Element("meta", key=k)
+                meta_element.append(Text(v))
+                metadata.append(meta_element)
         resp, body = self.put('servers/%s/metadata' % str(server_id),
                               str(doc), self.headers)
         return resp, xml_to_json(etree.fromstring(body))
@@ -526,6 +574,13 @@ class ServersClientXML(RestClientXML):
                    'Accept': 'application/xml'}
         resp, body = self.delete('servers/%s/os-volume_attachments/%s' %
                                  (server_id, volume_id), headers)
+        return resp, body
+
+    def get_server_diagnostics(self, server_id):
+        """Get the usage data for a server."""
+        resp, body = self.get("servers/%s/diagnostics" % server_id,
+                              self.headers)
+        body = xml_to_json(etree.fromstring(body))
         return resp, body
 
     def list_instance_actions(self, server_id):

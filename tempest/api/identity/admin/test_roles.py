@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -56,7 +56,7 @@ class RolesTestJSON(base.BaseIdentityAdminTest):
 
     @attr(type='gate')
     def test_list_roles_by_unauthorized_user(self):
-        # Non admin user should not be able to list roles
+        # Non-administrator user should not be able to list roles
         self.assertRaises(exceptions.Unauthorized,
                           self.non_admin_client.list_roles)
 
@@ -73,7 +73,7 @@ class RolesTestJSON(base.BaseIdentityAdminTest):
         # Role should be created, verified, and deleted
         role_name = rand_name('role-test-')
         resp, body = self.client.create_role(role_name)
-        self.assertTrue('status' in resp)
+        self.assertIn('status', resp)
         self.assertTrue(resp['status'].startswith('2'))
         self.assertEqual(role_name, body['name'])
 
@@ -82,7 +82,7 @@ class RolesTestJSON(base.BaseIdentityAdminTest):
         self.assertTrue(any(found))
 
         resp, body = self.client.delete_role(found[0]['id'])
-        self.assertTrue('status' in resp)
+        self.assertIn('status', resp)
         self.assertTrue(resp['status'].startswith('2'))
 
         resp, body = self.client.list_roles()
@@ -100,10 +100,10 @@ class RolesTestJSON(base.BaseIdentityAdminTest):
         role_name = rand_name('role-dup-')
         resp, body = self.client.create_role(role_name)
         role1_id = body.get('id')
-        self.assertTrue('status' in resp)
+        self.assertIn('status', resp)
         self.assertTrue(resp['status'].startswith('2'))
         self.addCleanup(self.client.delete_role, role1_id)
-        self.assertRaises(exceptions.Duplicate, self.client.create_role,
+        self.assertRaises(exceptions.Conflict, self.client.create_role,
                           role_name)
 
     @attr(type='gate')
@@ -116,7 +116,8 @@ class RolesTestJSON(base.BaseIdentityAdminTest):
 
     @attr(type='gate')
     def test_assign_user_role_by_unauthorized_user(self):
-        # Non admin user should not be authorized to assign a role to user
+        # Non-administrator user should not be authorized to
+        # assign a role to user
         (user, tenant, role) = self._get_role_params()
         self.assertRaises(exceptions.Unauthorized,
                           self.non_admin_client.assign_user_role,
@@ -159,7 +160,7 @@ class RolesTestJSON(base.BaseIdentityAdminTest):
         # Duplicate user role should not get assigned
         (user, tenant, role) = self._get_role_params()
         self.client.assign_user_role(tenant['id'], user['id'], role['id'])
-        self.assertRaises(exceptions.Duplicate, self.client.assign_user_role,
+        self.assertRaises(exceptions.Conflict, self.client.assign_user_role,
                           tenant['id'], user['id'], role['id'])
 
     @attr(type='gate')
@@ -170,11 +171,12 @@ class RolesTestJSON(base.BaseIdentityAdminTest):
                                                        user['id'], role['id'])
         resp, body = self.client.remove_user_role(tenant['id'], user['id'],
                                                   user_role['id'])
-        self.assertEquals(resp['status'], '204')
+        self.assertEqual(resp['status'], '204')
 
     @attr(type='gate')
     def test_remove_user_role_by_unauthorized_user(self):
-        # Non admin user should not be authorized to remove a user's role
+        # Non-administrator user should not be authorized to
+        # remove a user's role
         (user, tenant, role) = self._get_role_params()
         resp, user_role = self.client.assign_user_role(tenant['id'],
                                                        user['id'],
@@ -237,7 +239,8 @@ class RolesTestJSON(base.BaseIdentityAdminTest):
 
     @attr(type='gate')
     def test_list_user_roles_by_unauthorized_user(self):
-        # Non admin user should not be authorized to list a user's roles
+        # Non-administrator user should not be authorized to list
+        # a user's roles
         (user, tenant, role) = self._get_role_params()
         self.client.assign_user_role(tenant['id'], user['id'], role['id'])
         self.assertRaises(exceptions.Unauthorized,

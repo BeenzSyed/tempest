@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -29,33 +29,33 @@ class ServicesTestJSON(base.BaseIdentityAdminTest):
     def test_create_get_delete_service(self):
         # GET Service
         try:
-            #Creating a Service
+            # Creating a Service
             name = rand_name('service-')
             type = rand_name('type--')
             description = rand_name('description-')
             resp, service_data = self.client.create_service(
                 name, type, description=description)
             self.assertTrue(resp['status'].startswith('2'))
-            #Verifying response body of create service
-            self.assertTrue('id' in service_data)
+            # Verifying response body of create service
+            self.assertIn('id', service_data)
             self.assertFalse(service_data['id'] is None)
-            self.assertTrue('name' in service_data)
+            self.assertIn('name', service_data)
             self.assertEqual(name, service_data['name'])
-            self.assertTrue('type' in service_data)
+            self.assertIn('type', service_data)
             self.assertEqual(type, service_data['type'])
-            self.assertTrue('description' in service_data)
+            self.assertIn('description', service_data)
             self.assertEqual(description, service_data['description'])
-            #Get service
+            # Get service
             resp, fetched_service = self.client.get_service(service_data['id'])
             self.assertTrue(resp['status'].startswith('2'))
-            #verifying the existence of service created
-            self.assertTrue('id' in fetched_service)
-            self.assertEquals(fetched_service['id'], service_data['id'])
-            self.assertTrue('name' in fetched_service)
+            # verifying the existence of service created
+            self.assertIn('id', fetched_service)
+            self.assertEqual(fetched_service['id'], service_data['id'])
+            self.assertIn('name', fetched_service)
             self.assertEqual(fetched_service['name'], service_data['name'])
-            self.assertTrue('type' in fetched_service)
+            self.assertIn('type', fetched_service)
             self.assertEqual(fetched_service['type'], service_data['type'])
-            self.assertTrue('description' in fetched_service)
+            self.assertIn('description', fetched_service)
             self.assertEqual(fetched_service['description'],
                              service_data['description'])
         finally:

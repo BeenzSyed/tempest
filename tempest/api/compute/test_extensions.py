@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -23,11 +23,11 @@ from tempest.test import attr
 class ExtensionsTestJSON(base.BaseComputeTest):
     _interface = 'json'
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_list_extensions(self):
         # List of all extensions
         resp, extensions = self.extensions_client.list_extensions()
-        self.assertTrue("extensions" in extensions)
+        self.assertIn("extensions", extensions)
         self.assertEqual(200, resp.status)
 
 

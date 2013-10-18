@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,10 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import httplib2
 import json
 import urllib
 
+from tempest.common import http
 from tempest.common.rest_client import RestClient
 from tempest import exceptions
 
@@ -84,10 +84,13 @@ class AccountClient(RestClient):
             DEFAULT:  Python-List returned in response body
         """
 
-        url = '?format=%s' % self.format
         if params:
-            url += '&%s' + urllib.urlencode(params)
+            if 'format' not in params:
+                params['format'] = self.format
+        else:
+            params = {'format': self.format}
 
+        url = '?' + urllib.urlencode(params)
         resp, body = self.get(url)
         body = json.loads(body)
         return resp, body
@@ -99,13 +102,13 @@ class AccountClientCustomizedHeader(RestClient):
         super(AccountClientCustomizedHeader, self).__init__(config, username,
                                                             password, auth_url,
                                                             tenant_name)
-        #Overwrites json-specific header encoding in RestClient
+        # Overwrites json-specific header encoding in RestClient
         self.service = self.config.object_storage.catalog_type
         self.format = 'json'
 
     def request(self, method, url, headers=None, body=None):
         """A simple HTTP request interface."""
-        self.http_obj = httplib2.Http()
+        self.http_obj = http.ClosingHttp()
         if headers is None:
             headers = {}
         if self.base_url is None:

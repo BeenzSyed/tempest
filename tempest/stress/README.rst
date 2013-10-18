@@ -1,5 +1,5 @@
 Tempest Field Guide to Stress Tests
-======================================================
+===================================
 
 Nova is a distributed, asynchronous system that is prone to race condition
 bugs. These bugs will not be easily found during
@@ -9,7 +9,7 @@ in a more controlled environment.
 
 
 Environment
-------------
+-----------
 This particular framework assumes your working Nova cluster understands Nova
 API 2.0. The stress tests can read the logs from the cluster. To enable this
 you have to provide the hostname to call 'nova-manage' and
@@ -23,14 +23,15 @@ location of the log files:
 	target_controller = "hostname or ip of controller node (for nova-manage)
 	log_check_interval = "time between checking logs for errors (default 60s)"
 
-
+To activate logging on your console please make sure that you activate `use_stderr`
+in tempest.conf or use the default `logging.conf.sample` file.
 
 Running the sample test
 -----------------------
 
 To test installation, do the following (from the tempest/stress directory):
 
-	./run_stress.py etc/sample-test.json -d 30
+	./run_stress.py -t etc/server-create-destroy-test.json -d 30
 
 This sample test tries to create a few VMs and kill a few VMs.
 

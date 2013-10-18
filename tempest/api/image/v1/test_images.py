@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -45,9 +45,8 @@ class CreateRegisterImagesTest(base.BaseV1ImageTest):
                                        disk_format='raw',
                                        is_public=True,
                                        properties=properties)
-        self.assertTrue('id' in body)
+        self.assertIn('id', body)
         image_id = body.get('id')
-        self.created_images.append(image_id)
         self.assertEqual('New Name', body.get('name'))
         self.assertTrue(body.get('is_public'))
         self.assertEqual('queued', body.get('status'))
@@ -57,7 +56,7 @@ class CreateRegisterImagesTest(base.BaseV1ImageTest):
         # Now try uploading an image file
         image_file = StringIO.StringIO(('*' * 1024))
         resp, body = self.client.update_image(image_id, data=image_file)
-        self.assertTrue('size' in body)
+        self.assertIn('size', body)
         self.assertEqual(1024, body.get('size'))
 
     @attr(type='gate')
@@ -70,9 +69,7 @@ class CreateRegisterImagesTest(base.BaseV1ImageTest):
                                                 '/someimage.iso',
                                        properties={'key1': 'value1',
                                                    'key2': 'value2'})
-        self.assertTrue('id' in body)
-        image_id = body.get('id')
-        self.created_images.append(image_id)
+        self.assertIn('id', body)
         self.assertEqual('New Remote Image', body.get('name'))
         self.assertTrue(body.get('is_public'))
         self.assertEqual('active', body.get('status'))
@@ -86,9 +83,8 @@ class CreateRegisterImagesTest(base.BaseV1ImageTest):
                                        container_format='bare',
                                        disk_format='raw', is_public=True,
                                        copy_from=self.config.images.http_image)
-        self.assertTrue('id' in body)
+        self.assertIn('id', body)
         image_id = body.get('id')
-        self.created_images.append(image_id)
         self.assertEqual('New Http Image', body.get('name'))
         self.assertTrue(body.get('is_public'))
         self.client.wait_for_image_status(image_id, 'active')
@@ -105,9 +101,7 @@ class CreateRegisterImagesTest(base.BaseV1ImageTest):
                                        is_public=True,
                                        min_ram=40,
                                        properties=properties)
-        self.assertTrue('id' in body)
-        image_id = body.get('id')
-        self.created_images.append(image_id)
+        self.assertIn('id', body)
         self.assertEqual('New_image_with_min_ram', body.get('name'))
         self.assertTrue(body.get('is_public'))
         self.assertEqual('queued', body.get('status'))
@@ -190,7 +184,7 @@ class ListImagesTest(base.BaseV1ImageTest):
         self.assertEqual(resp['status'], '200')
         image_list = map(lambda x: x['id'], images_list)
         for image_id in self.created_images:
-            self.assertTrue(image_id in image_list)
+            self.assertIn(image_id, image_list)
 
     @attr(type='gate')
     def test_index_disk_format(self):

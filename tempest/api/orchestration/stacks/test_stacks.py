@@ -12,10 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
-
 from tempest.api.orchestration import base
 from tempest.common.utils.data_utils import rand_name
+from tempest.openstack.common import log as logging
 from tempest.test import attr
 import os
 from subprocess import call
@@ -61,8 +60,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     @attr(type='smoke')
     def test_stack_list_responds(self):
-        resp, body = self.client.list_stacks()
-        stacks = body['stacks']
+        resp, stacks = self.client.list_stacks()
         self.assertEqual('200', resp['status'])
         self.assertIsInstance(stacks, list)
         stack_count = len(body['stacks'])
@@ -121,28 +119,30 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print "hi"
         stack_identifier = self.create_stack(stack_name, yaml_template)
         print stack_identifier
+        stack_id = stack_identifier.split('/')[1]
         # wait for create complete (with no resources it should be instant)
         timetaken = self.client.wait_for_stack_status(stack_identifier, 'CREATE_COMPLETE')
         print "time taken for stack to deploy: %s" %timetaken
         # stack count will increment by 1
-        resp, body = self.client.list_stacks()
+        resp, stacks = self.client.list_stacks()
         self.assertEqual(stack_count + 1, len(body['stacks']),
                          'Expected stack count to increment by 1')
+        list_ids = list([stack['id'] for stack in stacks])
+        self.assertIn(stack_id, list_ids)
         print resp
         print len(body['stacks'])
 
         # fetch the stack
-        resp, body = self.client.get_stack(stack_identifier)
-        self.assertEqual('CREATE_COMPLETE', body['stack_status'])
+        resp, stack = self.client.get_stack(stack_identifier)
+        self.assertEqual('CREATE_COMPLETE', stack['stack_status'])
 
         # fetch the stack by name
-        resp, body = self.client.get_stack(stack_name)
-        self.assertEqual('CREATE_COMPLETE', body['stack_status'])
+        resp, stack = self.client.get_stack(stack_name)
+        self.assertEqual('CREATE_COMPLETE', stack['stack_status'])
 
         # fetch the stack by id
-        stack_id = stack_identifier.split('/')[1]
-        resp, body = self.client.get_stack(stack_id)
-        self.assertEqual('CREATE_COMPLETE', body['stack_status'])
+        resp, stack = self.client.get_stack(stack_id)
+        self.assertEqual('CREATE_COMPLETE', stack['stack_status'])
 
         # delete the stack
         #resp = self.client.delete_stack(stack_identifier)

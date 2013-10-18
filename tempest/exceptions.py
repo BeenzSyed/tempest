@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -57,12 +57,20 @@ class RestClientException(TempestException,
     pass
 
 
+class InvalidHttpSuccessCode(RestClientException):
+    message = "The success code is different than the expected one"
+
+
 class NotFound(RestClientException):
     message = "Object not found"
 
 
 class Unauthorized(RestClientException):
     message = 'Unauthorized'
+
+
+class InvalidServiceTag(RestClientException):
+    message = "Invalid service tag"
 
 
 class TimeoutException(TempestException):
@@ -105,7 +113,7 @@ class UnprocessableEntity(RestClientException):
 
 class AuthenticationFailure(RestClientException):
     message = ("Authentication with user %(user)s and password "
-               "%(password)s failed")
+               "%(password)s failed auth using tenant %(tenant)s.")
 
 
 class EndpointNotFound(TempestException):
@@ -121,8 +129,8 @@ class OverLimit(TempestException):
     message = "Quota exceeded"
 
 
-class ComputeFault(TempestException):
-    message = "Got compute fault"
+class ServerFault(TempestException):
+    message = "Got server fault"
 
 
 class ImageFault(TempestException):
@@ -133,7 +141,7 @@ class IdentityError(TempestException):
     message = "Got identity error"
 
 
-class Duplicate(RestClientException):
+class Conflict(RestClientException):
     message = "An object with that identifier already exists"
 
 

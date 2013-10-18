@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -36,6 +36,9 @@ class VolumesTestJSON(base.BaseComputeTest):
     def setUpClass(cls):
         super(VolumesTestJSON, cls).setUpClass()
         cls.client = cls.volumes_extensions_client
+        if not cls.config.service_available.cinder:
+            skip_msg = ("%s skipped as Cinder is not available" % cls.__name__)
+            raise cls.skipException(skip_msg)
         # Create 3 Volumes
         cls.volume_list = []
         cls.volume_id_list = []
@@ -94,10 +97,10 @@ class VolumesTestJSON(base.BaseComputeTest):
     @attr(type='gate')
     def test_volume_list_with_details(self):
         # Should return the list of Volumes with details
-        #Fetch all Volumes
+        # Fetch all Volumes
         resp, fetched_list = self.client.list_volumes_with_detail()
         self.assertEqual(200, resp.status)
-        #Now check if all the Volumes created in setup are in fetched list
+        # Now check if all the Volumes created in setup are in fetched list
         missing_volumes = [
             v for v in self.volume_list if v not in fetched_list
         ]

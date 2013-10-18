@@ -56,6 +56,30 @@ class VolumesClientXML(RestClientXML):
                 vol[tag] = xml_to_json(child)
         return vol
 
+    def get_attachment_from_volume(self, volume):
+        """Return the element 'attachment' from input volumes."""
+        return volume['attachments']['attachment']
+
+    def _check_if_bootable(self, volume):
+        """
+        Check if the volume is bootable, also change the value
+        of 'bootable' from string to boolean.
+        """
+
+        # NOTE(jdg): Version 1 of Cinder API uses lc strings
+        # We should consider being explicit in this check to
+        # avoid introducing bugs like: LP #1227837
+
+        if volume['bootable'].lower() == 'true':
+            volume['bootable'] = True
+        elif volume['bootable'].lower() == 'false':
+            volume['bootable'] = False
+        else:
+            raise ValueError(
+                'bootable flag is supposed to be either True or False,'
+                'it is %s' % volume['bootable'])
+        return volume
+
     def list_volumes(self, params=None):
         """List all the volumes created."""
         url = 'volumes'
@@ -68,6 +92,8 @@ class VolumesClientXML(RestClientXML):
         volumes = []
         if body is not None:
             volumes += [self._parse_volume(vol) for vol in list(body)]
+        for v in volumes:
+            v = self._check_if_bootable(v)
         return resp, volumes
 
     def list_volumes_with_detail(self, params=None):
@@ -82,14 +108,17 @@ class VolumesClientXML(RestClientXML):
         volumes = []
         if body is not None:
             volumes += [self._parse_volume(vol) for vol in list(body)]
+        for v in volumes:
+            v = self._check_if_bootable(v)
         return resp, volumes
 
     def get_volume(self, volume_id):
         """Returns the details of a single volume."""
         url = "volumes/%s" % str(volume_id)
         resp, body = self.get(url, self.headers)
-        body = etree.fromstring(body)
-        return resp, self._parse_volume(body)
+        body = self._parse_volume(etree.fromstring(body))
+        body = self._check_if_bootable(body)
+        return resp, body
 
     def create_volume(self, size, **kwargs):
         """Creates a new Volume.
@@ -103,7 +132,7 @@ class VolumesClientXML(RestClientXML):
         :param imageRef: When specified the volume is created from this
                          image
         """
-        #NOTE(afazekas): it should use a volume namespace
+        # NOTE(afazekas): it should use a volume namespace
         volume = Element("volume", xmlns=XMLNS_11, size=size)
 
         if 'metadata' in kwargs:
@@ -124,6 +153,16 @@ class VolumesClientXML(RestClientXML):
 
         resp, body = self.post('volumes', str(Document(volume)),
                                self.headers)
+        body = xml_to_json(etree.fromstring(body))
+        return resp, body
+
+    def update_volume(self, volume_id, **kwargs):
+        """Updates the Specified Volume."""
+        put_body = Element("volume", xmlns=XMLNS_11, **kwargs)
+
+        resp, body = self.put('volumes/%s' % volume_id,
+                              str(Document(put_body)),
+                              self.headers)
         body = xml_to_json(etree.fromstring(body))
         return resp, body
 
@@ -157,3 +196,34 @@ class VolumesClientXML(RestClientXML):
         except exceptions.NotFound:
             return True
         return False
+
+    def attach_volume(self, volume_id, instance_uuid, mountpoint):
+        """Attaches a volume to a given instance on a given mountpoint."""
+        post_body = Element("os-attach",
+                            instance_uuid=instance_uuid,
+                            mountpoint=mountpoint
+                            )
+        url = 'volumes/%s/action' % str(volume_id)
+        resp, body = self.post(url, str(Document(post_body)), self.headers)
+        if body:
+            body = xml_to_json(etree.fromstring(body))
+        return resp, body
+
+    def detach_volume(self, volume_id):
+        """Detaches a volume from an instance."""
+        post_body = Element("os-detach")
+        url = 'volumes/%s/action' % str(volume_id)
+        resp, body = self.post(url, str(Document(post_body)), self.headers)
+        if body:
+            body = xml_to_json(etree.fromstring(body))
+        return resp, body
+
+    def upload_volume(self, volume_id, image_name, disk_format):
+        """Uploads a volume in Glance."""
+        post_body = Element("os-volume_upload_image",
+                            image_name=image_name,
+                            disk_format=disk_format)
+        url = 'volumes/%s/action' % str(volume_id)
+        resp, body = self.post(url, str(Document(post_body)), self.headers)
+        volume = xml_to_json(etree.fromstring(body))
+        return resp, volume

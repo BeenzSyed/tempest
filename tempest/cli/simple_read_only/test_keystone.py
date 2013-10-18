@@ -15,11 +15,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
 import re
 import subprocess
 
+from oslo.config import cfg
+
 import tempest.cli
+from tempest.openstack.common import log as logging
+
+CONF = cfg.CONF
 
 
 LOG = logging.getLogger(__name__)
@@ -42,7 +46,15 @@ class SimpleReadOnlyKeystoneClientTest(tempest.cli.ClientTestBase):
         out = self.keystone('catalog')
         catalog = self.parser.details_multiple(out, with_label=True)
         for svc in catalog:
-            self.assertTrue(svc['__label'].startswith('Service:'))
+            if svc.get('__label'):
+                self.assertTrue(svc['__label'].startswith('Service:'),
+                                msg=('Invalid beginning of service block: '
+                                     '%s' % svc['__label']))
+            # check that region and publicURL exists. One might also
+            # check for adminURL and internalURL. id seems to be optional
+            # and is missing in the catalog backend
+            self.assertIn('publicURL', svc.keys())
+            self.assertIn('region', svc.keys())
 
     def test_admin_endpoint_list(self):
         out = self.keystone('endpoint-list')
@@ -90,7 +102,7 @@ class SimpleReadOnlyKeystoneClientTest(tempest.cli.ClientTestBase):
     def test_admin_help(self):
         help_text = self.keystone('help')
         lines = help_text.split('\n')
-        self.assertTrue(lines[0].startswith('usage: keystone'))
+        self.assertFirstLineStartsWith(lines, 'usage: keystone')
 
         commands = []
         cmds_start = lines.index('Positional arguments:')
@@ -107,3 +119,14 @@ class SimpleReadOnlyKeystoneClientTest(tempest.cli.ClientTestBase):
 
     def test_admin_bashcompletion(self):
         self.keystone('bash-completion')
+
+    # Optional arguments:
+
+    def test_admin_version(self):
+        self.keystone('', flags='--version')
+
+    def test_admin_debug_list(self):
+        self.keystone('catalog', flags='--debug')
+
+    def test_admin_timeout(self):
+        self.keystone('catalog', flags='--timeout %d' % CONF.cli.timeout)

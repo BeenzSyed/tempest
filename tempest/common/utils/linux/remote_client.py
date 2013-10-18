@@ -1,3 +1,17 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 import re
 import time
 
@@ -10,7 +24,7 @@ from tempest.exceptions import SSHTimeout
 
 class RemoteClient():
 
-    #Note(afazekas): It should always get an address instead of server
+    # NOTE(afazekas): It should always get an address instead of server
     def __init__(self, server, username, password=None, pkey=None):
         ssh_timeout = TempestConfig().compute.ssh_timeout
         network = TempestConfig().compute.network_for_ssh
@@ -38,12 +52,12 @@ class RemoteClient():
         return self.ssh_client.test_connection_auth()
 
     def hostname_equals_servername(self, expected_hostname):
-        # Get hostname using command "hostname"
+        # Get host name using command "hostname"
         actual_hostname = self.ssh_client.exec_command("hostname").rstrip()
         return expected_hostname == actual_hostname
 
     def get_files(self, path):
-        # Return a list of comma seperated files
+        # Return a list of comma separated files
         command = "ls -m " + path
         return self.ssh_client.exec_command(command).rstrip('\n').split(', ')
 

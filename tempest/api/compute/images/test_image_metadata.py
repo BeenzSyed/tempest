@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -27,6 +27,10 @@ class ImagesMetadataTestJSON(base.BaseComputeTest):
     @classmethod
     def setUpClass(cls):
         super(ImagesMetadataTestJSON, cls).setUpClass()
+        if not cls.config.service_available.glance:
+            skip_msg = ("%s skipped as glance is not available" % cls.__name__)
+            raise cls.skipException(skip_msg)
+
         cls.servers_client = cls.servers_client
         cls.client = cls.images_client
 
@@ -38,7 +42,6 @@ class ImagesMetadataTestJSON(base.BaseComputeTest):
         resp, _ = cls.client.create_image(cls.server_id, name, {})
         cls.image_id = resp['location'].rsplit('/', 1)[1]
 
-        cls.client.wait_for_image_resp_code(cls.image_id, 200)
         cls.client.wait_for_image_status(cls.image_id, 'ACTIVE')
 
     @classmethod
@@ -85,7 +88,7 @@ class ImagesMetadataTestJSON(base.BaseComputeTest):
         # The value for a specific metadata key should be returned
         resp, meta = self.client.get_image_metadata_item(self.image_id,
                                                          'key2')
-        self.assertTrue('value2', meta['key2'])
+        self.assertEqual('value2', meta['key2'])
 
     @attr(type='gate')
     def test_set_image_metadata_item(self):
@@ -116,20 +119,20 @@ class ImagesMetadataTestJSON(base.BaseComputeTest):
 
     @attr(type=['negative', 'gate'])
     def test_update_nonexistant_image_metadata(self):
-        # Negative test:An update should not happen for a nonexistant image
+        # Negative test:An update should not happen for a non-existent image
         meta = {'key1': 'alt1', 'key2': 'alt2'}
         self.assertRaises(exceptions.NotFound,
                           self.client.update_image_metadata, 999, meta)
 
     @attr(type=['negative', 'gate'])
     def test_get_nonexistant_image_metadata_item(self):
-        # Negative test: Get on nonexistant image should not happen
+        # Negative test: Get on non-existent image should not happen
         self.assertRaises(exceptions.NotFound,
                           self.client.get_image_metadata_item, 999, 'key2')
 
     @attr(type=['negative', 'gate'])
     def test_set_nonexistant_image_metadata(self):
-        # Negative test: Metadata should not be set to a nonexistant image
+        # Negative test: Metadata should not be set to a non-existent image
         meta = {'key1': 'alt1', 'key2': 'alt2'}
         self.assertRaises(exceptions.NotFound, self.client.set_image_metadata,
                           999, meta)
@@ -145,8 +148,8 @@ class ImagesMetadataTestJSON(base.BaseComputeTest):
 
     @attr(type=['negative', 'gate'])
     def test_delete_nonexistant_image_metadata_item(self):
-        # Negative test: Shouldnt be able to delete metadata
-        # item from nonexistant image
+        # Negative test: Shouldn't be able to delete metadata
+        # item from non-existent image
         self.assertRaises(exceptions.NotFound,
                           self.client.delete_image_metadata_item, 999, 'key1')
 

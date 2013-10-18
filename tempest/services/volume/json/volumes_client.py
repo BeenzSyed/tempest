@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -35,6 +35,10 @@ class VolumesClientJSON(RestClient):
         self.service = self.config.volume.catalog_type
         self.build_interval = self.config.volume.build_interval
         self.build_timeout = self.config.volume.build_timeout
+
+    def get_attachment_from_volume(self, volume):
+        """Return the element 'attachment' from input volumes."""
+        return volume['attachments'][0]
 
     def list_volumes(self, params=None):
         """List all the volumes created."""
@@ -81,9 +85,29 @@ class VolumesClientJSON(RestClient):
         body = json.loads(body)
         return resp, body['volume']
 
+    def update_volume(self, volume_id, **kwargs):
+        """Updates the Specified Volume."""
+        put_body = json.dumps({'volume': kwargs})
+        resp, body = self.put('volumes/%s' % volume_id, put_body,
+                              self.headers)
+        body = json.loads(body)
+        return resp, body['volume']
+
     def delete_volume(self, volume_id):
         """Deletes the Specified Volume."""
         return self.delete("volumes/%s" % str(volume_id))
+
+    def upload_volume(self, volume_id, image_name, disk_format):
+        """Uploads a volume in Glance."""
+        post_body = {
+            'image_name': image_name,
+            'disk_format': disk_format
+        }
+        post_body = json.dumps({'os-volume_upload_image': post_body})
+        url = 'volumes/%s/action' % (volume_id)
+        resp, body = self.post(url, post_body, self.headers)
+        body = json.loads(body)
+        return resp, body['os-volume_upload_image']
 
     def attach_volume(self, volume_id, instance_uuid, mountpoint):
         """Attaches a volume to a given instance on a given mountpoint."""

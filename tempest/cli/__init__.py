@@ -15,13 +15,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
+import os
 import shlex
 import subprocess
 
 from oslo.config import cfg
 
 import tempest.cli.output_parser
+from tempest.openstack.common import log as logging
 import tempest.test
 
 
@@ -34,6 +35,9 @@ cli_opts = [
     cfg.StrOpt('cli_dir',
                default='/usr/local/bin/',
                help="directory where python client binaries are located"),
+    cfg.IntOpt('timeout',
+               default=15,
+               help="Number of seconds to wait on a CLI timeout"),
 ]
 
 CONF = cfg.CONF
@@ -76,42 +80,53 @@ class ClientTestBase(tempest.test.BaseTestCase):
         return self.cmd_with_auth(
             'glance', action, flags, params, admin, fail_ok)
 
+    def cinder(self, action, flags='', params='', admin=True, fail_ok=False):
+        """Executes cinder command for the given action."""
+        return self.cmd_with_auth(
+            'cinder', action, flags, params, admin, fail_ok)
+
+    def neutron(self, action, flags='', params='', admin=True, fail_ok=False):
+        """Executes neutron command for the given action."""
+        return self.cmd_with_auth(
+            'neutron', action, flags, params, admin, fail_ok)
+
     def cmd_with_auth(self, cmd, action, flags='', params='',
                       admin=True, fail_ok=False):
         """Executes given command with auth attributes appended."""
-        #TODO(jogo) make admin=False work
+        # TODO(jogo) make admin=False work
         creds = ('--os-username %s --os-tenant-name %s --os-password %s '
-                 '--os-auth-url %s ' % (self.identity.admin_username,
-                 self.identity.admin_tenant_name, self.identity.admin_password,
-                 self.identity.uri))
+                 '--os-auth-url %s ' %
+                 (self.identity.admin_username,
+                  self.identity.admin_tenant_name,
+                  self.identity.admin_password,
+                  self.identity.uri))
         flags = creds + ' ' + flags
         return self.cmd(cmd, action, flags, params, fail_ok)
-
-    def check_output(self, cmd, **kwargs):
-        # substitutes subprocess.check_output which is not in python2.6
-        kwargs['stdout'] = subprocess.PIPE
-        proc = subprocess.Popen(cmd, **kwargs)
-        output = proc.communicate()[0]
-        if proc.returncode != 0:
-            raise CommandFailed(proc.returncode, cmd, output)
-        return output
 
     def cmd(self, cmd, action, flags='', params='', fail_ok=False,
             merge_stderr=False):
         """Executes specified command for the given action."""
-        cmd = ' '.join([CONF.cli.cli_dir + cmd,
+        cmd = ' '.join([os.path.join(CONF.cli.cli_dir, cmd),
                         flags, action, params])
         LOG.info("running: '%s'" % cmd)
+        cmd_str = cmd
         cmd = shlex.split(cmd)
+        result = ''
+        result_err = ''
         try:
-            if merge_stderr:
-                result = self.check_output(cmd, stderr=subprocess.STDOUT)
-            else:
-                with open('/dev/null', 'w') as devnull:
-                    result = self.check_output(cmd, stderr=devnull)
-        except subprocess.CalledProcessError, e:
-            LOG.error("command output:\n%s" % e.output)
-            raise
+            stdout = subprocess.PIPE
+            stderr = subprocess.STDOUT if merge_stderr else subprocess.PIPE
+            proc = subprocess.Popen(
+                cmd, stdout=stdout, stderr=stderr)
+            result, result_err = proc.communicate()
+            if not fail_ok and proc.returncode != 0:
+                raise CommandFailed(proc.returncode,
+                                    cmd,
+                                    result)
+        finally:
+            LOG.debug('output of %s:\n%s' % (cmd_str, result))
+            if not merge_stderr and result_err:
+                LOG.debug('error output of %s:\n%s' % (cmd_str, result_err))
         return result
 
     def assertTableStruct(self, items, field_names):
@@ -119,6 +134,11 @@ class ClientTestBase(tempest.test.BaseTestCase):
         for item in items:
             for field in field_names:
                 self.assertIn(field, item)
+
+    def assertFirstLineStartsWith(self, lines, beginning):
+        self.assertTrue(lines[0].startswith(beginning),
+                        msg=('Beginning of first line has invalid content: %s'
+                             % lines[:3]))
 
 
 class CommandFailed(subprocess.CalledProcessError):

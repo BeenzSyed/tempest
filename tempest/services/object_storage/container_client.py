@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -26,7 +26,7 @@ class ContainerClient(RestClient):
         super(ContainerClient, self).__init__(config, username, password,
                                               auth_url, tenant_name)
 
-        #Overwrites json-specific header encoding in RestClient
+        # Overwrites json-specific header encoding in RestClient
         self.headers = {}
         self.service = self.config.object_storage.catalog_type
         self.format = 'json'
@@ -35,7 +35,7 @@ class ContainerClient(RestClient):
                          metadata_prefix='X-Container-Meta-'):
         """
            Creates a container, with optional metadata passed in as a
-           dictonary
+           dictionary
         """
         url = str(container_name)
         headers = {}
@@ -92,10 +92,10 @@ class ContainerClient(RestClient):
         """
             Returns complete list of all objects in the container, even if
             item count is beyond 10,000 item listing limit.
-            Does not require any paramaters aside from container name.
+            Does not require any parameters aside from container name.
         """
-        #TODO(dwalleck):  Rewite using json format to avoid newlines at end of
-        #obj names. Set limit to API limit - 1 (max returned items = 9999)
+        # TODO(dwalleck): Rewrite using json format to avoid newlines at end of
+        # obj names. Set limit to API limit - 1 (max returned items = 9999)
         limit = 9999
         if params is not None:
             if 'limit' in params:
@@ -114,16 +114,16 @@ class ContainerClient(RestClient):
 
         if len(objlist) >= limit:
 
-            #Increment marker
+            # Increment marker
             marker = objlist[len(objlist) - 1]
 
-            #Get the next chunk of the list
+            # Get the next chunk of the list
             objlist.extend(_list_all_container_objects(container,
                                                       params={'marker': marker,
                                                               'limit': limit}))
             return objlist
         else:
-            #Return final, complete list
+            # Return final, complete list
             return objlist"""
 
     def list_container_contents(self, container, params=None):

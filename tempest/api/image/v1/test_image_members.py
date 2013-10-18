@@ -18,6 +18,8 @@ import cStringIO as StringIO
 
 from tempest.api.image import base
 from tempest import clients
+from tempest.common.utils.data_utils import rand_name
+from tempest import exceptions
 from tempest.test import attr
 
 
@@ -26,47 +28,52 @@ class ImageMembersTests(base.BaseV1ImageTest):
     @classmethod
     def setUpClass(cls):
         super(ImageMembersTests, cls).setUpClass()
-        admin = clients.AdminManager(interface='json')
-        cls.admin_client = admin.identity_client
-        cls.tenants = cls._get_tenants()
+        if cls.config.compute.allow_tenant_isolation:
+            creds = cls.isolated_creds.get_alt_creds()
+            username, tenant_name, password = creds
+            cls.os_alt = clients.Manager(username=username,
+                                         password=password,
+                                         tenant_name=tenant_name)
+        else:
+            cls.os_alt = clients.AltManager()
 
-    @classmethod
-    def _get_tenants(cls):
-        resp, tenants = cls.admin_client.list_tenants()
-        tenants = map(lambda x: x['id'], tenants)
-        return tenants
+        alt_tenant_name = cls.os_alt.tenant_name
+        identity_client = cls._get_identity_admin_client()
+        _, tenants = identity_client.list_tenants()
+        cls.alt_tenant_id = [tnt['id'] for tnt in tenants if tnt['name'] ==
+                             alt_tenant_name][0]
 
     def _create_image(self):
         image_file = StringIO.StringIO('*' * 1024)
         resp, image = self.create_image(container_format='bare',
                                         disk_format='raw',
-                                        is_public=True,
+                                        is_public=False,
                                         data=image_file)
-        self.assertEquals(201, resp.status)
+        self.assertEqual(201, resp.status)
         image_id = image['id']
         return image_id
 
     @attr(type='gate')
     def test_add_image_member(self):
         image = self._create_image()
-        resp = self.client.add_member(self.tenants[0], image)
-        self.assertEquals(204, resp.status)
+        resp = self.client.add_member(self.alt_tenant_id, image)
+        self.assertEqual(204, resp.status)
         resp, body = self.client.get_image_membership(image)
-        self.assertEquals(200, resp.status)
+        self.assertEqual(200, resp.status)
         members = body['members']
         members = map(lambda x: x['member_id'], members)
-        self.assertIn(self.tenants[0], members)
+        self.assertIn(self.alt_tenant_id, members)
 
     @attr(type='gate')
     def test_get_shared_images(self):
         image = self._create_image()
-        resp = self.client.add_member(self.tenants[0], image)
-        self.assertEquals(204, resp.status)
+        resp = self.client.add_member(self.alt_tenant_id, image)
+        self.assertEqual(204, resp.status)
         share_image = self._create_image()
-        resp = self.client.add_member(self.tenants[0], share_image)
-        self.assertEquals(204, resp.status)
-        resp, body = self.client.get_shared_images(self.tenants[0])
-        self.assertEquals(200, resp.status)
+        resp = self.client.add_member(self.alt_tenant_id, share_image)
+        self.assertEqual(204, resp.status)
+        resp, body = self.client.get_shared_images(self.alt_tenant_id)
+        self.assertEqual(200, resp.status)
         images = body['shared_images']
         images = map(lambda x: x['image_id'], images)
         self.assertIn(share_image, images)
@@ -75,11 +82,33 @@ class ImageMembersTests(base.BaseV1ImageTest):
     @attr(type='gate')
     def test_remove_member(self):
         image_id = self._create_image()
-        resp = self.client.add_member(self.tenants[0], image_id)
-        self.assertEquals(204, resp.status)
-        resp = self.client.delete_member(self.tenants[0], image_id)
-        self.assertEquals(204, resp.status)
+        resp = self.client.add_member(self.alt_tenant_id, image_id)
+        self.assertEqual(204, resp.status)
+        resp = self.client.delete_member(self.alt_tenant_id, image_id)
+        self.assertEqual(204, resp.status)
         resp, body = self.client.get_image_membership(image_id)
-        self.assertEquals(200, resp.status)
+        self.assertEqual(200, resp.status)
         members = body['members']
-        self.assertEquals(0, len(members))
+        self.assertEqual(0, len(members), str(members))
+
+    @attr(type=['negative', 'gate'])
+    def test_add_member_with_non_existing_image(self):
+        # Add member with non existing image.
+        non_exist_image = rand_name('image_')
+        self.assertRaises(exceptions.NotFound, self.client.add_member,
+                          self.alt_tenant_id, non_exist_image)
+
+    @attr(type=['negative', 'gate'])
+    def test_delete_member_with_non_existing_image(self):
+        # Delete member with non existing image.
+        non_exist_image = rand_name('image_')
+        self.assertRaises(exceptions.NotFound, self.client.delete_member,
+                          self.alt_tenant_id, non_exist_image)
+
+    @attr(type=['negative', 'gate'])
+    def test_delete_member_with_non_existing_tenant(self):
+        # Delete member with non existing tenant.
+        image_id = self._create_image()
+        non_exist_tenant = rand_name('tenant_')
+        self.assertRaises(exceptions.NotFound, self.client.delete_member,
+                          non_exist_tenant, image_id)

@@ -1,4 +1,4 @@
-# Copyright 2012 OpenStack LLC.
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -34,9 +34,8 @@ if not hasattr(urlparse, 'parse_qsl'):
 
 import OpenSSL
 
-from tempest.common import log as logging
 from tempest import exceptions as exc
-
+from tempest.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 USER_AGENT = 'tempest'
@@ -125,11 +124,12 @@ class HTTPClient(object):
                 conn.request(method, conn_url, **kwargs)
             resp = conn.getresponse()
         except socket.gaierror as e:
-            message = "Error finding address for %(url)s: %(e)s" % locals()
+            message = ("Error finding address for %(url)s: %(e)s" %
+                       {'url': url, 'e': e})
             raise exc.EndpointNotFound(message)
         except (socket.error, socket.timeout) as e:
-            endpoint = self.endpoint
-            message = "Error communicating with %(endpoint)s %(e)s" % locals()
+            message = ("Error communicating with %(endpoint)s %(e)s" %
+                       {'endpoint': self.endpoint, 'e': e})
             raise exc.TimeoutException(message)
 
         body_iter = ResponseBodyIterator(resp)
@@ -304,14 +304,14 @@ class VerifiedHTTPSConnection(httplib.HTTPSConnection):
         if self.cert_file:
             try:
                 self.context.use_certificate_file(self.cert_file)
-            except Exception, e:
+            except Exception as e:
                 msg = 'Unable to load cert from "%s" %s' % (self.cert_file, e)
                 raise exc.SSLConfigurationError(msg)
             if self.key_file is None:
                 # We support having key and cert in same file
                 try:
                     self.context.use_privatekey_file(self.cert_file)
-                except Exception, e:
+                except Exception as e:
                     msg = ('No key file specified and unable to load key '
                            'from "%s" %s' % (self.cert_file, e))
                     raise exc.SSLConfigurationError(msg)
@@ -319,14 +319,14 @@ class VerifiedHTTPSConnection(httplib.HTTPSConnection):
         if self.key_file:
             try:
                 self.context.use_privatekey_file(self.key_file)
-            except Exception, e:
+            except Exception as e:
                 msg = 'Unable to load key from "%s" %s' % (self.key_file, e)
                 raise exc.SSLConfigurationError(msg)
 
         if self.cacert:
             try:
                 self.context.load_verify_locations(self.cacert)
-            except Exception, e:
+            except Exception as e:
                 msg = 'Unable to load CA from "%s"' % (self.cacert, e)
                 raise exc.SSLConfigurationError(msg)
         else:

@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # Copyright 2013 Hewlett-Packard Development Company, L.P.
 # All Rights Reserved.
 #
@@ -21,14 +21,17 @@ import time
 import urllib
 
 from tempest.common.rest_client import RestClient
+from tempest.common import waiters
 from tempest import exceptions
 
 
 class ServersClientJSON(RestClient):
 
-    def __init__(self, config, username, password, auth_url, tenant_name=None):
+    def __init__(self, config, username, password, auth_url, tenant_name=None,
+                 auth_version='v2'):
         super(ServersClientJSON, self).__init__(config, username, password,
-                                                auth_url, tenant_name)
+                                                auth_url, tenant_name,
+                                                auth_version=auth_version)
         self.service = self.config.compute.catalog_type
 
     def create_server(self, name, image_ref, flavor_ref, **kwargs):
@@ -150,26 +153,7 @@ class ServersClientJSON(RestClient):
 
     def wait_for_server_status(self, server_id, status):
         """Waits for a server to reach a given status."""
-        resp, body = self.get_server(server_id)
-        server_status = body['status']
-        start = int(time.time())
-
-        while(server_status != status):
-            time.sleep(self.build_interval)
-            resp, body = self.get_server(server_id)
-            server_status = body['status']
-
-            if server_status == 'ERROR':
-                raise exceptions.BuildErrorException(server_id=server_id)
-
-            timed_out = int(time.time()) - start >= self.build_timeout
-
-            if server_status != status and timed_out:
-                message = ('Server %s failed to reach %s status within the '
-                           'required time (%s s).' %
-                           (server_id, status, self.build_timeout))
-                message += ' Current status: %s.' % server_status
-                raise exceptions.TimeoutException(message)
+        return waiters.wait_for_server_status(self, server_id, status)
 
     def wait_for_server_termination(self, server_id, ignore_error=False):
         """Waits for server to reach termination."""
@@ -252,8 +236,11 @@ class ServersClientJSON(RestClient):
         body = json.loads(body)
         return resp, body['metadata']
 
-    def set_server_metadata(self, server_id, meta):
-        post_body = json.dumps({'metadata': meta})
+    def set_server_metadata(self, server_id, meta, no_metadata_field=False):
+        if no_metadata_field:
+            post_body = ""
+        else:
+            post_body = json.dumps({'metadata': meta})
         resp, body = self.put('servers/%s/metadata' % str(server_id),
                               post_body, self.headers)
         body = json.loads(body)
@@ -330,15 +317,6 @@ class ServersClientJSON(RestClient):
                                req_body, self.headers)
         return resp, body
 
-    def list_servers_for_all_tenants(self):
-
-        url = self.base_url + '/servers?all_tenants=1'
-        resp = self.requests.get(url)
-        resp, body = self.get('servers', self.headers)
-
-        body = json.loads(body)
-        return resp, body['servers']
-
     def migrate_server(self, server_id, **kwargs):
         """Migrates a server to a new host."""
         return self.action(server_id, 'migrate', None, **kwargs)
@@ -390,6 +368,11 @@ class ServersClientJSON(RestClient):
     def unrescue_server(self, server_id):
         """Unrescue the provided server."""
         return self.action(server_id, 'unrescue', None)
+
+    def get_server_diagnostics(self, server_id):
+        """Get the usage data for a server."""
+        resp, body = self.get("servers/%s/diagnostics" % str(server_id))
+        return resp, json.loads(body)
 
     def list_instance_actions(self, server_id):
         """List the provided server action."""

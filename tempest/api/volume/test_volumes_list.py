@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
+# Copyright 2013 IBM Corp.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,8 +17,12 @@
 #    under the License.
 
 from tempest.api.volume import base
+from tempest.common.utils.data_utils import rand_int_id
 from tempest.common.utils.data_utils import rand_name
+from tempest.openstack.common import log as logging
 from tempest.test import attr
+
+LOG = logging.getLogger(__name__)
 
 
 class VolumesListTest(base.BaseVolumeTest):
@@ -27,10 +32,23 @@ class VolumesListTest(base.BaseVolumeTest):
     ensure that the backing file for the volume group that Nova uses
     has space for at least 3 1G volumes!
     If you are running a Devstack environment, ensure that the
-    VOLUME_BACKING_FILE_SIZE is atleast 4G in your localrc
+    VOLUME_BACKING_FILE_SIZE is at least 4G in your localrc
     """
 
     _interface = 'json'
+
+    def assertVolumesIn(self, fetched_list, expected_list):
+        missing_vols = [v for v in expected_list if v not in fetched_list]
+        if len(missing_vols) == 0:
+            return
+
+        def str_vol(vol):
+            return "%s:%s" % (vol['id'], vol['display_name'])
+
+        raw_msg = "Could not find volumes %s in expected list %s; fetched %s"
+        self.fail(raw_msg % ([str_vol(v) for v in missing_vols],
+                             [str_vol(v) for v in expected_list],
+                             [str_vol(v) for v in fetched_list]))
 
     @classmethod
     def setUpClass(cls):
@@ -51,22 +69,17 @@ class VolumesListTest(base.BaseVolumeTest):
                 resp, volume = cls.client.get_volume(volume['id'])
                 cls.volume_list.append(volume)
                 cls.volume_id_list.append(volume['id'])
-            except Exception:
+            except Exception as exc:
+                LOG.exception(exc)
                 if cls.volume_list:
                     # We could not create all the volumes, though we were able
                     # to create *some* of the volumes. This is typically
                     # because the backing file size of the volume group is
-                    # too small. So, here, we clean up whatever we did manage
-                    # to create and raise a SkipTest
+                    # too small.
                     for volid in cls.volume_id_list:
                         cls.client.delete_volume(volid)
                         cls.client.wait_for_resource_deletion(volid)
-                    msg = ("Failed to create ALL necessary volumes to run "
-                           "test. This typically means that the backing file "
-                           "size of the nova-volumes group is too small to "
-                           "create the 3 volumes needed by this test case")
-                    raise cls.skipException(msg)
-                raise
+                raise exc
 
     @classmethod
     def tearDownClass(cls):
@@ -76,18 +89,13 @@ class VolumesListTest(base.BaseVolumeTest):
             cls.client.wait_for_resource_deletion(volid)
         super(VolumesListTest, cls).tearDownClass()
 
-    @attr(type=['smoke'])
+    @attr(type='smoke')
     def test_volume_list(self):
         # Get a list of Volumes
         # Fetch all volumes
         resp, fetched_list = self.client.list_volumes()
         self.assertEqual(200, resp.status)
-        # Now check if all the volumes created in setup are in fetched list
-        missing_vols = [v for v in self.volume_list if v not in fetched_list]
-        self.assertFalse(missing_vols,
-                         "Failed to find volume %s in fetched list" %
-                         ', '.join(m_vol['display_name']
-                                   for m_vol in missing_vols))
+        self.assertVolumesIn(fetched_list, self.volume_list)
 
     @attr(type='gate')
     def test_volume_list_with_details(self):
@@ -95,12 +103,67 @@ class VolumesListTest(base.BaseVolumeTest):
         # Fetch all Volumes
         resp, fetched_list = self.client.list_volumes_with_detail()
         self.assertEqual(200, resp.status)
-        # Verify that all the volumes are returned
-        missing_vols = [v for v in self.volume_list if v not in fetched_list]
-        self.assertFalse(missing_vols,
-                         "Failed to find volume %s in fetched list" %
-                         ', '.join(m_vol['display_name']
-                                   for m_vol in missing_vols))
+        self.assertVolumesIn(fetched_list, self.volume_list)
+
+    @attr(type='gate')
+    def test_volume_list_by_name(self):
+        volume = self.volume_list[rand_int_id(0, 2)]
+        params = {'display_name': volume['display_name']}
+        resp, fetched_vol = self.client.list_volumes(params)
+        self.assertEqual(200, resp.status)
+        self.assertEqual(1, len(fetched_vol), str(fetched_vol))
+        self.assertEqual(fetched_vol[0]['display_name'],
+                         volume['display_name'])
+
+    @attr(type='gate')
+    def test_volume_list_details_by_name(self):
+        volume = self.volume_list[rand_int_id(0, 2)]
+        params = {'display_name': volume['display_name']}
+        resp, fetched_vol = self.client.list_volumes_with_detail(params)
+        self.assertEqual(200, resp.status)
+        self.assertEqual(1, len(fetched_vol), str(fetched_vol))
+        self.assertEqual(fetched_vol[0]['display_name'],
+                         volume['display_name'])
+
+    @attr(type='gate')
+    def test_volumes_list_by_status(self):
+        params = {'status': 'available'}
+        resp, fetched_list = self.client.list_volumes(params)
+        self.assertEqual(200, resp.status)
+        for volume in fetched_list:
+            self.assertEqual('available', volume['status'])
+        self.assertVolumesIn(fetched_list, self.volume_list)
+
+    @attr(type='gate')
+    def test_volumes_list_details_by_status(self):
+        params = {'status': 'available'}
+        resp, fetched_list = self.client.list_volumes_with_detail(params)
+        self.assertEqual(200, resp.status)
+        for volume in fetched_list:
+            self.assertEqual('available', volume['status'])
+        self.assertVolumesIn(fetched_list, self.volume_list)
+
+    @attr(type='gate')
+    def test_volumes_list_by_availability_zone(self):
+        volume = self.volume_list[rand_int_id(0, 2)]
+        zone = volume['availability_zone']
+        params = {'availability_zone': zone}
+        resp, fetched_list = self.client.list_volumes(params)
+        self.assertEqual(200, resp.status)
+        for volume in fetched_list:
+            self.assertEqual(zone, volume['availability_zone'])
+        self.assertVolumesIn(fetched_list, self.volume_list)
+
+    @attr(type='gate')
+    def test_volumes_list_details_by_availability_zone(self):
+        volume = self.volume_list[rand_int_id(0, 2)]
+        zone = volume['availability_zone']
+        params = {'availability_zone': zone}
+        resp, fetched_list = self.client.list_volumes_with_detail(params)
+        self.assertEqual(200, resp.status)
+        for volume in fetched_list:
+            self.assertEqual(zone, volume['availability_zone'])
+        self.assertVolumesIn(fetched_list, self.volume_list)
 
 
 class VolumeListTestXML(VolumesListTest):

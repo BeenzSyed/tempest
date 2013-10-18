@@ -19,12 +19,16 @@ import netaddr
 
 from tempest.api.compute import base
 from tempest.common.utils.data_utils import rand_name
+from tempest import config
 from tempest import exceptions
 from tempest.test import attr
+from tempest.test import skip_because
 
 
 class VirtualInterfacesTestJSON(base.BaseComputeTest):
     _interface = 'json'
+
+    CONF = config.TempestConfig()
 
     @classmethod
     def setUpClass(cls):
@@ -33,13 +37,15 @@ class VirtualInterfacesTestJSON(base.BaseComputeTest):
         resp, server = cls.create_server(wait_until='ACTIVE')
         cls.server_id = server['id']
 
-    @attr(type=['positive', 'gate'])
+    @skip_because(bug="1183436",
+                  condition=CONF.service_available.neutron)
+    @attr(type='gate')
     def test_list_virtual_interfaces(self):
         # Positive test:Should be able to GET the virtual interfaces list
         # for a given server_id
         resp, output = self.client.list_virtual_interfaces(self.server_id)
         self.assertEqual(200, resp.status)
-        self.assertNotEqual(output, None)
+        self.assertIsNotNone(output)
         virt_ifaces = output
         self.assertNotEqual(0, len(virt_ifaces['virtual_interfaces']),
                             'Expected virtual interfaces, got 0 interfaces.')

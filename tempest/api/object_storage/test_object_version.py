@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -29,6 +29,7 @@ class ContainerTest(base.BaseObjectTest):
     @classmethod
     def tearDownClass(cls):
         cls.delete_containers(cls.containers)
+        super(ContainerTest, cls).tearDownClass()
 
     def assertContainer(self, container, count, byte, versioned):
         resp, _ = self.container_client.list_container_metadata(container)

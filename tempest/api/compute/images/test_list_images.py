@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -25,6 +25,9 @@ class ListImagesTestJSON(base.BaseComputeTest):
     @classmethod
     def setUpClass(cls):
         super(ListImagesTestJSON, cls).setUpClass()
+        if not cls.config.service_available.glance:
+            skip_msg = ("%s skipped as glance is not available" % cls.__name__)
+            raise cls.skipException(skip_msg)
         cls.client = cls.images_client
 
     @attr(type='smoke')

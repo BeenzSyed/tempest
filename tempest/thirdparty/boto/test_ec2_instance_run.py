@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,14 +16,14 @@
 #    under the License.
 
 from boto import exception
-import testtools
 
 from tempest import clients
-from tempest.common import log as logging
 from tempest.common.utils.data_utils import rand_name
 from tempest.common.utils.linux.remote_client import RemoteClient
 from tempest import exceptions
+from tempest.openstack.common import log as logging
 from tempest.test import attr
+from tempest.test import skip_because
 from tempest.thirdparty.boto.test import BotoTestCase
 from tempest.thirdparty.boto.utils.s3 import s3_upload_dir
 from tempest.thirdparty.boto.utils.wait import re_search_wait
@@ -88,6 +88,53 @@ class InstanceRunTest(BotoTestCase):
                                                            image["image_id"])
 
     @attr(type='smoke')
+    def test_run_idempotent_instances(self):
+        # EC2 run instances idempotently
+
+        def _run_instance(client_token):
+            reservation = self.ec2_client.run_instances(
+                image_id=self.images["ami"]["image_id"],
+                kernel_id=self.images["aki"]["image_id"],
+                ramdisk_id=self.images["ari"]["image_id"],
+                instance_type=self.instance_type,
+                client_token=client_token)
+            rcuk = self.addResourceCleanUp(self.destroy_reservation,
+                                           reservation)
+            return (reservation, rcuk)
+
+        def _terminate_reservation(reservation, rcuk):
+            for instance in reservation.instances:
+                instance.terminate()
+            self.cancelResourceCleanUp(rcuk)
+
+        reservation_1, rcuk_1 = _run_instance('token_1')
+        reservation_2, rcuk_2 = _run_instance('token_2')
+        reservation_1a, rcuk_1a = _run_instance('token_1')
+
+        self.assertIsNotNone(reservation_1)
+        self.assertIsNotNone(reservation_2)
+        self.assertIsNotNone(reservation_1a)
+
+        # same reservation for token_1
+        self.assertEqual(reservation_1.id, reservation_1a.id)
+
+        # Cancel cleanup -- since it's a duplicate, it's
+        # handled by rcuk1
+        self.cancelResourceCleanUp(rcuk_1a)
+
+        _terminate_reservation(reservation_1, rcuk_1)
+        _terminate_reservation(reservation_2, rcuk_2)
+
+        reservation_3, rcuk_3 = _run_instance('token_1')
+        self.assertIsNotNone(reservation_3)
+
+        # make sure we don't get the old reservation back
+        self.assertNotEqual(reservation_1.id, reservation_3.id)
+
+        # clean up
+        _terminate_reservation(reservation_3, rcuk_3)
+
+    @attr(type='smoke')
     def test_run_stop_terminate_instance(self):
         # EC2 run, stop and terminate instance
         image_ami = self.ec2_client.get_image(self.images["ami"]
@@ -113,7 +160,54 @@ class InstanceRunTest(BotoTestCase):
         self.cancelResourceCleanUp(rcuk)
 
     @attr(type='smoke')
-    @testtools.skip("Skipped until the Bug #1098891 is resolved")
+    def test_run_stop_terminate_instance_with_tags(self):
+        # EC2 run, stop and terminate instance with tags
+        image_ami = self.ec2_client.get_image(self.images["ami"]
+                                              ["image_id"])
+        reservation = image_ami.run(kernel_id=self.images["aki"]["image_id"],
+                                    ramdisk_id=self.images["ari"]["image_id"],
+                                    instance_type=self.instance_type)
+        rcuk = self.addResourceCleanUp(self.destroy_reservation, reservation)
+
+        for instance in reservation.instances:
+            LOG.info("state: %s", instance.state)
+            if instance.state != "running":
+                self.assertInstanceStateWait(instance, "running")
+            instance.add_tag('key1', value='value1')
+
+        tags = self.ec2_client.get_all_tags()
+        self.assertEqual(tags[0].name, 'key1')
+        self.assertEqual(tags[0].value, 'value1')
+
+        tags = self.ec2_client.get_all_tags(filters={'key': 'key1'})
+        self.assertEqual(tags[0].name, 'key1')
+        self.assertEqual(tags[0].value, 'value1')
+
+        tags = self.ec2_client.get_all_tags(filters={'value': 'value1'})
+        self.assertEqual(tags[0].name, 'key1')
+        self.assertEqual(tags[0].value, 'value1')
+
+        tags = self.ec2_client.get_all_tags(filters={'key': 'value2'})
+        self.assertEqual(len(tags), 0, str(tags))
+
+        for instance in reservation.instances:
+            instance.remove_tag('key1', value='value1')
+
+        tags = self.ec2_client.get_all_tags()
+        self.assertEqual(len(tags), 0, str(tags))
+
+        for instance in reservation.instances:
+            instance.stop()
+            LOG.info("state: %s", instance.state)
+            if instance.state != "stopped":
+                self.assertInstanceStateWait(instance, "stopped")
+
+        for instance in reservation.instances:
+            instance.terminate()
+        self.cancelResourceCleanUp(rcuk)
+
+    @skip_because(bug="1098891")
+    @attr(type='smoke')
     def test_run_terminate_instance(self):
         # EC2 run, terminate immediately
         image_ami = self.ec2_client.get_image(self.images["ami"]
@@ -137,8 +231,9 @@ class InstanceRunTest(BotoTestCase):
         else:
             self.assertNotEqual(instance.state, "running")
 
-    #NOTE(afazekas): doctored test case,
+    # NOTE(afazekas): doctored test case,
     # with normal validation it would fail
+    @skip_because(bug="1182679")
     @attr(type='smoke')
     def test_integration_1(self):
         # EC2 1. integration test (not strict)
@@ -182,10 +277,10 @@ class InstanceRunTest(BotoTestCase):
         self.assertTrue(address.associate(instance.id))
 
         rcuk_da = self.addResourceCleanUp(address.disassociate)
-        #TODO(afazekas): ping test. dependecy/permission ?
+        # TODO(afazekas): ping test. dependecy/permission ?
 
         self.assertVolumeStatusWait(volume, "available")
-        #NOTE(afazekas): it may be reports availble before it is available
+        # NOTE(afazekas): it may be reports availble before it is available
 
         ssh = RemoteClient(address.public_ip,
                            self.os.config.compute.ssh_user,
@@ -209,7 +304,7 @@ class InstanceRunTest(BotoTestCase):
         self.assertVolumeStatusWait(_volume_state, "in-use")
         re_search_wait(_volume_state, "in-use")
 
-        #NOTE(afazekas):  Different Hypervisor backends names
+        # NOTE(afazekas):  Different Hypervisor backends names
         # differently the devices,
         # now we just test is the partition number increased/decrised
 
@@ -224,7 +319,7 @@ class InstanceRunTest(BotoTestCase):
         state_wait(_part_state, 'INCREASE')
         part_lines = ssh.get_partitions().split('\n')
 
-        #TODO(afazekas): Resource compare to the flavor settings
+        # TODO(afazekas): Resource compare to the flavor settings
 
         volume.detach()
 
@@ -245,7 +340,7 @@ class InstanceRunTest(BotoTestCase):
         LOG.info("state: %s", instance.state)
         if instance.state != "stopped":
             self.assertInstanceStateWait(instance, "stopped")
-        #TODO(afazekas): move steps from teardown to the test case
+        # TODO(afazekas): move steps from teardown to the test case
 
 
-#TODO(afazekas): Snapshot/volume read/write test case
+# TODO(afazekas): Snapshot/volume read/write test case

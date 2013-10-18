@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,22 +15,30 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import random
+
 from tempest.api.object_storage import base
 from tempest.common.utils.data_utils import rand_name
 from tempest import exceptions
 from tempest.test import attr
+from tempest.test import HTTP_SUCCESS
 
 
 class AccountTest(base.BaseObjectTest):
     @classmethod
     def setUpClass(cls):
         super(AccountTest, cls).setUpClass()
-        cls.container_name = rand_name(name='TestContainer')
-        cls.container_client.create_container(cls.container_name)
+        cls.containers = []
+        for i in xrange(ord('a'), ord('f') + 1):
+            name = rand_name(name='%s-' % chr(i))
+            cls.container_client.create_container(name)
+            cls.containers.append(name)
+        cls.containers_count = len(cls.containers)
 
     @classmethod
     def tearDownClass(cls):
-        cls.container_client.delete_container(cls.container_name)
+        cls.delete_containers(cls.containers)
+        super(AccountTest, cls).tearDownClass()
 
     @attr(type='smoke')
     def test_list_containers(self):
@@ -41,39 +49,89 @@ class AccountTest(base.BaseObjectTest):
 
         self.assertIsNotNone(container_list)
         container_names = [c['name'] for c in container_list]
-        self.assertTrue(self.container_name in container_names)
+        for container_name in self.containers:
+            self.assertIn(container_name, container_names)
+
+    @attr(type='smoke')
+    def test_list_containers_with_limit(self):
+        # list containers one of them, half of them then all of them
+        for limit in (1, self.containers_count / 2, self.containers_count):
+            params = {'limit': limit}
+            resp, container_list = \
+                self.account_client.list_account_containers(params=params)
+            self.assertEqual(len(container_list), limit)
+
+    @attr(type='smoke')
+    def test_list_containers_with_marker(self):
+        # list containers using marker param
+        # first expect to get 0 container as we specified last
+        # the container as marker
+        # second expect to get the bottom half of the containers
+        params = {'marker': self.containers[-1]}
+        resp, container_list = \
+            self.account_client.list_account_containers(params=params)
+        self.assertEqual(len(container_list), 0)
+        params = {'marker': self.containers[self.containers_count / 2]}
+        resp, container_list = \
+            self.account_client.list_account_containers(params=params)
+        self.assertEqual(len(container_list), self.containers_count / 2 - 1)
+
+    @attr(type='smoke')
+    def test_list_containers_with_end_marker(self):
+        # list containers using end_marker param
+        # first expect to get 0 container as we specified first container as
+        # end_marker
+        # second expect to get the top half of the containers
+        params = {'end_marker': self.containers[0]}
+        resp, container_list = \
+            self.account_client.list_account_containers(params=params)
+        self.assertEqual(len(container_list), 0)
+        params = {'end_marker': self.containers[self.containers_count / 2]}
+        resp, container_list = \
+            self.account_client.list_account_containers(params=params)
+        self.assertEqual(len(container_list), self.containers_count / 2)
+
+    @attr(type='smoke')
+    def test_list_containers_with_limit_and_marker(self):
+        # list containers combining marker and limit param
+        # result are always limitated by the limit whatever the marker
+        for marker in random.choice(self.containers):
+            limit = random.randint(0, self.containers_count - 1)
+            params = {'marker': marker,
+                      'limit': limit}
+            resp, container_list = \
+                self.account_client.list_account_containers(params=params)
+            self.assertLessEqual(len(container_list), limit)
 
     @attr(type='smoke')
     def test_list_account_metadata(self):
         # list all account metadata
         resp, metadata = self.account_client.list_account_metadata()
-        self.assertEqual(resp['status'], '204')
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
         self.assertIn('x-account-object-count', resp)
         self.assertIn('x-account-container-count', resp)
         self.assertIn('x-account-bytes-used', resp)
 
     @attr(type='smoke')
-    def test_create_account_metadata(self):
+    def test_create_and_delete_account_metadata(self):
+        header = 'test-account-meta'
+        data = 'Meta!'
         # add metadata to account
-        metadata = {'test-account-meta': 'Meta!'}
-        resp, _ = \
-            self.account_client.create_account_metadata(metadata=metadata)
-        self.assertEqual(resp['status'], '204')
+        resp, _ = self.account_client.create_account_metadata(
+            metadata={header: data})
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
 
-        resp, metadata = self.account_client.list_account_metadata()
-        self.assertIn('x-account-meta-test-account-meta', resp)
-        self.assertEqual(resp['x-account-meta-test-account-meta'], 'Meta!')
+        resp, _ = self.account_client.list_account_metadata()
+        self.assertIn('x-account-meta-' + header, resp)
+        self.assertEqual(resp['x-account-meta-' + header], data)
 
-    @attr(type='smoke')
-    def test_delete_account_metadata(self):
         # delete metadata from account
-        metadata = ['test-account-meta']
         resp, _ = \
-            self.account_client.delete_account_metadata(metadata=metadata)
-        self.assertEqual(resp['status'], '204')
+            self.account_client.delete_account_metadata(metadata=[header])
+        self.assertIn(int(resp['status']), HTTP_SUCCESS)
 
-        resp, metadata = self.account_client.list_account_metadata()
-        self.assertNotIn('x-account-meta-test-account-meta', resp)
+        resp, _ = self.account_client.list_account_metadata()
+        self.assertNotIn('x-account-meta-' + header, resp)
 
     @attr(type=['negative', 'gate'])
     def test_list_containers_with_non_authorized_user(self):

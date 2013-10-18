@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -94,3 +94,13 @@ class FloatingIPsClientJSON(RestClient):
         except exceptions.NotFound:
             return True
         return False
+
+    def list_floating_ip_pools(self, params=None):
+        """Returns a list of all floating IP Pools."""
+        url = 'os-floating-ip-pools'
+        if params:
+            url += '?%s' % urllib.urlencode(params)
+
+        resp, body = self.get(url)
+        body = json.loads(body)
+        return resp, body['floating_ip_pools']

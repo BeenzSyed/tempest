@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -32,7 +32,7 @@ class ServersTestJSON(base.BaseComputeTest):
         self.clear_servers()
         super(ServersTestJSON, self).tearDown()
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_create_server_with_admin_password(self):
         # If an admin password is provided on server creation, the server's
         # root password should be set to that password.
@@ -60,7 +60,7 @@ class ServersTestJSON(base.BaseComputeTest):
         name2 = server['name']
         self.assertEqual(name1, name2)
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_create_specify_keypair(self):
         # Specify a keypair while creating a server
 
@@ -73,7 +73,7 @@ class ServersTestJSON(base.BaseComputeTest):
         resp, server = self.client.get_server(server['id'])
         self.assertEqual(key_name, server['key_name'])
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_update_server_name(self):
         # The server name should be changed to the the provided value
         resp, server = self.create_server(wait_until='ACTIVE')
@@ -81,14 +81,14 @@ class ServersTestJSON(base.BaseComputeTest):
         # Update the server with a new name
         resp, server = self.client.update_server(server['id'],
                                                  name='newname')
-        self.assertEquals(200, resp.status)
+        self.assertEqual(200, resp.status)
         self.client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # Verify the name of the server has changed
         resp, server = self.client.get_server(server['id'])
         self.assertEqual('newname', server['name'])
 
-    @attr(type=['positive', 'gate'])
+    @attr(type='gate')
     def test_update_access_server_address(self):
         # The server's access addresses should reflect the provided values
         resp, server = self.create_server(wait_until='ACTIVE')
@@ -109,6 +109,13 @@ class ServersTestJSON(base.BaseComputeTest):
     def test_delete_server_while_in_building_state(self):
         # Delete a server while it's VM state is Building
         resp, server = self.create_server(wait_until='BUILD')
+        resp, _ = self.client.delete_server(server['id'])
+        self.assertEqual('204', resp['status'])
+
+    @attr(type='gate')
+    def test_delete_active_server(self):
+        # Delete a server while it's VM state is Active
+        resp, server = self.create_server(wait_until='ACTIVE')
         resp, _ = self.client.delete_server(server['id'])
         self.assertEqual('204', resp['status'])
 

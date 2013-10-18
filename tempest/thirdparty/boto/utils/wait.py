@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,8 +21,8 @@ import time
 import boto.exception
 from testtools import TestCase
 
-from tempest.common import log as logging
 import tempest.config
+from tempest.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ default_check_interval = _boto_config.build_interval
 
 
 def state_wait(lfunction, final_set=set(), valid_set=None):
-    #TODO(afazekas): evaluate using ABC here
+    # TODO(afazekas): evaluate using ABC here
     if not isinstance(final_set, set):
         final_set = set((final_set,))
     if not isinstance(valid_set, set) and valid_set is not None:
@@ -54,8 +54,7 @@ def state_wait(lfunction, final_set=set(), valid_set=None):
             raise TestCase.failureException("State change timeout exceeded!"
                                             '(%ds) While waiting'
                                             'for %s at "%s"' %
-                                            (dtime,
-                                            final_set, status))
+                                            (dtime, final_set, status))
         time.sleep(default_check_interval)
         old_status = status
         status = lfunction()
@@ -78,8 +77,7 @@ def re_search_wait(lfunction, regexp):
             raise TestCase.failureException('Pattern find timeout exceeded!'
                                             '(%ds) While waiting for'
                                             '"%s" pattern in "%s"' %
-                                            (dtime,
-                                            regexp, text))
+                                            (dtime, regexp, text))
         time.sleep(default_check_interval)
 
 
@@ -112,7 +110,7 @@ def wait_no_exception(lfunction, exc_class=None, exc_matcher=None):
         time.sleep(default_check_interval)
 
 
-#NOTE(afazekas): EC2/boto normally raise exception instead of empty list
+# NOTE(afazekas): EC2/boto normally raise exception instead of empty list
 def wait_exception(lfunction):
     """Returns with the exception or raises one."""
     start_time = time.time()
@@ -129,4 +127,4 @@ def wait_exception(lfunction):
                                             dtime)
         time.sleep(default_check_interval)
 
-#TODO(afazekas): consider strategy design pattern..
+# TODO(afazekas): consider strategy design pattern..

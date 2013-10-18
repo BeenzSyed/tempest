@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012 OpenStack, LLC
+# Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -17,7 +17,7 @@
 
 """Common utilities used in testing."""
 
-from testtools import TestCase
+from tempest.test import BaseTestCase
 
 
 class skip_unless_attr(object):
@@ -32,7 +32,7 @@ class skip_unless_attr(object):
             """Wrapped skipper function."""
             testobj = args[0]
             if not getattr(testobj, self.attr, False):
-                raise TestCase.skipException(self.message)
+                raise BaseTestCase.skipException(self.message)
             func(*args, **kw)
         _skipper.__name__ = func.__name__
         _skipper.__doc__ = func.__doc__
