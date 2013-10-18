@@ -283,7 +283,9 @@ class RestClient(object):
         if headers is None:
             headers = {}
         #headers['X-Auth-Token'] = self.token
-        headers['X-Auth-Token'] = '09abcd1d091241a4b179ef5029662006'
+        headers['X-Auth-Token'] = '160b397b1b6a48fbb93be4de8e6456b1'
+        headers['X-Auth-User'] = '836933'
+        headers['X-Auth-Key'] = '160b397b1b6a48fbb93be4de8e6456b1'
         print method
         print url
         print headers

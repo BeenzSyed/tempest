@@ -76,7 +76,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         for i in range(10):
             response_templates = \
                 requests.get(
-                    "https://raw.github.com/heat-ci/heat-prod-templates/master/example/wordpress-single-winserver.template",
+                    "https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template",
                     timeout=3)
             yaml_template = yaml.safe_load(response_templates.content)
 
@@ -100,7 +100,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         response_templates = \
             requests.get(
-                "https://raw.github.com/heat-ci/heat-templates/master/staging/ruby-on-rails.template",
+                "https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template",
                 timeout=3)
         #print response_templates.content
         #print type(response_templates.content)

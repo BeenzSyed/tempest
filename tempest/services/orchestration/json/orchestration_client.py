@@ -50,8 +50,8 @@ class OrchestrationClient(rest_client.RestClient):
             "stack_name": name,
             "disable_rollback": disable_rollback,
             "parameters": parameters,
-            "timeout_mins": timeout_mins,
-            "template": "HeatTemplateFormatVersion: '2012-12-12'\n"
+            "timeout_mins": timeout_mins
+            #"template": "HeatTemplateFormatVersion: '2013-05-23'\n"
         }
         if template:
             post_body['template'] = template

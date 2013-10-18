@@ -60,13 +60,14 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         )
 
     def create_stack(self, stack_name, template_data, parameters={}):
-        print "hi"
-        print stack_name
-        print template_data
-        print parameters
-        #pdb.set_trace()
+        parameters = {
+            'InstanceType': self.orchestration_cfg.instance_type,
+            'ImageId': self.orchestration_cfg.image_ref,
+            'key_name': "keypairqe"
+        }
         resp, body = self.client.create_stack(
             stack_name,
+            #template_url='https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template',
             template=template_data,
             parameters=parameters)
         self.assertEqual('201', resp['status'])
