@@ -22,6 +22,7 @@ import json
 from lxml import etree
 import re
 import time
+import pdb
 
 from tempest.common import http
 from tempest import exceptions
@@ -99,7 +100,6 @@ class RestClient(object):
         """
         Sets the token and base_url used in requests based on the strategy type
         """
-
         if self.auth_version == 'v3':
             auth_func = self.identity_auth_v3
         else:
@@ -186,10 +186,8 @@ class RestClient(object):
                     if not mgmt_url:
                         mgmt_url = ep['endpoints'][0][self.endpoint_url]
                     break
-
             if mgmt_url is None:
                 raise exceptions.EndpointNotFound(service)
-
             return token, mgmt_url
 
         elif resp.status == 401:
@@ -398,7 +396,12 @@ class RestClient(object):
     def _request(self, method, url,
                  headers=None, body=None):
         """A simple HTTP request interface."""
+        # regions = self.config.orchestration.region.split(",")
+        # #regions = ['DFW', 'IAD', 'ORD']
+        # for reg in regions:
+        #     print reg
         req_url = "%s/%s" % (self.base_url, url)
+        #print req_url
         self._log_request(method, req_url, headers, body)
         resp, resp_body = self.http_obj.request(req_url, method,
                                                 headers=headers, body=body)
@@ -410,16 +413,17 @@ class RestClient(object):
     def request(self, method, url,
                 headers=None, body=None):
         retry = 0
+        print "base url is: %s" % self.base_url
         #print self.token
         if (self.token is None) or (self.base_url is None):
             self._set_auth()
-
+        print "base url is: %s" % self.base_url
         if headers is None:
             headers = {}
         #headers['X-Auth-Token'] = self.token
-        headers['X-Auth-Token'] = '160b397b1b6a48fbb93be4de8e6456b1'
+        headers['X-Auth-Token'] = '114f3b6b1e5b49c585097870356cd7a1'
         headers['X-Auth-User'] = '836933'
-        headers['X-Auth-Key'] = '160b397b1b6a48fbb93be4de8e6456b1'
+        headers['X-Auth-Key'] = '114f3b6b1e5b49c585097870356cd7a1'
         print method
         print url
         print headers

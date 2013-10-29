@@ -17,6 +17,7 @@ import logging
 from tempest.api.orchestration import base
 from tempest.common.utils.data_utils import rand_name
 from tempest.test import attr
+import pdb
 
 
 LOG = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     _interface = 'json'
 
     template = """
-HeatTemplateFormatVersion: '2012-12-12'
+HeatTemplateFormatVersion: '2013-05-23'
 Description: |
   Template which creates single EC2 instance
 Parameters:

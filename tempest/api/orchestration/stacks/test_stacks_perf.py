@@ -32,7 +32,7 @@ LOG = logging.getLogger(__name__)
 class StacksTestJSON(base.BaseOrchestrationTest):
     _interface = 'json'
 
-    #empty_template = "HeatTemplateFormatVersion: '2013-05-23'\n"
+    empty_template = "HeatTemplateFormatVersion: '2013-05-23'\n"
 
     @classmethod
     def setUpClass(cls):
@@ -71,33 +71,20 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     @attr(type='smoke')
     def test_limits(self):
-        #resp, body = self.post(uri, headers=self.headers, body=body)
-        #uri = 'stacks'
-        #resp, body = rest_client.post(uri, headers=self.headers, body=body)
-        for i in range(10):
-            response_templates = \
+
+        response_templates = \
                 requests.get(
                     "https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template",
                     timeout=3)
-            yaml_template = yaml.safe_load(response_templates.content)
-
+        yaml_template = yaml.safe_load(response_templates.content)
+        for i in range(10):
             stack_name = rand_name('heat')
             print stack_name
             # count how many stacks to start with
-            resp, body = self.client.list_stacks()
-            #print body
-            stack_count = len(body['stacks'])
+            resp, stacks = self.client.list_stacks()
+            stack_count = len(stacks)
             print stack_count
 
-            #print yaml_template
-            # create the stack
-            #stack_name = 'Beenz2Stack'
-            #stack_identifier = self.create_stack(stack_name, self.empty_template)
-            parameters = {
-        #     'InstanceType': self.orchestration_cfg.instance_type,
-        #     'ImageId': self.orchestration_cfg.image_ref,
-            'key_name': "sabeen"
-            }
             stack_identifier = self.create_stack(stack_name, yaml_template)
             print stack_identifier
 
@@ -106,7 +93,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         response_templates = \
             requests.get(
-                "https://raw.github.com/heat-ci/heat-templates/master/staging/wp-single-linux-cdb.template",
+                "https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template",
                 timeout=3)
         #print response_templates.content
         #print type(response_templates.content)

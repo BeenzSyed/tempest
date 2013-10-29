@@ -75,9 +75,9 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
     @classmethod
     def create_stack(cls, stack_name, template_data, parameters={}):
         # parameters = {
-        #     'InstanceType': self.orchestration_cfg.instance_type,
-        #     'ImageId': self.orchestration_cfg.image_ref,
-        #     'key_name': "keypairqe"
+        # #     'InstanceType': self.orchestration_cfg.instance_type,
+        # #     'ImageId': self.orchestration_cfg.image_ref,
+        #     'key_name': "sabeen"
         # }
         resp, body = cls.client.create_stack(
             stack_name,

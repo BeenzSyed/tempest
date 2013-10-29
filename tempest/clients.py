@@ -449,6 +449,8 @@ class OrchestrationManager(object):
         client_args = (self.config, self.username, self.password,
                        self.auth_url, self.tenant_name)
         self.keypairs_client = KEYPAIRS_CLIENTS[interface](*client_args)
+        self.servers_client = SERVERS_CLIENTS[interface](*client_args)
+        self.network_client = NETWORKS_CLIENTS[interface](*client_args)
         self.orchestration_client = OrchestrationClient(*client_args)
 
 
