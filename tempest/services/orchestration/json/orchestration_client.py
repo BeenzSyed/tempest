@@ -99,11 +99,19 @@ class OrchestrationClient(rest_client.RestClient):
         headers['X-Auth-User'] = self.user
         return headers, body
 
-
     def get_stack(self, stack_identifier):
         """Returns the details of a single stack."""
         url = "stacks/%s" % stack_identifier
         resp, body = self.get(url)
+        body = json.loads(body)
+        return resp, body
+
+    def get_stack_id(self, stack_name):
+        """Returns the details of a single stack."""
+        url = "stacks/%s" % stack_name
+        resp, body = self.get(url)
+        print resp
+        print body
         body = json.loads(body)
         return resp, body['stack']
 
@@ -121,9 +129,9 @@ class OrchestrationClient(rest_client.RestClient):
         body = json.loads(body)
         return resp, body['resource']
 
-    def delete_stack(self, stack_identifier):
+    def delete_stack(self, stack_name, stack_id):
         """Deletes the specified Stack."""
-        return self.delete("stacks/%s" % str(stack_identifier))
+        return self.delete("stacks/%s/%s" % (str(stack_name), str(stack_id)))
 
     def wait_for_resource_status(self, stack_identifier, resource_name,
                                  status, failure_pattern='^.*_FAILED$'):

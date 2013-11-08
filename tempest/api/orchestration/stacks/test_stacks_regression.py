@@ -18,6 +18,8 @@ from tempest.openstack.common import log as logging
 from tempest.test import attr
 import requests
 import yaml
+import time
+import pdb
 
 LOG = logging.getLogger(__name__)
 
@@ -92,6 +94,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             parameters = {
             'key_name': "sabeen"
             }
+            # parameters = {
+            # 'key_name': "sabeen",
+            # 'git_url': "https://github.com/timductive/phphelloworld"
+            # }
+        if 'git_url' in yaml_template['parameters']:
+            parameters['git_url'] = "https://github.com/timductive/phphelloworld"
         else:
             parameters = {}
 
@@ -100,13 +108,30 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         # #     'ImageId': self.orchestration_cfg.image_ref,
         #     'key_name': "sabeen"
         #     }
-
+        #pdb.set_trace()
         stack_identifier = self.create_stack(stack_name, yaml_template, parameters)
-        print stack_identifier
+        #print stack_identifier
         stack_id = stack_identifier.split('/')[1]
+        #pdb.set_trace()
+        count = 0
+        resp, body = self.get_stack(stack_id)
+        #print "response is: %s" % resp
+        print "stack status is: %s ,%s" % (body['stack_status'], body['stack_status_reason'])
+
+        while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
+            resp, body = self.get_stack(stack_id)
+            print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
+            time.sleep(60)
+            count += 1
+            if body['stack_status'] == 'CREATE_FAILED':
+                print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+
+        if body['stack_status'] == 'CREATE_COMPLETE':
+            print "The deployment took %s minutes" % count
+
         # wait for create complete (with no resources it should be instant)
-        timetaken = self.client.wait_for_stack_status(stack_identifier, 'CREATE_COMPLETE')
-        print "time taken for stack to deploy: %s" %timetaken
+        # timetaken = self.client.wait_for_stack_status(stack_identifier, 'CREATE_COMPLETE')
+        # print "time taken for stack to deploy: %s" %timetaken
         # stack count will increment by 1
         resp, stacks = self.client.list_stacks()
         list_ids = list([stack['id'] for stack in stacks])

@@ -413,21 +413,20 @@ class RestClient(object):
     def request(self, method, url,
                 headers=None, body=None):
         retry = 0
-        print "base url is: %s" % self.base_url
         #print self.token
         if (self.token is None) or (self.base_url is None):
             self._set_auth()
-        print "base url is: %s" % self.base_url
+        # print "base url is: %s" % self.base_url
         if headers is None:
             headers = {}
-        #headers['X-Auth-Token'] = self.token
-        headers['X-Auth-Token'] = '114f3b6b1e5b49c585097870356cd7a1'
-        headers['X-Auth-User'] = '836933'
-        headers['X-Auth-Key'] = '114f3b6b1e5b49c585097870356cd7a1'
-        print method
-        print url
-        print headers
-        print body
+        headers['X-Auth-Token'] = self.token
+        # headers['X-Auth-Token'] = '8b6c9c04fe93494c8fe959400f4a3b2a'
+        # headers['X-Auth-User'] = '836933'
+        # headers['X-Auth-Key'] = '8b6c9c04fe93494c8fe959400f4a3b2a'
+        # print method
+        # print url
+        # print headers
+        # print body
         resp, resp_body = self._request(method, url,
                                         headers=headers, body=body)
 

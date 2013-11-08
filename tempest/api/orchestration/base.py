@@ -14,7 +14,7 @@
 
 import time
 import pdb
-
+import json
 from tempest import clients
 from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
@@ -88,6 +88,15 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         stack_identifier = '%s/%s' % (stack_name, stack_id)
         cls.stacks.append(stack_identifier)
         return stack_identifier
+
+    @classmethod
+    def get_stack(cls, stackid):
+        """Returns the details of a single stack."""
+        resp, body = cls.client.get_stack(stackid)
+        # url = "stacks/%s" % stackid
+        # resp, body = self.get(url)
+        # body = json.loads(body)
+        return resp, body['stack']
 
     @classmethod
     def clear_stacks(cls):
