@@ -99,6 +99,11 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         return resp, body['stack']
 
     @classmethod
+    def delete_stack(cls,stackname, stackid):
+        resp, body = cls.orchestration_client.delete_stack(stackname, stackid)
+        return resp, body
+
+    @classmethod
     def clear_stacks(cls):
         for stack_identifier in cls.stacks:
             try:
