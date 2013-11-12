@@ -98,7 +98,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             parameters['key_name'] = "sabeen"
         if 'git_url' in yaml_template['parameters']:
             parameters['git_url'] = "https://github.com/timductive/phphelloworld"
-        print parameters
 
         stack_identifier = self.create_stack(stack_name, yaml_template, parameters)
         stack_id = stack_identifier.split('/')[1]
@@ -115,11 +114,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                 self._send_deploy_time_graphite("iad", body['server_name'], count, "failtime")
                 resp, body = self.delete_stack(stack_name, stack_id)
+                if resp['status'] != '204':
+                    print "Delete did not work"
 
             if count == 90:
                 print "Stack create has taken over 90 minutes. Force failing now."
                 self._send_deploy_time_graphite("iad", body['server_name'], count, "failtime")
                 resp, body = self.delete_stack(stack_name, stack_id)
+                if resp['status'] != '204':
+                    print "Delete did not work"
 
         if body['stack_status'] == 'CREATE_COMPLETE':
             print "The deployment took %s minutes" % count
@@ -131,7 +134,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             resp, body = self.delete_stack(stack_name, stack_id)
             if resp['status'] != '204':
                 print "Delete did not work"
-
 
         # wait for create complete (with no resources it should be instant)
         # timetaken = self.client.wait_for_stack_status(stack_identifier, 'CREATE_COMPLETE')
