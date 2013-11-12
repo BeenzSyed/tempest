@@ -110,7 +110,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
             resp, body = self.get_stack(stack_id)
-            if resp != '200':
+            if resp['status'] != '200':
                 print "The response is: %s" % resp
                 self.fail(resp)
             print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
