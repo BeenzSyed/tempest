@@ -19,6 +19,7 @@ from tempest.test import attr
 import requests
 import yaml
 import time
+import os
 import pdb
 
 LOG = logging.getLogger(__name__)
@@ -79,12 +80,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_wp_single_linux_realDeployment(self):
         self._test_stack("wp-single-linux-cdb")
 
+    def test_rackconnect_realDeployment(self):
+        self._test_stack("php-app")
+
     @attr(type='smoke')
     def _test_stack(self, template):
         env = "staging"
         template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
         print template_giturl
-
+        #pdb.set_trace()
         response_templates = requests.get(template_giturl, timeout=3)
         yaml_template = yaml.safe_load(response_templates.content)
 
@@ -94,14 +98,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             parameters = {
             'key_name': "sabeen"
             }
+            #parameters['key_name'] = "sabeen"
             # parameters = {
             # 'key_name': "sabeen",
             # 'git_url': "https://github.com/timductive/phphelloworld"
             # }
         if 'git_url' in yaml_template['parameters']:
             parameters['git_url'] = "https://github.com/timductive/phphelloworld"
-        else:
-            parameters = {}
+        # else:
+        #     parameters = {}
+
+        print parameters
 
         # parameters = {
         # #     'InstanceType': self.orchestration_cfg.instance_type,
@@ -116,7 +123,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         count = 0
         resp, body = self.get_stack(stack_id)
         #print "response is: %s" % resp
-        print "stack status is: %s ,%s" % (body['stack_status'], body['stack_status_reason'])
+        print "Stack status is: %s, %s" % (body['stack_status'], body['stack_status_reason'])
 
         while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
             resp, body = self.get_stack(stack_id)
@@ -125,9 +132,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             count += 1
             if body['stack_status'] == 'CREATE_FAILED':
                 print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                self._send_deploy_time_graphite("iad", body['server_name'], count, "failtime")
 
         if body['stack_status'] == 'CREATE_COMPLETE':
             print "The deployment took %s minutes" % count
+            self._send_deploy_time_graphite("iad", "php_app", count, "buildtime")
+            #extract region and name of template
 
         # wait for create complete (with no resources it should be instant)
         # timetaken = self.client.wait_for_stack_status(stack_identifier, 'CREATE_COMPLETE')
@@ -153,3 +163,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         # delete the stack
         #resp = self.client.delete_stack(stack_identifier)
         #self.assertEqual('204', resp[0]['status'])
+
+    def _send_deploy_time_graphite(self, region, template, deploy_time, buildfail):
+        cmd = 'echo "heat.qa.build-tests.' + region + '.' + template \
+              + '.' + buildfail + '  ' + str(deploy_time) \
+              + ' `date +%s`" | ' \
+                'nc http://graphite.staging.rs-heat.com/ ' \
+                '2003 -q 2'
+        print cmd
+        os.system(cmd)
+        print "Deploy time sent to graphite"

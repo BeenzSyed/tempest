@@ -22,7 +22,6 @@ import json
 from lxml import etree
 import re
 import time
-import pdb
 
 from tempest.common import http
 from tempest import exceptions
@@ -426,7 +425,7 @@ class RestClient(object):
         # print method
         # print url
         # print headers
-        # print body
+        print body
         resp, resp_body = self._request(method, url,
                                         headers=headers, body=body)
 
