@@ -95,7 +95,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         stack_name = rand_name("sabeen"+template)
         parameters = {}
         if 'key_name' in yaml_template['parameters']:
-            parameters['key_name'] = "sabeen"
+            #parameters['key_name'] = "sabeen"
+            parameters = {
+                'key_name': 'sabeen'
+            }
         if 'git_url' in yaml_template['parameters']:
             parameters['git_url'] = "https://github.com/timductive/phphelloworld"
 
@@ -112,21 +115,21 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             count += 1
             if body['stack_status'] == 'CREATE_FAILED':
                 print "Stack create failed. Here's why: %s" % body['stack_status_reason']
-                self._send_deploy_time_graphite("iad", body['server_name'], count, "failtime")
+                self._send_deploy_time_graphite("dfw", template, count, "failtime")
                 resp, body = self.delete_stack(stack_name, stack_id)
                 if resp['status'] != '204':
                     print "Delete did not work"
 
             if count == 90:
                 print "Stack create has taken over 90 minutes. Force failing now."
-                self._send_deploy_time_graphite("iad", body['server_name'], count, "failtime")
+                self._send_deploy_time_graphite("dfw", template, count, "failtime")
                 resp, body = self.delete_stack(stack_name, stack_id)
                 if resp['status'] != '204':
                     print "Delete did not work"
 
         if body['stack_status'] == 'CREATE_COMPLETE':
             print "The deployment took %s minutes" % count
-            self._send_deploy_time_graphite("iad", "php_app", count, "buildtime")
+            self._send_deploy_time_graphite("dfw", template, count, "buildtime")
             #extract region and name of template
 
             #delete stack
