@@ -354,6 +354,7 @@ catalog_type = orchestration
 # of identity.region is used instead. If no such region is found in the service
 # catalog, the first found one is used.
 #region = RegionOne
+region = IAD
 
 # Status change wait interval
 build_interval = 1

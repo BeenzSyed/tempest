@@ -604,6 +604,7 @@ class TempestConfig:
         failsafe_path = "/etc/tempest/" + self.DEFAULT_CONFIG_FILE
 
         # Environment variables override defaults...
+
         conf_dir = os.environ.get('TEMPEST_CONFIG_DIR',
                                   self.DEFAULT_CONFIG_DIR)
         conf_file = os.environ.get('TEMPEST_CONFIG', self.DEFAULT_CONFIG_FILE)

@@ -22,6 +22,7 @@ import json
 from lxml import etree
 import re
 import time
+import pdb
 
 from tempest.common import http
 from tempest import exceptions
@@ -95,7 +96,7 @@ class RestClient(object):
                              str(self.token)[0:STRING_LIMIT],
                              str(self.headers)[0:STRING_LIMIT])
 
-    def _set_auth(self):
+    def _set_auth(self, region):
         """
         Sets the token and base_url used in requests based on the strategy type
         """
@@ -106,7 +107,7 @@ class RestClient(object):
 
         self.token, self.base_url = (
             auth_func(self.user, self.password, self.auth_url,
-                      self.service, self.tenant_name))
+                      self.service, self.tenant_name, region))
 
     def clear_auth(self):
         """
@@ -141,7 +142,8 @@ class RestClient(object):
         except Exception:
             raise
 
-    def keystone_auth(self, user, password, auth_url, service, tenant_name):
+    def keystone_auth(self, user, password, auth_url, service, tenant_name,
+                      region='IAD'):
         """
         Provides authentication via Keystone using v2 identity API.
         """
@@ -179,8 +181,12 @@ class RestClient(object):
             for ep in auth_data['serviceCatalog']:
                 if ep["type"] == service:
                     for _ep in ep['endpoints']:
-                        if service in self.region and \
-                                _ep['region'] == self.region[service]:
+                        #print ep['endpoints']
+                        #pdb.set_trace()
+                        # if service in self.region and \
+                        #         _ep['region'] == self.region[service]:
+                        #     mgmt_url = _ep[self.endpoint_url]
+                        if region == _ep['region']:
                             mgmt_url = _ep[self.endpoint_url]
                     if not mgmt_url:
                         mgmt_url = ep['endpoints'][0][self.endpoint_url]
@@ -197,7 +203,7 @@ class RestClient(object):
             resp.status))
 
     def identity_auth_v3(self, user, password, auth_url, service,
-                         project_name, domain_id='default'):
+                         project_name, domain_id='default', region='default'):
         """Provides authentication using Identity API v3."""
 
         req_url = auth_url.rstrip('/') + '/auth/tokens'
@@ -294,8 +300,8 @@ class RestClient(object):
                 details = pattern.format(read_code, expected_code)
                 raise exceptions.InvalidHttpSuccessCode(details)
 
-    def post(self, url, body, headers):
-        return self.request('POST', url, headers, body)
+    def post(self, url, region, body, headers):
+        return self.request('POST', url, region, headers, body)
 
     def get(self, url, headers=None):
         return self.request('GET', url, headers)
@@ -401,31 +407,33 @@ class RestClient(object):
         #     print reg
         req_url = "%s/%s" % (self.base_url, url)
         #print req_url
-        self._log_request(method, req_url, headers, body)
+        #uncomment below to see requests
+        #self._log_request(method, req_url, headers, body)
         resp, resp_body = self.http_obj.request(req_url, method,
                                                 headers=headers, body=body)
-        self._log_response(resp, resp_body)
+        #uncomment below to see responses
+        #self._log_response(resp, resp_body)
         self.response_checker(method, url, headers, body, resp, resp_body)
 
         return resp, resp_body
 
-    def request(self, method, url,
+    def request(self, method, url, region,
                 headers=None, body=None):
         retry = 0
         #print self.token
         if (self.token is None) or (self.base_url is None):
-            self._set_auth()
+            self._set_auth(region)
         # print "base url is: %s" % self.base_url
         if headers is None:
             headers = {}
         headers['X-Auth-Token'] = self.token
-        # headers['X-Auth-Token'] = '8b6c9c04fe93494c8fe959400f4a3b2a'
+        # headers['X-Auth-Token'] = '54027a38aaa543fab6c2a72ad538bae3'
         # headers['X-Auth-User'] = '836933'
-        # headers['X-Auth-Key'] = '8b6c9c04fe93494c8fe959400f4a3b2a'
+        # headers['X-Auth-Key'] = '54027a38aaa543fab6c2a72ad538bae3'
         # print method
         # print url
         # print headers
-        print body
+        #print body
         resp, resp_body = self._request(method, url,
                                         headers=headers, body=body)
 

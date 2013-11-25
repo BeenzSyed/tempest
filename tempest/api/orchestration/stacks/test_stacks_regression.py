@@ -87,57 +87,59 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def _test_stack(self, template):
         env = "staging"
         template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
-        print template_giturl
-        #pdb.set_trace()
+        #print template_giturl
         response_templates = requests.get(template_giturl, timeout=3)
         yaml_template = yaml.safe_load(response_templates.content)
 
-        stack_name = rand_name("sabeen"+template)
-        parameters = {}
-        if 'key_name' in yaml_template['parameters']:
-            #parameters['key_name'] = "sabeen"
-            parameters = {
-                'key_name': 'sabeen'
-            }
-        if 'git_url' in yaml_template['parameters']:
-            parameters['git_url'] = "https://github.com/timductive/phphelloworld"
+        regions = ['DFW', 'IAD', 'ORD', 'SYD', 'HKG']
+        for region in regions:
+            stack_name = rand_name("sabeen"+template)
+            parameters = {}
+            if 'key_name' in yaml_template['parameters']:
+                #parameters['key_name'] = "sabeen"
+                parameters = {
+                    'key_name': 'sabeen'
+                }
+            if 'git_url' in yaml_template['parameters']:
+                parameters['git_url'] = "https://github.com/timductive/phphelloworld"
 
-        stack_identifier = self.create_stack(stack_name, yaml_template, parameters)
-        stack_id = stack_identifier.split('/')[1]
-        count = 0
-        resp, body = self.get_stack(stack_id)
-        print "Stack status is: %s, %s" % (body['stack_status'], body['stack_status_reason'])
-
-        while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
+            print "\nDeploying %s in %s" % (template, region)
+            stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
+            stack_id = stack_identifier.split('/')[1]
+            count = 0
             resp, body = self.get_stack(stack_id)
-            if resp['status'] != '200':
-                print "The response is: %s" % resp
-                self.fail(resp)
-            print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
-            time.sleep(60)
-            count += 1
-            if body['stack_status'] == 'CREATE_FAILED':
-                print "Stack create failed. Here's why: %s" % body['stack_status_reason']
-                self._send_deploy_time_graphite("dfw", template, count, "failtime")
-                self.fail("Stack create failed")
-            if count == 90:
-                print "Stack create has taken over 90 minutes. Force failing now."
-                self._send_deploy_time_graphite("dfw", template, count, "failtime")
+            print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
+
+            while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
+                resp, body = self.get_stack(stack_id)
+                if resp['status'] != '200':
+                    print "The response is: %s" % resp
+                    self.fail(resp)
+                print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
+                time.sleep(60)
+                count += 1
+                if body['stack_status'] == 'CREATE_FAILED':
+                    print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                    self._send_deploy_time_graphite(region, template, count, "failtime")
+                    self.fail("Stack create failed")
+                if count == 90:
+                    print "Stack create has taken over 90 minutes. Force failing now."
+                    self._send_deploy_time_graphite(region, template, count, "failtime")
+                    resp, body = self.delete_stack(stack_name, stack_id)
+                    if resp['status'] != '204':
+                        print "Delete did not work"
+                    self.fail("Stack create took too long")
+
+            if body['stack_status'] == 'CREATE_COMPLETE':
+                print "The deployment took %s minutes" % count
+                self._send_deploy_time_graphite(region, template, count, "buildtime")
+                #extract region and name of template
+
+                #delete stack
+                print "Deleting stack now"
                 resp, body = self.delete_stack(stack_name, stack_id)
                 if resp['status'] != '204':
                     print "Delete did not work"
-                self.fail("Stack create took too long")
-
-        if body['stack_status'] == 'CREATE_COMPLETE':
-            print "The deployment took %s minutes" % count
-            self._send_deploy_time_graphite("dfw", template, count, "buildtime")
-            #extract region and name of template
-
-            #delete stack
-            print "Deleting stack now"
-            resp, body = self.delete_stack(stack_name, stack_id)
-            if resp['status'] != '204':
-                print "Delete did not work"
 
         # wait for create complete (with no resources it should be instant)
         # timetaken = self.client.wait_for_stack_status(stack_identifier, 'CREATE_COMPLETE')

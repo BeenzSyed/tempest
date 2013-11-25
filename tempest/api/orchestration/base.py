@@ -73,7 +73,7 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         )
 
     @classmethod
-    def create_stack(cls, stack_name, template_data, parameters={}):
+    def create_stack(cls, stack_name, region, template_data, parameters={}):
         # parameters = {
         # #     'InstanceType': self.orchestration_cfg.instance_type,
         # #     'ImageId': self.orchestration_cfg.image_ref,
@@ -81,6 +81,7 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         # }
         resp, body = cls.client.create_stack(
             stack_name,
+            region,
             #template_url='https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template',
             template=template_data,
             parameters=parameters)

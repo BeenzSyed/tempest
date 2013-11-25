@@ -25,7 +25,8 @@ import yaml
 from tempest.common import rest_client
 #from heatclient import Client
 import pdb
-
+import pyrax
+import uuid
 LOG = logging.getLogger(__name__)
 
 
@@ -68,6 +69,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print stacks
         stack_count = len(stacks)
         print stack_count
+
 
     @attr(type='smoke')
     def test_limits(self):

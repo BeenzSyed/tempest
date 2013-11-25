@@ -45,7 +45,7 @@ class OrchestrationClient(rest_client.RestClient):
         body = json.loads(body)
         return resp, body['stacks']
 
-    def create_stack(self, name, disable_rollback=True, parameters={},
+    def create_stack(self, name, region, disable_rollback=True, parameters={},
                      timeout_mins=60, template=None, template_url=None):
         headers, body = self._prepare_update_create(
             name,
@@ -55,7 +55,7 @@ class OrchestrationClient(rest_client.RestClient):
             template,
             template_url)
         uri = 'stacks'
-        resp, body = self.post(uri, headers=headers, body=body)
+        resp, body = self.post(uri, region, headers=headers, body=body)
         return resp, body
 
     def update_stack(self, stack_identifier, name, disable_rollback=True,
