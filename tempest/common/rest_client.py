@@ -181,6 +181,7 @@ class RestClient(object):
             for ep in auth_data['serviceCatalog']:
                 if ep["type"] == service:
                     for _ep in ep['endpoints']:
+                        #print auth_data['serviceCatalog']
                         #print ep['endpoints']
                         #pdb.set_trace()
                         # if service in self.region and \
@@ -188,6 +189,7 @@ class RestClient(object):
                         #     mgmt_url = _ep[self.endpoint_url]
                         if region == _ep['region']:
                             mgmt_url = _ep[self.endpoint_url]
+                            print mgmt_url
                     if not mgmt_url:
                         mgmt_url = ep['endpoints'][0][self.endpoint_url]
                     break
@@ -426,10 +428,10 @@ class RestClient(object):
         # print "base url is: %s" % self.base_url
         if headers is None:
             headers = {}
-        headers['X-Auth-Token'] = self.token
-        # headers['X-Auth-Token'] = '54027a38aaa543fab6c2a72ad538bae3'
-        # headers['X-Auth-User'] = '836933'
-        # headers['X-Auth-Key'] = '54027a38aaa543fab6c2a72ad538bae3'
+        #headers['X-Auth-Token'] = self.token
+        headers['X-Auth-Token'] = 'f28d70ec6f0c41fa866d58c45b40f61c'
+        headers['X-Auth-User'] = '836933'
+        headers['X-Auth-Key'] = 'f28d70ec6f0c41fa866d58c45b40f61c'
         # print method
         # print url
         # print headers

@@ -91,7 +91,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         response_templates = requests.get(template_giturl, timeout=3)
         yaml_template = yaml.safe_load(response_templates.content)
 
-        regions = ['DFW', 'IAD', 'ORD', 'SYD', 'HKG']
+        regions = ['RegionOne']
         for region in regions:
             stack_name = rand_name("sabeen"+template)
             parameters = {}
