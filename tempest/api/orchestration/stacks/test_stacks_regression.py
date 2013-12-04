@@ -85,13 +85,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     @attr(type='smoke')
     def _test_stack(self, template):
-        env = "staging"
+        env = "prod"
         template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
         #print template_giturl
         response_templates = requests.get(template_giturl, timeout=3)
         yaml_template = yaml.safe_load(response_templates.content)
 
-        regions = ['RegionOne']
+        regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
         for region in regions:
             stack_name = rand_name("sabeen"+template)
             parameters = {}
@@ -120,6 +120,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 count += 1
                 if body['stack_status'] == 'CREATE_FAILED':
                     print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                    print "Deleting the stack now"
+                    resp, body = self.delete_stack(stack_name, stack_id)
+                    if resp['status'] != '204':
+                        print "Delete did not work"
                     self._send_deploy_time_graphite(region, template, count, "failtime")
                     self.fail("Stack create failed")
                 if count == 90:
@@ -140,6 +144,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 resp, body = self.delete_stack(stack_name, stack_id)
                 if resp['status'] != '204':
                     print "Delete did not work"
+
+            else:
+                print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
+
 
         # wait for create complete (with no resources it should be instant)
         # timetaken = self.client.wait_for_stack_status(stack_identifier, 'CREATE_COMPLETE')
