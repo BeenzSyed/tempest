@@ -93,7 +93,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
         for region in regions:
-            stack_name = rand_name("sabeen"+template)
+            stack_name = rand_name("prod_regr"+template)
             parameters = {}
             if 'key_name' in yaml_template['parameters']:
                 #parameters['key_name'] = "sabeen"
