@@ -21,6 +21,8 @@ from tempest.performance.load_test_runner import LoadTestRunner
 import requests
 import yaml
 import datetime
+import time
+import multimechanize
 
 
 LOG = logging.getLogger(__name__)
@@ -36,9 +38,37 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         super(StacksTestJSON, cls).setUpClass()
         cls.client = cls.orchestration_client
 
-    def test_rate_limit(self):
-        #pattern = load_pattern.ConstantLoad(5)
-        pattern = load_pattern.StepLoad(10, 12, 5, 2)
+
+    def test_create_delete_limit(self):
+        pass
+
+    def test_getstack_limit(self):
+        #limit 200/min
+        pattern = load_pattern.StepLoad(5, 200, 10, 15)
+        runner = LoadTestRunner(pattern)
+        runner.run(self._create_stack)
+        pattern = load_pattern.StepLoad(15, 200, 10, 15)
+        runner = LoadTestRunner(pattern)
+        runner.run(self._get_stack)
+
+    def test_deletestack_limit(self):
+        #limit 100/min
+        pattern = load_pattern.StepLoad(5, 100, 10, 15)
+        runner = LoadTestRunner(pattern)
+        runner.run(self._create_stack)
+        pattern = load_pattern.StepLoad(5, 100, 10, 15)
+        runner = LoadTestRunner(pattern)
+        runner.run(self._delete_stack)
+
+    def test_updatestack_limit(self):
+        #limit 20/min
+        pattern = load_pattern.StepLoad(2, 20, 2, 2)
+        runner = LoadTestRunner(pattern)
+        runner.run(self._create_stack)
+
+    def test_createstack_limit(self):
+        #limit 20/min
+        pattern = load_pattern.StepLoad(2, 20, 2, 2)
         runner = LoadTestRunner(pattern)
         runner.run(self._create_stack)
 
@@ -51,8 +81,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def _delete_stack(self):
         # Delete call will need force delete method to be implemented first
-        #limit is 20/min
-        # Need to find the way to delete stack Multiple time
+        #limit is 100/min
+        resp, stacks = self.client.list_stacks()
+        for stack in stacks:
+            stack_id = stack['id']
+            stack_name = stack['stack_name']
+            resp = self.client.delete_stack(stack_name, stack_id)
+            print resp
         print datetime.datetime.now()
 
     def _update_stack(self):
@@ -63,11 +98,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             for stack in stacks:
                 stack_name = stack['stack_name']
                 stack_id = stack['id']
-                resp, stacks = self.client.update_stack(stack_id,stack_name)
+                resp, stack = self.client.update_stack(stack_id,stack_name)
+                print resp
             print datetime.datetime.now()
 
     def _create_stack(self):
-        template = "wp-resource"
+        template = "php-app"
         region = "DFW"
         env = "staging"
         template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
