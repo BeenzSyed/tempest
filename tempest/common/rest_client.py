@@ -143,11 +143,11 @@ class RestClient(object):
             raise
 
     def keystone_auth(self, user, password, auth_url, service, tenant_name,
-                      region='IAD'):
+                      region):
         """
         Provides authentication via Keystone using v2 identity API.
         """
-
+        print "region in keystone_auth is: %s" % region
         # Normalize URI to ensure /tokens is in it.
         if 'tokens' not in auth_url:
             auth_url = auth_url.rstrip('/') + '/tokens'
@@ -190,12 +190,13 @@ class RestClient(object):
                         #     mgmt_url = _ep[self.endpoint_url]
                         if region == _ep['region']:
                             mgmt_url = _ep[self.endpoint_url]
-                            print mgmt_url
+                            #print mgmt_url
                     if not mgmt_url:
                         mgmt_url = ep['endpoints'][0][self.endpoint_url]
                     break
             if mgmt_url is None:
                 raise exceptions.EndpointNotFound(service)
+            print "endpoint is %s" % mgmt_url
             return token, mgmt_url
 
         elif resp.status == 401:
@@ -409,7 +410,7 @@ class RestClient(object):
         # for reg in regions:
         #     print reg
         req_url = "%s/%s" % (self.base_url, url)
-        #print req_url
+        #print "request url is: %s" % req_url
         #uncomment below to see requests
         #self._log_request(method, req_url, headers, body)
         resp, resp_body = self.http_obj.request(req_url, method,
@@ -426,7 +427,8 @@ class RestClient(object):
         #print self.token
         if (self.token is None) or (self.base_url is None):
             self._set_auth(region)
-        # print "base url is: %s" % self.base_url
+        #print "base url is: %s" % self.base_url
+        #print "url is: %s" % url
         if headers is None:
             headers = {}
         headers['X-Auth-Token'] = self.token

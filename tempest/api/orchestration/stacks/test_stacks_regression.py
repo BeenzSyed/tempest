@@ -91,6 +91,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         response_templates = requests.get(template_giturl, timeout=3)
         yaml_template = yaml.safe_load(response_templates.content)
 
+        #pf is the variable that stays 0 if no failures occur, turns to 1 if a build fails
+        pf = 0
+
         regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
         for region in regions:
             stack_name = rand_name("prod_regr"+template)
@@ -120,25 +123,25 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 count += 1
                 if body['stack_status'] == 'CREATE_FAILED':
                     print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                    self._send_deploy_time_graphite(region, template, count, "failtime")
                     print "Deleting the stack now"
                     resp, body = self.delete_stack(stack_name, stack_id)
                     if resp['status'] != '204':
                         print "Delete did not work"
-                    self._send_deploy_time_graphite(region, template, count, "failtime")
-                    self.fail("Stack create failed")
-                if count == 90:
+                    pf += 1
+                elif count == 90:
                     print "Stack create has taken over 90 minutes. Force failing now."
                     self._send_deploy_time_graphite(region, template, count, "failtime")
+                    print "Stack create took too long. Deleting stack now."
                     resp, body = self.delete_stack(stack_name, stack_id)
                     if resp['status'] != '204':
                         print "Delete did not work"
-                    self.fail("Stack create took too long")
+                    pf += 1
 
             if body['stack_status'] == 'CREATE_COMPLETE':
                 print "The deployment took %s minutes" % count
                 self._send_deploy_time_graphite(region, template, count, "buildtime")
                 #extract region and name of template
-
                 #delete stack
                 print "Deleting stack now"
                 resp, body = self.delete_stack(stack_name, stack_id)
@@ -147,6 +150,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             else:
                 print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
+
+        if pf > 0:
+            self.fail("Stack build failed.")
 
 
         # wait for create complete (with no resources it should be instant)
