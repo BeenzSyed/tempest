@@ -53,6 +53,7 @@ class RestClient(object):
         self.service = None
         self.token = None
         self.base_url = None
+        self.all_urls = None
         self.region = {}
         for cfgname in dir(self.config):
             # Find all config.FOO.catalog_type and assume FOO is a service.
@@ -105,9 +106,10 @@ class RestClient(object):
         else:
             auth_func = self.keystone_auth
 
-        self.token, self.base_url = (
+        self.token, self.all_urls = (
             auth_func(self.user, self.password, self.auth_url,
                       self.service, self.tenant_name, region))
+        print "base urls are: %s" % self.all_urls
 
     def clear_auth(self):
         """
@@ -181,22 +183,22 @@ class RestClient(object):
             for ep in auth_data['serviceCatalog']:
                 #print ep['endpoints']
                 if ep["type"] == service:
-                    for _ep in ep['endpoints']:
+                    #for _ep in ep['endpoints']:
                         #print auth_data['serviceCatalog']
                         #print ep['endpoints']
                         #pdb.set_trace()
                         # if service in self.region and \
                         #         _ep['region'] == self.region[service]:
                         #     mgmt_url = _ep[self.endpoint_url]
-                        if region == _ep['region']:
-                            mgmt_url = _ep[self.endpoint_url]
+                        #if region == _ep['region']:
+                    mgmt_url = ep['endpoints']
                             #print mgmt_url
-                    if not mgmt_url:
-                        mgmt_url = ep['endpoints'][0][self.endpoint_url]
-                    break
+                    #if not mgmt_url:
+                    #    mgmt_url = ep['endpoints'][0][self.endpoint_url]
+                    #break
             if mgmt_url is None:
                 raise exceptions.EndpointNotFound(service)
-            print "endpoint is %s" % mgmt_url
+            #print "endpoint is %s" % mgmt_url
             return token, mgmt_url
 
         elif resp.status == 401:
@@ -402,13 +404,26 @@ class RestClient(object):
         if not resp_body and resp.status >= 400:
             self.LOG.warning("status >= 400 response with empty body")
 
-    def _request(self, method, url,
+    def _request(self, method, url, region,
                  headers=None, body=None):
         """A simple HTTP request interface."""
         # regions = self.config.orchestration.region.split(",")
         # #regions = ['DFW', 'IAD', 'ORD']
         # for reg in regions:
         #     print reg
+        if region is not None:
+            for ep in self.all_urls:
+                #print ep
+                #print type(ep)
+                print "region passed in: %s" % region
+                print "region in base url: %s" % ep['region']
+                if region == ep['region']:
+                    self.base_url = ep['publicURL']
+                    print "base url is: %s" % self.base_url
+            if self.base_url is None:
+                    raise exceptions.EndpointNotFound()
+            # for key in ep.keys():
+            #     print "key: %s , value: %s" % (key, ep[key])
         req_url = "%s/%s" % (self.base_url, url)
         #print "request url is: %s" % req_url
         #uncomment below to see requests
@@ -439,7 +454,7 @@ class RestClient(object):
         # print url
         # print headers
         #print body
-        resp, resp_body = self._request(method, url,
+        resp, resp_body = self._request(method, url, region,
                                         headers=headers, body=body)
 
         while (resp.status == 413 and
