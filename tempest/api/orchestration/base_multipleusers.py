@@ -15,6 +15,8 @@
 import tempest.test
 from tempest import clients
 from tempest.openstack.common import log as logging
+import json
+import datetime
 
 LOG = logging.getLogger(__name__)
 
@@ -38,6 +40,11 @@ class BaseMultipleOrchestrationTest(tempest.test.BaseTestCase):
                 "username": "heatdev",
                 "password": "pHxA5rJQ",
                 "tenant_id": "836933"
+            },
+            {
+                "username": "rctestsyd02",
+                "password": "801b4aaed19d58ecb38a2d7604f244fa",
+                "tenant_id": "828222"
             }
         ]
         for user in users:
@@ -96,3 +103,55 @@ class BaseMultipleOrchestrationTest(tempest.test.BaseTestCase):
     def tearDownClass(cls):
         cls.clear_stacks()
         super(BaseMultipleOrchestrationTest, cls).tearDownClass()
+
+    @classmethod
+    def list_stack(cls, manager):
+
+        resp, body = manager.orchestration_client.list_stacks()
+        return resp, body
+
+    def update_stack(self, manager ,stack_identifier, name,
+                     disable_rollback=True,
+                     parameters={}, timeout_mins=60, template=None,
+                     template_url=None):
+        headers, body = self._prepare_update_create(
+            name,
+            disable_rollback,
+            parameters,
+            timeout_mins,
+            template,
+            template_url)
+
+        uri = "stacks/%s" % stack_identifier
+        resp, body = self.put(uri, headers=headers, body=body)
+        return resp, body
+
+    def _prepare_update_create(self, name, disable_rollback=True,
+                               parameters={}, timeout_mins=60,
+                               template=None, template_url=None):
+        post_body = {
+            "stack_name": name,
+            "disable_rollback": disable_rollback,
+            "parameters": parameters,
+            "timeout_mins": timeout_mins
+            #"template": "HeatTemplateFormatVersion: '2013-05-23'\n"
+        }
+        if template:
+            post_body['template'] = template
+        if template_url:
+            post_body['template_url'] = template_url
+        body = json.dumps(post_body, default=datehandler)
+
+        # Password must be provided on stack create so that heat
+        # can perform future operations on behalf of the user
+        headers = dict(self.headers)
+        headers['X-Auth-Key'] = self.password
+        headers['X-Auth-User'] = self.user
+        return headers, body
+
+    def datehandler(obj):
+        if isinstance(obj, datetime.date):
+               return str(obj)
+        else:
+               raise TypeError, 'Object of type %s with value of %s is not ' \
+                         'JSON serializable' % (type(obj), repr(obj))
