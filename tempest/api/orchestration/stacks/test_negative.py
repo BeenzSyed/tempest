@@ -49,7 +49,7 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
 
     def test_verify_username_pwd(self):
         manager = OrchestrationManager(username="heatqe",
-                                       password="Longhorn7",
+                                       password="wrongpwd",
                                        tenant_name="862456")
         try:
             self._create_stack(manager)

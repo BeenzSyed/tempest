@@ -75,7 +75,7 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
             resp, body = self.get_stack(user_rackconnect,stack_id)
             print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
 
-            while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
+            while body['stack_status'] == 'DEPLOYING' and count < 90:
                 resp, body = self.get_stack(user_rackconnect,stack_id)
                 if resp['status'] != '200':
                     print "The response is: %s" % resp
@@ -83,7 +83,7 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
                 print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
                 time.sleep(60)
                 count += 1
-                if body['stack_status'] == 'CREATE_FAILED':
+                if body['stack_status'] == 'FAILED':
                     print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                     print "Deleting the stack now"
                     resp, body = self.delete_stack(user_rackconnect,
@@ -100,7 +100,7 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
                         print "Delete did not work"
                     self.fail("Stack create took too long")
 
-            if body['stack_status'] == 'CREATE_COMPLETE':
+            if body['stack_status'] == 'DEPLOYED':
                 print "The deployment took %s minutes" % count
                 self._send_deploy_time_graphite(region, template, count, "buildtime")
                 #extract region and name of template
