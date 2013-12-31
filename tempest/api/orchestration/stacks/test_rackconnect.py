@@ -34,10 +34,8 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
     def setUpClass(cls):
         super(StacksTestJSON, cls).setUpClass()
 
-
-
     def test_rackconnect_realDeployment(self):
-        self._test_stack_for_RackConnect("php-app")
+        self._test_stack_for_RackConnect("wordpress-winserver-clouddb")
 
     def _send_deploy_time_graphite(self, region, template, deploy_time, buildfail):
         cmd = 'echo "heat.qa.build-tests.' + region + '.' + template \
@@ -62,20 +60,20 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
             parameters = {
                     'key_name': 'sabeen'
                 }
-            if 'git_url' in yaml_template['parameters']:
+        if 'git_url' in yaml_template['parameters']:
                 parameters['git_url'] = "https://github.com/timductive/phphelloworld"
 
-            print "\nDeploying %s in %s" % (template,region)
-            stack_identifier = self.create_stack(user_rackconnect,stack_name, region,
+        print "\nDeploying %s in %s" % (template,region)
+        stack_identifier = self.create_stack(user_rackconnect,stack_name, region,
                                              yaml_template, parameters)
             #stack_identifier = self.create_stack(stack_name, region,
             # yaml_template, parameters)
-            stack_id = stack_identifier.split('/')[1]
-            count = 0
-            resp, body = self.get_stack(user_rackconnect,stack_id)
-            print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
+        stack_id = stack_identifier.split('/')[1]
+        count = 0
+        resp, body = self.get_stack(user_rackconnect,stack_id)
+        print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
 
-            while body['stack_status'] == 'DEPLOYING' and count < 90:
+        while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
                 resp, body = self.get_stack(user_rackconnect,stack_id)
                 if resp['status'] != '200':
                     print "The response is: %s" % resp
@@ -83,7 +81,7 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
                 print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
                 time.sleep(60)
                 count += 1
-                if body['stack_status'] == 'FAILED':
+                if body['stack_status'] == 'CREATE_FAILED':
                     print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                     print "Deleting the stack now"
                     resp, body = self.delete_stack(user_rackconnect,
@@ -100,7 +98,7 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
                         print "Delete did not work"
                     self.fail("Stack create took too long")
 
-            if body['stack_status'] == 'DEPLOYED':
+        if body['stack_status'] == 'CREATE_COMPLETE':
                 print "The deployment took %s minutes" % count
                 self._send_deploy_time_graphite(region, template, count, "buildtime")
                 #extract region and name of template
@@ -112,5 +110,5 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
                 if resp['status'] != '204':
                     print "Delete did not work"
 
-            else:
+        else:
                 print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
