@@ -113,6 +113,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             resp, body = self.get_stack(stack_id)
             print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
 
+            #pdb.set_trace()
             while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
                 resp, body = self.get_stack(stack_id)
                 if resp['status'] != '200':
@@ -125,16 +126,16 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                     self._send_deploy_time_graphite(region, template, count, "failtime")
                     print "Deleting the stack now"
-                    resp, body = self.delete_stack(stack_name, stack_id)
-                    if resp['status'] != '204':
+                    dresp, dbody = self.delete_stack(stack_name, stack_id)
+                    if dresp['status'] != '204':
                         print "Delete did not work"
                     pf += 1
                 elif count == 90:
                     print "Stack create has taken over 90 minutes. Force failing now."
                     self._send_deploy_time_graphite(region, template, count, "failtime")
                     print "Stack create took too long. Deleting stack now."
-                    resp, body = self.delete_stack(stack_name, stack_id)
-                    if resp['status'] != '204':
+                    dresp, dbody = self.delete_stack(stack_name, stack_id)
+                    if dresp['status'] != '204':
                         print "Delete did not work"
                     pf += 1
 
