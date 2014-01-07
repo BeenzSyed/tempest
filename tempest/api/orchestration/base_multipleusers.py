@@ -43,7 +43,7 @@ class BaseMultipleOrchestrationTest(tempest.test.BaseTestCase):
             },
             {
                 "username": "rctestsyd02",
-                "password": "801b4aaed19d58ecb38a2d7604f244fa",
+                "password": "Hybr1d99",
                 "tenant_id": "828222"
             }
         ]
