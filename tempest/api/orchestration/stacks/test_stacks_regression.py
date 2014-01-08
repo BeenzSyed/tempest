@@ -124,7 +124,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 count += 1
                 if body['stack_status'] == 'CREATE_FAILED':
                     print "Stack create failed. Here's why: %s" % body['stack_status_reason']
-                    self._send_deploy_time_graphite(region, template, count, "failtime")
+                    self._send_deploy_time_graphite(env, region, template, count, "failtime")
                     print "Deleting the stack now"
                     dresp, dbody = self.delete_stack(stack_name, stack_id)
                     if dresp['status'] != '204':
@@ -132,7 +132,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     pf += 1
                 elif count == 90:
                     print "Stack create has taken over 90 minutes. Force failing now."
-                    self._send_deploy_time_graphite(region, template, count, "failtime")
+                    self._send_deploy_time_graphite(env, region, template, count, "failtime")
                     print "Stack create took too long. Deleting stack now."
                     dresp, dbody = self.delete_stack(stack_name, stack_id)
                     if dresp['status'] != '204':
@@ -141,7 +141,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             if body['stack_status'] == 'CREATE_COMPLETE':
                 print "The deployment took %s minutes" % count
-                self._send_deploy_time_graphite(region, template, count, "buildtime")
+                self._send_deploy_time_graphite(env, region, template, count, "buildtime")
                 #extract region and name of template
                 #delete stack
                 print "Deleting stack now"
@@ -155,38 +155,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         if pf > 0:
             self.fail("Stack build failed.")
 
-
-        # wait for create complete (with no resources it should be instant)
-        # timetaken = self.client.wait_for_stack_status(stack_identifier, 'CREATE_COMPLETE')
-        # print "time taken for stack to deploy: %s" %timetaken
-        # stack count will increment by 1
-        # resp, stacks = self.client.list_stacks()
-        # list_ids = list([stack['id'] for stack in stacks])
-        # self.assertIn(stack_id, list_ids)
-        # print resp
-
-        # # fetch the stack
-        # resp, stack = self.client.get_stack(stack_identifier)
-        # self.assertEqual('CREATE_COMPLETE', stack['stack_status'])
-        #
-        # # fetch the stack by name
-        # resp, stack = self.client.get_stack(stack_name)
-        # self.assertEqual('CREATE_COMPLETE', stack['stack_status'])
-        #
-        # # fetch the stack by id
-        # resp, stack = self.client.get_stack(stack_id)
-        # self.assertEqual('CREATE_COMPLETE', stack['stack_status'])
-
-        # delete the stack
-        #resp = self.client.delete_stack(stack_identifier)
-        #self.assertEqual('204', resp[0]['status'])
-
-    def _send_deploy_time_graphite(self, region, template, deploy_time, buildfail):
-        cmd = 'echo "heat.qa.build-tests.' + region + '.' + template \
+    def _send_deploy_time_graphite(self, env, region, template, deploy_time, buildfail):
+        cmd = 'echo "heat.' + env + '.build-tests.' + region + '.' + template \
               + '.' + buildfail + '  ' + str(deploy_time) \
               + ' `date +%s`" | ' \
-                'nc http://graphite.staging.rs-heat.com/ ' \
+                'nc graphite.staging.rs-heat.com ' \
                 '2003 -q 2'
-        print cmd
+        #print cmd
         os.system(cmd)
         print "Deploy time sent to graphite"
