@@ -26,9 +26,11 @@ from tempest.services.compute.xml.common import xml_to_json
 
 class KeyPairsClientXML(RestClientXML):
 
-    def __init__(self, config, username, password, auth_url, tenant_name=None):
+    def __init__(self, config, username, password, auth_url, token_url,
+                 tenant_name=None):
         super(KeyPairsClientXML, self).__init__(config, username, password,
-                                                auth_url, tenant_name)
+                                                auth_url, token_url,
+                                                tenant_name)
         self.service = self.config.compute.catalog_type
 
     def list_keypairs(self):

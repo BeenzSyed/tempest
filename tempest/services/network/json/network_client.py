@@ -32,9 +32,11 @@ class NetworkClientJSON(RestClient):
     quotas
     """
 
-    def __init__(self, config, username, password, auth_url, tenant_name=None):
+    def __init__(self, config, username, password, auth_url, token_url,
+                 tenant_name=None):
         super(NetworkClientJSON, self).__init__(config, username, password,
-                                                auth_url, tenant_name)
+                                                auth_url, token_url,
+                                                tenant_name)
         self.service = self.config.network.catalog_type
         self.version = '2.0'
         self.uri_prefix = "v%s" % (self.version)

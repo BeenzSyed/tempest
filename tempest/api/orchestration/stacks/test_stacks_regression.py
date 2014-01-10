@@ -20,6 +20,7 @@ import requests
 import yaml
 import time
 import os
+import ConfigParser
 import pdb
 
 LOG = logging.getLogger(__name__)
@@ -85,18 +86,29 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     @attr(type='smoke')
     def _test_stack(self, template):
-        env = "prod"
-        template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
+        print os.environ.get('TEMPEST_CONFIG')
+        if os.environ.get('TEMPEST_CONFIG') == "tempest.conf":
+            print "yay"
+
+        env = self.config.orchestration['env']
+        #env = "prod"
+        template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
         #print template_giturl
         response_templates = requests.get(template_giturl, timeout=3)
+        #pdb.set_trace()
         yaml_template = yaml.safe_load(response_templates.content)
 
         #pf is the variable that stays 0 if no failures occur, turns to 1 if a build fails
         pf = 0
 
-        regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
+        regionsConfig = self.config.orchestration['regions']
+        # config = ConfigParser.RawConfigParser()
+        # config.read('etc/tempest_qa.conf')
+        # regions = config.get('orchestration', 'regions')
+        #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
+        regions = regionsConfig.split(",")
         for region in regions:
-            stack_name = rand_name("prod_regr"+template+region)
+            stack_name = rand_name("qe_"+template+region)
             parameters = {}
             if 'key_name' in yaml_template['parameters']:
                 #parameters['key_name'] = "sabeen"
@@ -107,6 +119,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 parameters['git_url'] = "https://github.com/timductive/phphelloworld"
 
             print "\nDeploying %s in %s" % (template, region)
+            #pdb.set_trace()
             stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
             stack_id = stack_identifier.split('/')[1]
             count = 0

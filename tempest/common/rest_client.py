@@ -41,14 +41,15 @@ class RestClient(object):
     TYPE = "json"
     LOG = logging.getLogger(__name__)
 
-    def __init__(self, config, user, password, auth_url, tenant_name=None,
-                 auth_version='v2'):
+    def __init__(self, config, user, password, auth_url, token_url,
+                 tenant_name=None, auth_version='v2'):
         self.config = config
         self.user = user
         self.password = password
         self.auth_url = auth_url
         self.tenant_name = tenant_name
         self.auth_version = auth_version
+        self.token_url = token_url
 
         self.service = None
         self.token = None
@@ -101,15 +102,120 @@ class RestClient(object):
         """
         Sets the token and base_url used in requests based on the strategy type
         """
-        if self.auth_version == 'v3':
-            auth_func = self.identity_auth_v3
-        else:
-            auth_func = self.keystone_auth
+        # if self.auth_version == 'v3':
+        #     auth_func = self.identity_auth_v3
+        # else:
+        #     auth_func = self.keystone_auth
+        #
+        # self.token, self.all_urls = (
+        #     auth_func(self.user, self.password, self.auth_url,
+        #               self.service, self.tenant_name, region))
 
-        self.token, self.all_urls = (
-            auth_func(self.user, self.password, self.auth_url,
-                      self.service, self.tenant_name, region))
+        if self.auth_version == 'v3':
+            token_func = self.identity_auth_v3_token
+        else:
+            token_func = self.keystone_auth_token
+
+        self.token = (
+            token_func(self.user, self.password, self.token_url, self.service,
+                       self.tenant_name, region))
+
+        if self.auth_version == 'v3':
+            urls_func = self.identity_auth_v3_urls
+        else:
+            urls_func = self.keystone_auth_urls
+
+        self.all_urls = (
+            urls_func(self.user, self.password, self.auth_url, self.service,
+                      self.tenant_name, region))
+
+        print "token is: %s" % self.token
         print "base urls are: %s" % self.all_urls
+
+    def identity_auth_v3_token(self, user, password, auth_url, service, tenant_name,
+                      region):
+        print "blank"
+
+    def keystone_auth_token(self, user, password, token_url, service, tenant_name,
+                      region):
+        if 'tokens' not in token_url:
+            token_url = token_url.rstrip('/') + '/tokens'
+
+        creds = {
+            'auth': {
+                'passwordCredentials': {
+                    'username': user,
+                    'password': password,
+                },
+                'tenantName': tenant_name,
+            }
+        }
+
+        headers = {'Content-Type': 'application/json'}
+        body = json.dumps(creds)
+        self._log_request('POST', token_url, headers, body)
+        resp, resp_body = self.http_obj.request(token_url, 'POST',
+                                                headers=headers, body=body)
+        self._log_response(resp, resp_body)
+        if resp.status == 200:
+            try:
+                auth_data = json.loads(resp_body)['access']
+                token = auth_data['token']['id']
+            except Exception as e:
+                print("Failed to obtain token for user: %s" % e)
+                raise
+            return token
+
+        elif resp.status == 401:
+            raise exceptions.AuthenticationFailure(user=user,
+                                                   password=password,
+                                                   tenant=tenant_name)
+
+    def identity_auth_v3_urls(self, user, password, auth_url, service, tenant_name,
+                      region):
+        print "blank"
+
+    def keystone_auth_urls(self, user, password, auth_url, service, tenant_name,
+                      region):
+        print "region in keystone_auth is: %s" % region
+        # Normalize URI to ensure /tokens is in it.
+        if 'tokens' not in auth_url:
+            auth_url = auth_url.rstrip('/') + '/tokens'
+
+        creds = {
+            'auth': {
+                'passwordCredentials': {
+                    'username': user,
+                    'password': password,
+                },
+                'tenantName': tenant_name,
+            }
+        }
+
+        headers = {'Content-Type': 'application/json'}
+        body = json.dumps(creds)
+        self._log_request('POST', auth_url, headers, body)
+        resp, resp_body = self.http_obj.request(auth_url, 'POST',
+                                                headers=headers, body=body)
+        self._log_response(resp, resp_body)
+        if resp.status == 200:
+            try:
+                auth_data = json.loads(resp_body)['access']
+            except Exception as e:
+                print("Failed to obtain token for user: %s" % e)
+                raise
+
+            mgmt_url = None
+            for ep in auth_data['serviceCatalog']:
+                if ep["type"] == service:
+                    mgmt_url = ep['endpoints']
+            if mgmt_url is None:
+                raise exceptions.EndpointNotFound(service)
+            return mgmt_url
+        elif resp.status == 401:
+            raise exceptions.AuthenticationFailure(user=user,
+                                                   password=password,
+                                                   tenant=tenant_name)
 
     def clear_auth(self):
         """
@@ -181,24 +287,10 @@ class RestClient(object):
 
             mgmt_url = None
             for ep in auth_data['serviceCatalog']:
-                #print ep['endpoints']
                 if ep["type"] == service:
-                    #for _ep in ep['endpoints']:
-                        #print auth_data['serviceCatalog']
-                        #print ep['endpoints']
-                        #pdb.set_trace()
-                        # if service in self.region and \
-                        #         _ep['region'] == self.region[service]:
-                        #     mgmt_url = _ep[self.endpoint_url]
-                        #if region == _ep['region']:
                     mgmt_url = ep['endpoints']
-                            #print mgmt_url
-                    #if not mgmt_url:
-                    #    mgmt_url = ep['endpoints'][0][self.endpoint_url]
-                    #break
             if mgmt_url is None:
                 raise exceptions.EndpointNotFound(service)
-            #print "endpoint is %s" % mgmt_url
             return token, mgmt_url
 
         elif resp.status == 401:
@@ -307,6 +399,10 @@ class RestClient(object):
                 raise exceptions.InvalidHttpSuccessCode(details)
 
     def post(self, url, region, body, headers):
+        # print url
+        # print region
+        # print headers
+        # print body
         return self.request('POST', url, region, headers, body)
 
     def get(self, url, headers=None):
@@ -413,8 +509,7 @@ class RestClient(object):
         #     print reg
         if region is not None:
             for ep in self.all_urls:
-                #print ep
-                #print type(ep)
+                pdb.set_trace()
                 print "region passed in: %s" % region
                 print "region in base url: %s" % ep['region']
                 if region == ep['region']:

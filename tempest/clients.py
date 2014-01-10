@@ -303,6 +303,7 @@ class Manager(object):
             raise exceptions.InvalidConfiguration(msg)
 
         self.auth_url = self.config.identity.uri
+        self.token_url = self.config.identity.uri_token
         self.auth_url_v3 = self.config.identity.uri_v3
 
         client_args = (self.config, self.username, self.password,
@@ -446,8 +447,9 @@ class OrchestrationManager(object):
         self.password = password or self.config.identity.password
         self.tenant_name = tenant_name or self.config.identity.tenant_name
         self.auth_url = self.config.identity.uri
+        self.token_url = self.config.identity.uri_token
         client_args = (self.config, self.username, self.password,
-                       self.auth_url, self.tenant_name)
+                       self.auth_url, self.token_url, self.tenant_name)
         self.keypairs_client = KEYPAIRS_CLIENTS[interface](*client_args)
         self.servers_client = SERVERS_CLIENTS[interface](*client_args)
         self.network_client = NETWORKS_CLIENTS[interface](*client_args)

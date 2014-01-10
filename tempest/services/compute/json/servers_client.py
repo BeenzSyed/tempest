@@ -27,10 +27,12 @@ from tempest import exceptions
 
 class ServersClientJSON(RestClient):
 
-    def __init__(self, config, username, password, auth_url, tenant_name=None,
+    def __init__(self, config, username, password, auth_url, token_url,
+                 tenant_name=None,
                  auth_version='v2'):
         super(ServersClientJSON, self).__init__(config, username, password,
-                                                auth_url, tenant_name,
+                                                auth_url, token_url,
+                                                tenant_name,
                                                 auth_version=auth_version)
         self.service = self.config.compute.catalog_type
 

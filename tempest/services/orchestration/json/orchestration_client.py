@@ -27,9 +27,11 @@ from tempest import exceptions
 
 class OrchestrationClient(rest_client.RestClient):
 
-    def __init__(self, config, username, password, auth_url, tenant_name=None):
+    def __init__(self, config, username, password, auth_url, token_url,
+                 tenant_name=None):
         super(OrchestrationClient, self).__init__(config, username, password,
-                                                  auth_url, tenant_name)
+                                                  auth_url, token_url,
+                                                  tenant_name)
         self.service = self.config.orchestration.catalog_type
         self.build_interval = self.config.orchestration.build_interval
         self.build_timeout = self.config.orchestration.build_timeout

@@ -22,9 +22,11 @@ from tempest.common.rest_client import RestClient
 
 class KeyPairsClientJSON(RestClient):
 
-    def __init__(self, config, username, password, auth_url, tenant_name=None):
+    def __init__(self, config, username, password, auth_url, token_url,
+                 tenant_name=None):
         super(KeyPairsClientJSON, self).__init__(config, username, password,
-                                                 auth_url, tenant_name)
+                                                 auth_url, token_url,
+                                                 tenant_name)
         self.service = self.config.compute.catalog_type
 
     def list_keypairs(self):
