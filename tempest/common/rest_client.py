@@ -129,8 +129,8 @@ class RestClient(object):
             urls_func(self.user, self.password, self.auth_url, self.service,
                       self.tenant_name, region))
 
-        print "token is: %s" % self.token
-        print "base urls are: %s" % self.all_urls
+        #print "token is: %s" % self.token
+        #print "base urls are: %s" % self.all_urls
 
     def identity_auth_v3_token(self, user, password, auth_url, service, tenant_name,
                       region):
@@ -509,9 +509,9 @@ class RestClient(object):
         #     print reg
         if region is not None:
             for ep in self.all_urls:
-                pdb.set_trace()
-                print "region passed in: %s" % region
-                print "region in base url: %s" % ep['region']
+                #pdb.set_trace()
+                #print "region passed in: %s" % region
+                #print "region in base url: %s" % ep['region']
                 if region == ep['region']:
                     self.base_url = ep['publicURL']
                     print "base url is: %s" % self.base_url
