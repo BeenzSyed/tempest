@@ -84,3 +84,13 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
         stack_id = stack_identifier.split('/')[1]
         self.get_stack(manager, stack_id)
         return stack_identifier
+
+    def test_get_api_version(self):
+        user = self.managers[0]
+        regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
+        for region in regions:
+            resp, body = self.get_api_version(user, region)
+            body = body['versions']
+            versions = map(lambda x: x['id'], body)
+            self.assertEquals(1, len(versions))
+            self.assertEquals("v1.0", versions[0])

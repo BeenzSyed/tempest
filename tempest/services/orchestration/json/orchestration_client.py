@@ -115,6 +115,14 @@ class OrchestrationClient(rest_client.RestClient):
         body = json.loads(body)
         return resp, body['stack']
 
+    def get_api_version(self, region):
+        """Returns api version with response."""
+        url = "https://%s.orchestration.api.rackspacecloud" \
+              ".com/versions/"%region
+        resp, body = self.get(url)
+        body = json.loads(body)
+        return resp, body
+
     def list_resources(self, stack_identifier):
         """Returns the details of a single resource."""
         url = "stacks/%s/resources" % stack_identifier

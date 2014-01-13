@@ -75,8 +75,13 @@ class BaseMultipleOrchestrationTest(tempest.test.BaseTestCase):
     def get_stack(cls, manager, stack_id):
         """Returns the details of a single stack."""
         resp, body = manager.orchestration_client.get_stack(stack_id)
-
         return resp, body['stack']
+
+    @classmethod
+    def get_api_version(cls, manager, region):
+        resp, body = manager.orchestration_client.get_api_version(region)
+        return resp, body
+
 
     @classmethod
     def delete_stack(cls, manager, stack_name, stack_id):
@@ -149,7 +154,7 @@ class BaseMultipleOrchestrationTest(tempest.test.BaseTestCase):
         headers['X-Auth-User'] = self.user
         return headers, body
 
-    def datehandler(obj):
+def datehandler(obj):
         if isinstance(obj, datetime.date):
                return str(obj)
         else:
