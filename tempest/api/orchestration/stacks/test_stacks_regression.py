@@ -138,18 +138,20 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 if body['stack_status'] == 'CREATE_FAILED':
                     print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                     self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                    print "Deleting the stack now"
-                    dresp, dbody = self.delete_stack(stack_name, stack_id)
-                    if dresp['status'] != '204':
-                        print "Delete did not work"
+                    if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
+                        print "Deleting the stack now"
+                        dresp, dbody = self.delete_stack(stack_name, stack_id)
+                        if dresp['status'] != '204':
+                            print "Delete did not work"
                     pf += 1
                 elif count == 90:
                     print "Stack create has taken over 90 minutes. Force failing now."
                     self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                    print "Stack create took too long. Deleting stack now."
-                    dresp, dbody = self.delete_stack(stack_name, stack_id)
-                    if dresp['status'] != '204':
-                        print "Delete did not work"
+                    if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
+                        print "Stack create took too long. Deleting stack now."
+                        dresp, dbody = self.delete_stack(stack_name, stack_id)
+                        if dresp['status'] != '204':
+                            print "Delete did not work"
                     pf += 1
 
             if body['stack_status'] == 'CREATE_COMPLETE':
