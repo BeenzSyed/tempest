@@ -130,7 +130,7 @@ class RestClient(object):
                       self.tenant_name, region))
 
         #print "token is: %s" % self.token
-        #print "base urls are: %s" % self.all_urls
+        print "base urls are: %s" % self.all_urls
 
     def identity_auth_v3_token(self, user, password, auth_url, service, tenant_name,
                       region):

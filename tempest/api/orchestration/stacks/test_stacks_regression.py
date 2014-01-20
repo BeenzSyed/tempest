@@ -93,7 +93,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         env = self.config.orchestration['env']
         #env = "prod"
         template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
-        #print template_giturl
+        print template_giturl
         response_templates = requests.get(template_giturl, timeout=3)
         #pdb.set_trace()
         yaml_template = yaml.safe_load(response_templates.content)
@@ -158,6 +158,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 print "The deployment took %s minutes" % count
                 self._send_deploy_time_graphite(env, region, template, count, "buildtime")
                 #extract region and name of template
+
+
+
                 #delete stack
                 print "Deleting stack now"
                 resp, body = self.delete_stack(stack_name, stack_id)
