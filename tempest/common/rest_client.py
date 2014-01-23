@@ -21,6 +21,7 @@ from lxml import etree
 import re
 import time
 import pdb
+from urlparse import urlparse
 
 from tempest.common import http
 from tempest import exceptions
@@ -517,16 +518,21 @@ class RestClient(object):
                     raise exceptions.EndpointNotFound()
             # for key in ep.keys():
             #     print "key: %s , value: %s" % (key, ep[key])
-        req_url = "%s/%s" % (self.base_url, url)
+        #req_url = "%s/%s" % (self.base_url, url)
         #print "request url is: %s" % req_url
         #uncomment below to see requests
         #self._log_request(method, req_url, headers, body)
+        req_url = urlparse(url)
+        if req_url.scheme in ['http', 'https']:
+            req_url = url
+        else :
+            req_url = "%s/%s" % (self.base_url, url)
+
         resp, resp_body = self.http_obj.request(req_url, method,
                                                 headers=headers, body=body)
         #uncomment below to see responses
         #self._log_response(resp, resp_body)
         self.response_checker(method, url, headers, body, resp, resp_body)
-
         return resp, resp_body
 
     def request(self, method, url, region,
