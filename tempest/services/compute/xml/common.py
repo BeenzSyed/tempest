@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2012 IBM Corp.
 # All Rights Reserved.
 #
@@ -18,6 +16,7 @@
 import collections
 
 XMLNS_11 = "http://docs.openstack.org/compute/api/v1.1"
+XMLNS_V3 = "http://docs.openstack.org/compute/api/v1.1"
 
 
 # NOTE(danms): This is just a silly implementation to help make generating
@@ -36,7 +35,9 @@ class Element(object):
         self._elements.append(element)
 
     def __str__(self):
-        args = " ".join(['%s="%s"' % (k, v) for k, v in self._attrs.items()])
+        args = " ".join(['%s="%s"' %
+                        (k, v if v is not None else "")
+                        for k, v in self._attrs.items()])
         string = '<%s %s' % (self.element_name, args)
         if not self._elements:
             string += '/>'
@@ -78,7 +79,9 @@ class Document(Element):
         Element.__init__(self, '?xml', *args, **kwargs)
 
     def __str__(self):
-        args = " ".join(['%s="%s"' % (k, v) for k, v in self._attrs.items()])
+        args = " ".join(['%s="%s"' %
+                        (k, v if v is not None else "")
+                        for k, v in self._attrs.items()])
         string = '<?xml %s?>\n' % args
         for element in self._elements:
             string += str(element)
@@ -94,7 +97,15 @@ class Text(Element):
         return self.__content
 
 
-def xml_to_json(node):
+def parse_array(node, plurals=None):
+    array = []
+    for child in node.getchildren():
+        array.append(xml_to_json(child,
+                     plurals))
+    return array
+
+
+def xml_to_json(node, plurals=None):
     """This does a really braindead conversion of an XML tree to
     something that looks like a json dump. In cases where the XML
     and json structures are the same, then this "just works". In
@@ -110,7 +121,10 @@ def xml_to_json(node):
         tag = child.tag
         if tag.startswith("{"):
             ns, tag = tag.split("}", 1)
-        json[tag] = xml_to_json(child)
+        if plurals is not None and tag in plurals:
+                json[tag] = parse_array(child, plurals)
+        else:
+            json[tag] = xml_to_json(child, plurals)
     return json
 
 

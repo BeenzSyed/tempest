@@ -14,25 +14,22 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import testtools
-
 from tempest.api.object_storage import base
 from tempest import clients
-from tempest.common.utils.data_utils import arbitrary_string
-from tempest.common.utils.data_utils import rand_name
-import tempest.config
+from tempest.common.utils import data_utils
+from tempest import config
 from tempest import exceptions
-from tempest.test import attr
+from tempest import test
+
+CONF = config.CONF
 
 
 class AccountQuotasTest(base.BaseObjectTest):
-    accounts_quotas_available = \
-        tempest.config.TempestConfig().object_storage.accounts_quotas_available
 
     @classmethod
     def setUpClass(cls):
         super(AccountQuotasTest, cls).setUpClass()
-        cls.container_name = rand_name(name="TestContainer")
+        cls.container_name = data_utils.rand_name(name="TestContainer")
         cls.container_client.create_container(cls.container_name)
 
         cls.data.setup_test_user()
@@ -98,30 +95,28 @@ class AccountQuotasTest(base.BaseObjectTest):
         cls.data.teardown_all()
         super(AccountQuotasTest, cls).tearDownClass()
 
-    @testtools.skipIf(not accounts_quotas_available,
-                      "Account Quotas middleware not available")
-    @attr(type="smoke")
+    @test.attr(type="smoke")
+    @test.requires_ext(extension='account_quotas', service='object')
     def test_upload_valid_object(self):
-        object_name = rand_name(name="TestObject")
-        data = arbitrary_string()
+        object_name = data_utils.rand_name(name="TestObject")
+        data = data_utils.arbitrary_string()
         resp, _ = self.object_client.create_object(self.container_name,
                                                    object_name, data)
 
         self.assertEqual(resp["status"], "201")
+        self.assertHeaders(resp, 'Object', 'PUT')
 
-    @testtools.skipIf(not accounts_quotas_available,
-                      "Account Quotas middleware not available")
-    @attr(type=["negative", "smoke"])
+    @test.attr(type=["negative", "smoke"])
+    @test.requires_ext(extension='account_quotas', service='object')
     def test_upload_large_object(self):
-        object_name = rand_name(name="TestObject")
-        data = arbitrary_string(30)
+        object_name = data_utils.rand_name(name="TestObject")
+        data = data_utils.arbitrary_string(30)
         self.assertRaises(exceptions.OverLimit,
                           self.object_client.create_object,
                           self.container_name, object_name, data)
 
-    @testtools.skipIf(not accounts_quotas_available,
-                      "Account Quotas middleware not available")
-    @attr(type=["smoke"])
+    @test.attr(type=["smoke"])
+    @test.requires_ext(extension='account_quotas', service='object')
     def test_admin_modify_quota(self):
         """Test that the ResellerAdmin is able to modify and remove the quota
         on a user's account.
@@ -142,10 +137,10 @@ class AccountQuotasTest(base.BaseObjectTest):
                                                             headers, "")
 
             self.assertEqual(resp["status"], "204")
+            self.assertHeaders(resp, 'Account', 'POST')
 
-    @testtools.skipIf(not accounts_quotas_available,
-                      "Account Quotas middleware not available")
-    @attr(type=["negative", "smoke"])
+    @test.attr(type=["negative", "smoke"])
+    @test.requires_ext(extension='account_quotas', service='object')
     def test_user_modify_quota(self):
         """Test that a user is not able to modify or remove a quota on
         its account.

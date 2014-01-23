@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -102,10 +100,32 @@ class FlavorsClientJSON(RestClient):
         body = json.loads(body)
         return resp, body['extra_specs']
 
+    def get_flavor_extra_spec_with_key(self, flavor_id, key):
+        """Gets extra Specs key-value of the mentioned flavor and key."""
+        resp, body = self.get('flavors/%s/os-extra_specs/%s' % (str(flavor_id),
+                              key))
+        body = json.loads(body)
+        return resp, body
+
+    def update_flavor_extra_spec(self, flavor_id, key, **kwargs):
+        """Update specified extra Specs of the mentioned flavor and key."""
+        resp, body = self.put('flavors/%s/os-extra_specs/%s' %
+                              (flavor_id, key),
+                              json.dumps(kwargs), self.headers)
+        body = json.loads(body)
+        return resp, body
+
     def unset_flavor_extra_spec(self, flavor_id, key):
         """Unsets extra Specs from the mentioned flavor."""
         return self.delete('flavors/%s/os-extra_specs/%s' % (str(flavor_id),
                            key))
+
+    def list_flavor_access(self, flavor_id):
+        """Gets flavor access information given the flavor id."""
+        resp, body = self.get('flavors/%s/os-flavor-access' % flavor_id,
+                              self.headers)
+        body = json.loads(body)
+        return resp, body['flavor_access']
 
     def add_flavor_access(self, flavor_id, tenant_id):
         """Add flavor access for the specified tenant."""

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2012 IBM Corp.
 # All Rights Reserved.
 #
@@ -76,6 +74,30 @@ class SecurityGroupsClientXML(RestClientXML):
         resp, body = self.post('os-security-groups',
                                str(Document(security_group)),
                                self.headers)
+        body = self._parse_body(etree.fromstring(body))
+        return resp, body
+
+    def update_security_group(self, security_group_id, name=None,
+                              description=None):
+        """
+        Update a security group.
+        security_group_id: a security_group to update
+        name: new name of security group
+        description: new description of security group
+        """
+        security_group = Element("security_group")
+        if name:
+            sg_name = Element("name")
+            sg_name.append(Text(content=name))
+            security_group.append(sg_name)
+        if description:
+            des = Element("description")
+            des.append(Text(content=description))
+            security_group.append(des)
+        resp, body = self.put('os-security-groups/%s' %
+                              str(security_group_id),
+                              str(Document(security_group)),
+                              self.headers)
         body = self._parse_body(etree.fromstring(body))
         return resp, body
 

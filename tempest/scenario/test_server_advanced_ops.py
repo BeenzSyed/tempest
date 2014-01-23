@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -33,9 +31,10 @@ class TestServerAdvancedOps(manager.OfficialClientTest):
 
     @classmethod
     def setUpClass(cls):
+        cls.set_network_resources()
         super(TestServerAdvancedOps, cls).setUpClass()
 
-        if not cls.config.compute.resize_available:
+        if not cls.config.compute_feature_enabled.resize:
             msg = "Skipping test - resize not available on this host"
             raise cls.skipException(msg)
 

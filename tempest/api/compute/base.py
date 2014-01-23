@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -17,11 +15,8 @@
 
 import time
 
-from tempest.api import compute
 from tempest import clients
-from tempest.common import isolated_creds
-from tempest.common.utils.data_utils import parse_image_id
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest import exceptions
 from tempest.openstack.common import log as logging
 import tempest.test
@@ -33,7 +28,7 @@ LOG = logging.getLogger(__name__)
 class BaseComputeTest(tempest.test.BaseTestCase):
     """Base test case class for all Compute API tests."""
 
-    conclusion = compute.generic_setup_package()
+    force_tenant_isolation = False
 
     @classmethod
     def setUpClass(cls):
@@ -41,49 +36,45 @@ class BaseComputeTest(tempest.test.BaseTestCase):
         if not cls.config.service_available.nova:
             skip_msg = ("%s skipped as nova is not available" % cls.__name__)
             raise cls.skipException(skip_msg)
-        cls.isolated_creds = isolated_creds.IsolatedCreds(cls.__name__)
 
-        if cls.config.compute.allow_tenant_isolation:
-            creds = cls.isolated_creds.get_primary_creds()
-            username, tenant_name, password = creds
-            os = clients.Manager(username=username,
-                                 password=password,
-                                 tenant_name=tenant_name,
-                                 interface=cls._interface)
-        else:
-            os = clients.Manager(interface=cls._interface)
+        os = cls.get_client_manager()
 
         cls.os = os
-        cls.servers_client = os.servers_client
-        cls.flavors_client = os.flavors_client
-        cls.images_client = os.images_client
-        cls.extensions_client = os.extensions_client
-        cls.floating_ips_client = os.floating_ips_client
-        cls.keypairs_client = os.keypairs_client
-        cls.security_groups_client = os.security_groups_client
-        cls.quotas_client = os.quotas_client
-        cls.limits_client = os.limits_client
-        cls.volumes_extensions_client = os.volumes_extensions_client
-        cls.volumes_client = os.volumes_client
-        cls.interfaces_client = os.interfaces_client
-        cls.fixed_ips_client = os.fixed_ips_client
-        cls.availability_zone_client = os.availability_zone_client
-        cls.aggregates_client = os.aggregates_client
-        cls.services_client = os.services_client
-        cls.hypervisor_client = os.hypervisor_client
         cls.build_interval = cls.config.compute.build_interval
         cls.build_timeout = cls.config.compute.build_timeout
         cls.ssh_user = cls.config.compute.ssh_user
-        cls.image_ssh_user = cls.config.compute.image_ssh_user
-        cls.image_ssh_password = cls.config.compute.image_ssh_password
         cls.image_ref = cls.config.compute.image_ref
         cls.image_ref_alt = cls.config.compute.image_ref_alt
         cls.flavor_ref = cls.config.compute.flavor_ref
         cls.flavor_ref_alt = cls.config.compute.flavor_ref_alt
+        cls.image_ssh_user = cls.config.compute.image_ssh_user
+        cls.image_ssh_password = cls.config.compute.image_ssh_password
         cls.servers = []
         cls.images = []
+        cls.multi_user = cls.get_multi_user()
 
-        cls.servers_client_v3_auth = os.servers_client_v3_auth
+    @classmethod
+    def get_multi_user(cls):
+        multi_user = True
+        # Determine if there are two regular users that can be
+        # used in testing. If the test cases are allowed to create
+        # users (config.compute.allow_tenant_isolation is true,
+        # then we allow multi-user.
+        if not cls.config.compute.allow_tenant_isolation:
+            user1 = cls.config.identity.username
+            user2 = cls.config.identity.alt_username
+            if not user2 or user1 == user2:
+                multi_user = False
+            else:
+                user2_password = cls.config.identity.alt_password
+                user2_tenant_name = cls.config.identity.alt_tenant_name
+                if not user2_password or not user2_tenant_name:
+                    msg = ("Alternate user specified but not alternate "
+                           "tenant or password: alt_tenant_name=%s "
+                           "alt_password=%s"
+                           % (user2_tenant_name, user2_password))
+                    raise exceptions.InvalidConfiguration(msg)
+        return multi_user
 
     @classmethod
     def clear_servers(cls):
@@ -100,19 +91,6 @@ class BaseComputeTest(tempest.test.BaseTestCase):
                 pass
 
     @classmethod
-    def rebuild_server(cls, **kwargs):
-        # Destroy an existing server and creates a new one
-        try:
-            cls.servers_client.delete_server(cls.server_id)
-            cls.servers_client.wait_for_server_termination(cls.server_id)
-        except Exception as exc:
-            LOG.exception(exc)
-            pass
-        resp, server = cls.create_server(wait_until='ACTIVE', **kwargs)
-        cls.server_id = server['id']
-        cls.password = server['adminPass']
-
-    @classmethod
     def clear_images(cls):
         for image_id in cls.images:
             try:
@@ -120,22 +98,21 @@ class BaseComputeTest(tempest.test.BaseTestCase):
             except exceptions.NotFound:
                 # The image may have already been deleted which is OK.
                 pass
-            except Exception as exc:
-                LOG.info('Exception raised deleting image %s', image_id)
-                LOG.exception(exc)
+            except Exception:
+                LOG.exception('Exception raised deleting image %s' % image_id)
                 pass
 
     @classmethod
     def tearDownClass(cls):
         cls.clear_images()
         cls.clear_servers()
-        cls.isolated_creds.clear_isolated_creds()
+        cls.clear_isolated_creds()
         super(BaseComputeTest, cls).tearDownClass()
 
     @classmethod
-    def create_server(cls, **kwargs):
+    def create_test_server(cls, **kwargs):
         """Wrapper utility that returns a test server."""
-        name = rand_name(cls.__name__ + "-instance")
+        name = data_utils.rand_name(cls.__name__ + "-instance")
         if 'name' in kwargs:
             name = kwargs.pop('name')
         flavor = kwargs.get('flavor', cls.flavor_ref)
@@ -151,33 +128,24 @@ class BaseComputeTest(tempest.test.BaseTestCase):
             r, b = cls.servers_client.list_servers()
             servers = [s for s in b['servers'] if s['name'].startswith(name)]
 
-        cls.servers.extend(servers)
-
         if 'wait_until' in kwargs:
             for server in servers:
-                cls.servers_client.wait_for_server_status(
-                    server['id'], kwargs['wait_until'])
+                try:
+                    cls.servers_client.wait_for_server_status(
+                        server['id'], kwargs['wait_until'])
+                except Exception as ex:
+                    if ('preserve_server_on_error' not in kwargs
+                        or kwargs['preserve_server_on_error'] is False):
+                        for server in servers:
+                            try:
+                                cls.servers_client.delete_server(server['id'])
+                            except Exception:
+                                pass
+                    raise ex
+
+        cls.servers.extend(servers)
 
         return resp, body
-
-    @classmethod
-    def create_image_from_server(cls, server_id, **kwargs):
-        """Wrapper utility that returns a test server."""
-        name = rand_name(cls.__name__ + "-image")
-        if 'name' in kwargs:
-            name = kwargs.pop('name')
-
-        resp, image = cls.images_client.create_image(
-            server_id, name)
-        image_id = parse_image_id(resp['location'])
-        cls.images.append(image_id)
-
-        if 'wait_until' in kwargs:
-            cls.images_client.wait_for_image_status(image_id,
-                                                    kwargs['wait_until'])
-            resp, image = cls.images_client.get_image(image_id)
-
-        return resp, image
 
     def wait_for(self, condition):
         """Repeatedly calls condition() until a timeout."""
@@ -195,12 +163,171 @@ class BaseComputeTest(tempest.test.BaseTestCase):
             time.sleep(self.build_interval)
 
 
-class BaseComputeAdminTest(BaseComputeTest):
-    """Base test case class for all Compute Admin API tests."""
+class BaseV2ComputeTest(BaseComputeTest):
 
     @classmethod
     def setUpClass(cls):
-        super(BaseComputeAdminTest, cls).setUpClass()
+        # By default compute tests do not create network resources
+        cls.set_network_resources()
+        super(BaseV2ComputeTest, cls).setUpClass()
+        cls.servers_client = cls.os.servers_client
+        cls.flavors_client = cls.os.flavors_client
+        cls.images_client = cls.os.images_client
+        cls.extensions_client = cls.os.extensions_client
+        cls.floating_ips_client = cls.os.floating_ips_client
+        cls.keypairs_client = cls.os.keypairs_client
+        cls.security_groups_client = cls.os.security_groups_client
+        cls.quotas_client = cls.os.quotas_client
+        cls.limits_client = cls.os.limits_client
+        cls.volumes_extensions_client = cls.os.volumes_extensions_client
+        cls.volumes_client = cls.os.volumes_client
+        cls.interfaces_client = cls.os.interfaces_client
+        cls.fixed_ips_client = cls.os.fixed_ips_client
+        cls.availability_zone_client = cls.os.availability_zone_client
+        cls.aggregates_client = cls.os.aggregates_client
+        cls.services_client = cls.os.services_client
+        cls.instance_usages_audit_log_client = \
+            cls.os.instance_usages_audit_log_client
+        cls.hypervisor_client = cls.os.hypervisor_client
+        cls.servers_client_v3_auth = cls.os.servers_client_v3_auth
+        cls.certificates_client = cls.os.certificates_client
+
+    @classmethod
+    def create_image_from_server(cls, server_id, **kwargs):
+        """Wrapper utility that returns an image created from the server."""
+        name = data_utils.rand_name(cls.__name__ + "-image")
+        if 'name' in kwargs:
+            name = kwargs.pop('name')
+
+        resp, image = cls.images_client.create_image(
+            server_id, name)
+        image_id = data_utils.parse_image_id(resp['location'])
+        cls.images.append(image_id)
+
+        if 'wait_until' in kwargs:
+            cls.images_client.wait_for_image_status(image_id,
+                                                    kwargs['wait_until'])
+            resp, image = cls.images_client.get_image(image_id)
+
+            if kwargs['wait_until'] == 'ACTIVE':
+                if kwargs.get('wait_for_server', True):
+                    cls.servers_client.wait_for_server_status(server_id,
+                                                              'ACTIVE')
+
+        return resp, image
+
+    @classmethod
+    def rebuild_server(cls, server_id, **kwargs):
+        # Destroy an existing server and creates a new one
+        if server_id:
+            try:
+                cls.servers_client.delete_server(server_id)
+                cls.servers_client.wait_for_server_termination(server_id)
+            except Exception:
+                LOG.exception('Failed to delete server %s' % server_id)
+                pass
+        resp, server = cls.create_test_server(wait_until='ACTIVE', **kwargs)
+        cls.password = server['adminPass']
+        return server['id']
+
+
+class BaseV2ComputeAdminTest(BaseV2ComputeTest):
+    """Base test case class for Compute Admin V2 API tests."""
+
+    @classmethod
+    def setUpClass(cls):
+        super(BaseV2ComputeAdminTest, cls).setUpClass()
+        admin_username = cls.config.compute_admin.username
+        admin_password = cls.config.compute_admin.password
+        admin_tenant = cls.config.compute_admin.tenant_name
+        if not (admin_username and admin_password and admin_tenant):
+            msg = ("Missing Compute Admin API credentials "
+                   "in configuration.")
+            raise cls.skipException(msg)
+        if (cls.config.compute.allow_tenant_isolation or
+            cls.force_tenant_isolation is True):
+            creds = cls.isolated_creds.get_admin_creds()
+            admin_username, admin_tenant_name, admin_password = creds
+            cls.os_adm = clients.Manager(username=admin_username,
+                                         password=admin_password,
+                                         tenant_name=admin_tenant_name,
+                                         interface=cls._interface)
+        else:
+            cls.os_adm = clients.ComputeAdminManager(interface=cls._interface)
+
+
+class BaseV3ComputeTest(BaseComputeTest):
+
+    @classmethod
+    def setUpClass(cls):
+        # By default compute tests do not create network resources
+        cls.set_network_resources()
+        super(BaseV3ComputeTest, cls).setUpClass()
+        if not cls.config.compute_feature_enabled.api_v3:
+            cls.tearDownClass()
+            skip_msg = ("%s skipped as nova v3 api is not available" %
+                        cls.__name__)
+            raise cls.skipException(skip_msg)
+
+        cls.servers_client = cls.os.servers_v3_client
+        cls.images_client = cls.os.image_client
+        cls.flavors_client = cls.os.flavors_v3_client
+        cls.services_client = cls.os.services_v3_client
+        cls.extensions_client = cls.os.extensions_v3_client
+        cls.availability_zone_client = cls.os.availability_zone_v3_client
+        cls.interfaces_client = cls.os.interfaces_v3_client
+        cls.instance_usages_audit_log_client = \
+            cls.os.instance_usages_audit_log_v3_client
+        cls.hypervisor_client = cls.os.hypervisor_v3_client
+        cls.keypairs_client = cls.os.keypairs_v3_client
+        cls.tenant_usages_client = cls.os.tenant_usages_v3_client
+        cls.volumes_client = cls.os.volumes_client
+        cls.certificates_client = cls.os.certificates_v3_client
+        cls.keypairs_client = cls.os.keypairs_v3_client
+        cls.aggregates_client = cls.os.aggregates_v3_client
+        cls.hosts_client = cls.os.hosts_v3_client
+        cls.quotas_client = cls.os.quotas_v3_client
+        cls.version_client = cls.os.version_v3_client
+
+    @classmethod
+    def create_image_from_server(cls, server_id, **kwargs):
+        """Wrapper utility that returns an image created from the server."""
+        name = data_utils.rand_name(cls.__name__ + "-image")
+        if 'name' in kwargs:
+            name = kwargs.pop('name')
+
+        resp, image = cls.servers_client.create_image(
+            server_id, name)
+        image_id = data_utils.parse_image_id(resp['location'])
+        cls.images.append(image_id)
+
+        if 'wait_until' in kwargs:
+            cls.images_client.wait_for_image_status(image_id,
+                                                    kwargs['wait_until'])
+            resp, image = cls.images_client.get_image_meta(image_id)
+
+        return resp, image
+
+    @classmethod
+    def rebuild_server(cls, server_id, **kwargs):
+        # Destroy an existing server and creates a new one
+        try:
+            cls.servers_client.delete_server(server_id)
+            cls.servers_client.wait_for_server_termination(server_id)
+        except Exception:
+            LOG.exception('Failed to delete server %s' % server_id)
+            pass
+        resp, server = cls.create_test_server(wait_until='ACTIVE', **kwargs)
+        cls.password = server['admin_password']
+        return server['id']
+
+
+class BaseV3ComputeAdminTest(BaseV3ComputeTest):
+    """Base test case class for all Compute Admin API V3 tests."""
+
+    @classmethod
+    def setUpClass(cls):
+        super(BaseV3ComputeAdminTest, cls).setUpClass()
         admin_username = cls.config.compute_admin.username
         admin_password = cls.config.compute_admin.password
         admin_tenant = cls.config.compute_admin.tenant_name
@@ -211,9 +338,23 @@ class BaseComputeAdminTest(BaseComputeTest):
         if cls.config.compute.allow_tenant_isolation:
             creds = cls.isolated_creds.get_admin_creds()
             admin_username, admin_tenant_name, admin_password = creds
-            cls.os_adm = clients.Manager(username=admin_username,
-                                         password=admin_password,
-                                         tenant_name=admin_tenant_name,
-                                         interface=cls._interface)
+            os_adm = clients.Manager(username=admin_username,
+                                     password=admin_password,
+                                     tenant_name=admin_tenant_name,
+                                     interface=cls._interface)
         else:
-            cls.os_adm = clients.ComputeAdminManager(interface=cls._interface)
+            os_adm = clients.ComputeAdminManager(interface=cls._interface)
+
+        cls.os_adm = os_adm
+        cls.servers_admin_client = cls.os_adm.servers_v3_client
+        cls.instance_usages_audit_log_admin_client = \
+            cls.os_adm.instance_usages_audit_log_v3_client
+        cls.services_admin_client = cls.os_adm.services_v3_client
+        cls.availability_zone_admin_client = \
+            cls.os_adm.availability_zone_v3_client
+        cls.hypervisor_admin_client = cls.os_adm.hypervisor_v3_client
+        cls.tenant_usages_admin_client = cls.os_adm.tenant_usages_v3_client
+        cls.flavors_admin_client = cls.os_adm.flavors_v3_client
+        cls.aggregates_admin_client = cls.os_adm.aggregates_v3_client
+        cls.hosts_admin_client = cls.os_adm.hosts_v3_client
+        cls.quotas_admin_client = cls.os_adm.quotas_v3_client

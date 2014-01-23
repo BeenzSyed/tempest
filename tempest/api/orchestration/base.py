@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -16,7 +14,7 @@ import time
 import pdb
 import json
 from tempest import clients
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest.openstack.common import log as logging
 import tempest.test
 
@@ -121,7 +119,7 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
 
     @classmethod
     def _create_keypair(cls, name_start='keypair-heat-'):
-        kp_name = rand_name(name_start)
+        kp_name = data_utils.rand_name(name_start)
         resp, body = cls.keypairs_client.create_keypair(kp_name)
         cls.keypairs.append(kp_name)
         return body
@@ -139,21 +137,6 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         cls.clear_stacks()
         cls.clear_keypairs()
         super(BaseOrchestrationTest, cls).tearDownClass()
-
-    def wait_for(self, condition):
-        """Repeatedly calls condition() until a timeout."""
-        start_time = int(time.time())
-        while True:
-            try:
-                condition()
-            except Exception:
-                pass
-            else:
-                return
-            if int(time.time()) - start_time >= self.build_timeout:
-                condition()
-                return
-            time.sleep(self.build_interval)
 
     @staticmethod
     def stack_output(stack, output_key):

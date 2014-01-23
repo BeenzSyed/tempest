@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 IBM Corp.
 # All Rights Reserved.
 #
@@ -19,13 +17,15 @@ import testtools
 
 from tempest.api.compute import base
 from tempest.common.utils.linux.remote_client import RemoteClient
-import tempest.config
+from tempest import config
 from tempest.test import attr
 
+CONF = config.CONF
 
-class AttachVolumeTestJSON(base.BaseComputeTest):
+
+class AttachVolumeTestJSON(base.BaseV2ComputeTest):
     _interface = 'json'
-    run_ssh = tempest.config.TempestConfig().compute.run_ssh
+    run_ssh = CONF.compute.run_ssh
 
     def __init__(self, *args, **kwargs):
         super(AttachVolumeTestJSON, self).__init__(*args, **kwargs)
@@ -53,8 +53,9 @@ class AttachVolumeTestJSON(base.BaseComputeTest):
 
     def _create_and_attach(self):
         # Start a server and wait for it to become ready
-        resp, server = self.create_server(wait_until='ACTIVE',
-                                          adminPass=self.image_ssh_password)
+        admin_pass = self.image_ssh_password
+        resp, server = self.create_test_server(wait_until='ACTIVE',
+                                               adminPass=admin_pass)
         self.server = server
 
         # Record addresses so that we can ssh later

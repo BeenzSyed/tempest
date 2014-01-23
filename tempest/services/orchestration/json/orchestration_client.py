@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2013 IBM Corp.
 # All Rights Reserved.
 #
@@ -116,6 +114,20 @@ class OrchestrationClient(rest_client.RestClient):
         print body
         body = json.loads(body)
         return resp, body['stack']
+
+    def suspend_stack(self, stack_identifier):
+        """Suspend a stack."""
+        url = 'stacks/%s/actions' % stack_identifier
+        body = {'suspend': None}
+        resp, body = self.post(url, json.dumps(body), self.headers)
+        return resp, body
+
+    def resume_stack(self, stack_identifier):
+        """Resume a stack."""
+        url = 'stacks/%s/actions' % stack_identifier
+        body = {'resume': None}
+        resp, body = self.post(url, json.dumps(body), self.headers)
+        return resp, body
 
     def list_resources(self, stack_identifier):
         """Returns the details of a single resource."""

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # Copyright 2013 Hewlett-Packard Development Company, L.P.
 # All Rights Reserved.
@@ -91,7 +89,7 @@ class ServersClientJSON(RestClient):
         return resp, body['server']
 
     def update_server(self, server_id, name=None, meta=None, accessIPv4=None,
-                      accessIPv6=None):
+                      accessIPv6=None, disk_config=None):
         """
         Updates the properties of an existing server.
         server_id: The id of an existing server.
@@ -114,6 +112,9 @@ class ServersClientJSON(RestClient):
 
         if accessIPv6 is not None:
             post_body['accessIPv6'] = accessIPv6
+
+        if disk_config is not None:
+            post_body['OS-DCF:diskConfig'] = disk_config
 
         post_body = json.dumps({'server': post_body})
         resp, body = self.put("servers/%s" % str(server_id),
@@ -153,9 +154,12 @@ class ServersClientJSON(RestClient):
         body = json.loads(body)
         return resp, body
 
-    def wait_for_server_status(self, server_id, status):
+    def wait_for_server_status(self, server_id, status, extra_timeout=0,
+                               raise_on_error=True):
         """Waits for a server to reach a given status."""
-        return waiters.wait_for_server_status(self, server_id, status)
+        return waiters.wait_for_server_status(self, server_id, status,
+                                              extra_timeout=extra_timeout,
+                                              raise_on_error=raise_on_error)
 
     def wait_for_server_termination(self, server_id, ignore_error=False):
         """Waits for server to reach termination."""
@@ -196,10 +200,32 @@ class ServersClientJSON(RestClient):
             body = json.loads(body)[response_key]
         return resp, body
 
+    def create_backup(self, server_id, backup_type, rotation, name):
+        """Backup a server instance."""
+        return self.action(server_id, "createBackup", None,
+                           backup_type=backup_type,
+                           rotation=rotation,
+                           name=name)
+
     def change_password(self, server_id, adminPass):
         """Changes the root password for the server."""
         return self.action(server_id, 'changePassword', None,
                            adminPass=adminPass)
+
+    def get_password(self, server_id):
+        resp, body = self.get("servers/%s/os-server-password" %
+                              str(server_id))
+        body = json.loads(body)
+        return resp, body
+
+    def delete_password(self, server_id):
+        """
+        Removes the encrypted server password from the metadata server
+        Note that this does not actually change the instance server
+        password.
+        """
+        return self.delete("servers/%s/os-server-password" %
+                           str(server_id))
 
     def reboot(self, server_id, reboot_type):
         """Reboots a server."""
@@ -332,24 +358,32 @@ class ServersClientJSON(RestClient):
         return self.action(server_id, 'unlock', None, **kwargs)
 
     def suspend_server(self, server_id, **kwargs):
-        """Suspends the provded server."""
+        """Suspends the provided server."""
         return self.action(server_id, 'suspend', None, **kwargs)
 
     def resume_server(self, server_id, **kwargs):
-        """Un-suspends the provded server."""
+        """Un-suspends the provided server."""
         return self.action(server_id, 'resume', None, **kwargs)
 
     def pause_server(self, server_id, **kwargs):
-        """Pauses the provded server."""
+        """Pauses the provided server."""
         return self.action(server_id, 'pause', None, **kwargs)
 
     def unpause_server(self, server_id, **kwargs):
-        """Un-pauses the provded server."""
+        """Un-pauses the provided server."""
         return self.action(server_id, 'unpause', None, **kwargs)
 
     def reset_state(self, server_id, state='error'):
         """Resets the state of a server to active/error."""
         return self.action(server_id, 'os-resetState', None, state=state)
+
+    def shelve_server(self, server_id, **kwargs):
+        """Shelves the provided server."""
+        return self.action(server_id, 'shelve', None, **kwargs)
+
+    def unshelve_server(self, server_id, **kwargs):
+        """Un-shelves the provided server."""
+        return self.action(server_id, 'unshelve', None, **kwargs)
 
     def get_console_output(self, server_id, length):
         return self.action(server_id, 'os-getConsoleOutput', 'output',
@@ -363,9 +397,9 @@ class ServersClientJSON(RestClient):
                               'os-virtual-interfaces']))
         return resp, json.loads(body)
 
-    def rescue_server(self, server_id, adminPass=None):
+    def rescue_server(self, server_id, **kwargs):
         """Rescue the provided server."""
-        return self.action(server_id, 'rescue', None, adminPass=adminPass)
+        return self.action(server_id, 'rescue', None, **kwargs)
 
     def unrescue_server(self, server_id):
         """Unrescue the provided server."""
@@ -389,3 +423,11 @@ class ServersClientJSON(RestClient):
                               (str(server_id), str(request_id)))
         body = json.loads(body)
         return resp, body['instanceAction']
+
+    def force_delete_server(self, server_id, **kwargs):
+        """Force delete a server."""
+        return self.action(server_id, 'forceDelete', None, **kwargs)
+
+    def restore_soft_deleted_server(self, server_id, **kwargs):
+        """Restore a soft-deleted server."""
+        return self.action(server_id, 'restore', None, **kwargs)

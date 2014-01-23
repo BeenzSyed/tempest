@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -13,7 +11,7 @@
 #    under the License.
 
 from tempest.api.orchestration import base
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest.openstack.common import log as logging
 from tempest.test import attr
 import os
@@ -103,6 +101,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     @attr(type='smoke')
     def test_stack_crud_no_resources(self):
+<<<<<<< HEAD
 
         response_templates = \
             requests.get(
@@ -113,6 +112,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         yaml_template = yaml.safe_load(response_templates.content)
 
         stack_name = rand_name('heat')
+=======
+        stack_name = data_utils.rand_name('heat')
+>>>>>>> 88eb519114e5d5da1a55bd5fb402101d5bd9626f
 
         # count how many stacks to start with
         #resp, stacks = self.client.list_stacks()

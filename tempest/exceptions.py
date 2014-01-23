@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -79,6 +77,10 @@ class TimeoutException(TempestException):
 
 class BuildErrorException(TempestException):
     message = "Server %(server_id)s failed to build and is in ERROR status"
+
+
+class ImageKilledException(TempestException):
+    message = "Image %(image_id)s 'killed' while waiting for '%(status)s'"
 
 
 class AddImageException(TempestException):
@@ -180,3 +182,7 @@ class ResponseWithNonEmptyBody(RFCViolation):
 class ResponseWithEntity(RFCViolation):
     message = ("RFC Violation! Response with 205 HTTP Status Code "
                "MUST NOT have an entity")
+
+
+class InvalidHTTPResponseBody(RestClientException):
+    message = "HTTP response body is invalid json or xml"

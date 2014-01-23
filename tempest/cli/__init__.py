@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -33,7 +31,7 @@ cli_opts = [
                 default=True,
                 help="enable cli tests"),
     cfg.StrOpt('cli_dir',
-               default='/usr/local/bin/',
+               default='/usr/local/bin',
                help="directory where python client binaries are located"),
     cfg.IntOpt('timeout',
                default=15,
@@ -80,6 +78,18 @@ class ClientTestBase(tempest.test.BaseTestCase):
         return self.cmd_with_auth(
             'glance', action, flags, params, admin, fail_ok)
 
+    def ceilometer(self, action, flags='', params='', admin=True,
+                   fail_ok=False):
+        """Executes ceilometer command for the given action."""
+        return self.cmd_with_auth(
+            'ceilometer', action, flags, params, admin, fail_ok)
+
+    def heat(self, action, flags='', params='', admin=True,
+             fail_ok=False):
+        """Executes heat command for the given action."""
+        return self.cmd_with_auth(
+            'heat', action, flags, params, admin, fail_ok)
+
     def cinder(self, action, flags='', params='', admin=True, fail_ok=False):
         """Executes cinder command for the given action."""
         return self.cmd_with_auth(
@@ -122,7 +132,8 @@ class ClientTestBase(tempest.test.BaseTestCase):
             if not fail_ok and proc.returncode != 0:
                 raise CommandFailed(proc.returncode,
                                     cmd,
-                                    result)
+                                    result,
+                                    stderr=result_err)
         finally:
             LOG.debug('output of %s:\n%s' % (cmd_str, result))
             if not merge_stderr and result_err:
@@ -143,6 +154,7 @@ class ClientTestBase(tempest.test.BaseTestCase):
 
 class CommandFailed(subprocess.CalledProcessError):
     # adds output attribute for python2.6
-    def __init__(self, returncode, cmd, output):
+    def __init__(self, returncode, cmd, output, stderr=""):
         super(CommandFailed, self).__init__(returncode, cmd)
         self.output = output
+        self.stderr = stderr

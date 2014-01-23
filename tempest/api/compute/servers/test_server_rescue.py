@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Hewlett-Packard Development Company, L.P.
 # All Rights Reserved.
 #
@@ -16,16 +14,13 @@
 #    under the License.
 
 from tempest.api.compute import base
-from tempest.common.utils.data_utils import rand_name
-import tempest.config
+from tempest.common.utils import data_utils
 from tempest import exceptions
 from tempest.test import attr
 
 
-class ServerRescueTestJSON(base.BaseComputeTest):
+class ServerRescueTestJSON(base.BaseV2ComputeTest):
     _interface = 'json'
-
-    run_ssh = tempest.config.TempestConfig().compute.run_ssh
 
     @classmethod
     def setUpClass(cls):
@@ -38,8 +33,8 @@ class ServerRescueTestJSON(base.BaseComputeTest):
         cls.floating_ip = str(body['ip']).strip()
 
         # Security group creation
-        cls.sg_name = rand_name('sg')
-        cls.sg_desc = rand_name('sg-desc')
+        cls.sg_name = data_utils.rand_name('sg')
+        cls.sg_desc = data_utils.rand_name('sg-desc')
         resp, cls.sg = \
             cls.security_groups_client.create_security_group(cls.sg_name,
                                                              cls.sg_desc)
@@ -62,12 +57,8 @@ class ServerRescueTestJSON(base.BaseComputeTest):
             cls.volume_to_detach['id'], 'available')
 
         # Server for positive tests
-        resp, server = cls.create_server(image_id=cls.image_ref,
-                                         flavor=cls.flavor_ref,
-                                         wait_until='BUILD')
-        resp, resc_server = cls.create_server(image_id=cls.image_ref,
-                                              flavor=cls.flavor_ref,
-                                              wait_until='ACTIVE')
+        resp, server = cls.create_test_server(wait_until='BUILD')
+        resp, resc_server = cls.create_test_server(wait_until='ACTIVE')
         cls.server_id = server['id']
         cls.password = server['adminPass']
         cls.servers_client.wait_for_server_status(cls.server_id, 'ACTIVE')
@@ -77,7 +68,7 @@ class ServerRescueTestJSON(base.BaseComputeTest):
         cls.rescue_password = resc_server['adminPass']
 
         cls.servers_client.rescue_server(
-            cls.rescue_id, cls.rescue_password)
+            cls.rescue_id, adminPass=cls.rescue_password)
         cls.servers_client.wait_for_server_status(cls.rescue_id, 'RESCUE')
 
     def setUp(self):
@@ -118,7 +109,7 @@ class ServerRescueTestJSON(base.BaseComputeTest):
     @attr(type='smoke')
     def test_rescue_unrescue_instance(self):
         resp, body = self.servers_client.rescue_server(
-            self.server_id, self.password)
+            self.server_id, adminPass=self.password)
         self.assertEqual(200, resp.status)
         self.servers_client.wait_for_server_status(self.server_id, 'RESCUE')
         resp, body = self.servers_client.unrescue_server(self.server_id)
@@ -159,7 +150,8 @@ class ServerRescueTestJSON(base.BaseComputeTest):
     @attr(type=['negative', 'gate'])
     def test_rescued_vm_attach_volume(self):
         # Rescue the server
-        self.servers_client.rescue_server(self.server_id, self.password)
+        self.servers_client.rescue_server(self.server_id,
+                                          adminPass=self.password)
         self.servers_client.wait_for_server_status(self.server_id, 'RESCUE')
         self.addCleanup(self._unrescue, self.server_id)
 
@@ -180,7 +172,8 @@ class ServerRescueTestJSON(base.BaseComputeTest):
             self.volume_to_detach['id'], 'in-use')
 
         # Rescue the server
-        self.servers_client.rescue_server(self.server_id, self.password)
+        self.servers_client.rescue_server(self.server_id,
+                                          adminPass=self.password)
         self.servers_client.wait_for_server_status(self.server_id, 'RESCUE')
         # addCleanup is a LIFO queue
         self.addCleanup(self._detach, self.server_id,
@@ -197,7 +190,7 @@ class ServerRescueTestJSON(base.BaseComputeTest):
     def test_rescued_vm_associate_dissociate_floating_ip(self):
         # Rescue the server
         self.servers_client.rescue_server(
-            self.server_id, self.password)
+            self.server_id, adminPass=self.password)
         self.servers_client.wait_for_server_status(self.server_id, 'RESCUE')
         self.addCleanup(self._unrescue, self.server_id)
 
@@ -217,7 +210,7 @@ class ServerRescueTestJSON(base.BaseComputeTest):
     def test_rescued_vm_add_remove_security_group(self):
         # Rescue the server
         self.servers_client.rescue_server(
-            self.server_id, self.password)
+            self.server_id, adminPass=self.password)
         self.servers_client.wait_for_server_status(self.server_id, 'RESCUE')
 
         # Add Security group

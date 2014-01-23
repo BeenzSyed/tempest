@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # Copyright 2013 IBM Corp.
 # All Rights Reserved.
@@ -636,18 +634,26 @@ class RestClient(object):
         if resp.status in (500, 501):
             message = resp_body
             if parse_resp:
-                resp_body = self._parse_resp(resp_body)
-                # I'm seeing both computeFault and cloudServersFault come back.
-                # Will file a bug to fix, but leave as is for now.
-                if 'cloudServersFault' in resp_body:
-                    message = resp_body['cloudServersFault']['message']
-                elif 'computeFault' in resp_body:
-                    message = resp_body['computeFault']['message']
-                elif 'error' in resp_body:  # Keystone errors
-                    message = resp_body['error']['message']
-                    raise exceptions.IdentityError(message)
-                elif 'message' in resp_body:
-                    message = resp_body['message']
+                try:
+                    resp_body = self._parse_resp(resp_body)
+                except ValueError:
+                    # If response body is a non-json string message.
+                    # Use resp_body as is and raise InvalidResponseBody
+                    # exception.
+                    raise exceptions.InvalidHTTPResponseBody(message)
+                else:
+                    # I'm seeing both computeFault
+                    # and cloudServersFault come back.
+                    # Will file a bug to fix, but leave as is for now.
+                    if 'cloudServersFault' in resp_body:
+                        message = resp_body['cloudServersFault']['message']
+                    elif 'computeFault' in resp_body:
+                        message = resp_body['computeFault']['message']
+                    elif 'error' in resp_body:  # Keystone errors
+                        message = resp_body['error']['message']
+                        raise exceptions.IdentityError(message)
+                    elif 'message' in resp_body:
+                        message = resp_body['message']
 
             raise exceptions.ServerFault(message)
 

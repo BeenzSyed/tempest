@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -18,6 +16,7 @@
 
 from tempest.api.identity.base import DataGenerator
 from tempest import clients
+from tempest.common import custom_matchers
 from tempest.common import isolated_creds
 from tempest import exceptions
 import tempest.test
@@ -27,11 +26,13 @@ class BaseObjectTest(tempest.test.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.set_network_resources()
         super(BaseObjectTest, cls).setUpClass()
         if not cls.config.service_available.swift:
             skip_msg = ("%s skipped as swift is not available" % cls.__name__)
             raise cls.skipException(skip_msg)
-        cls.isolated_creds = isolated_creds.IsolatedCreds(cls.__name__)
+        cls.isolated_creds = isolated_creds.IsolatedCreds(
+            cls.__name__, network_resources=cls.network_resources)
         if cls.config.compute.allow_tenant_isolation:
             # Get isolated creds for normal user
             creds = cls.isolated_creds.get_primary_creds()
@@ -100,6 +101,7 @@ class BaseObjectTest(tempest.test.BaseTestCase):
 
         The containers should be visible from the container_client given.
         Will not throw any error if the containers don't exist.
+        Will not check that object and container deletions succeed.
 
         :param containers: list of container names to remove
         :param container_client: if None, use cls.container_client, this means
@@ -120,3 +122,12 @@ class BaseObjectTest(tempest.test.BaseTestCase):
                 container_client.delete_container(cont)
             except exceptions.NotFound:
                 pass
+
+    def assertHeaders(self, resp, target, method):
+        """
+        Common method to check the existence and the format of common response
+        headers
+        """
+        self.assertThat(resp, custom_matchers.ExistsAllResponseHeaders(
+                        target, method))
+        self.assertThat(resp, custom_matchers.AreAllWellFormatted())

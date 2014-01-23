@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,23 +18,25 @@ import keystoneclient.v2_0.client as keystoneclient
 import neutronclient.v2_0.client as neutronclient
 
 from tempest import clients
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest import config
 from tempest import exceptions
 from tempest.openstack.common import log as logging
 
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
 class IsolatedCreds(object):
 
     def __init__(self, name, tempest_client=True, interface='json',
-                 password='pass'):
+                 password='pass', network_resources=None):
+        self.network_resources = network_resources
         self.isolated_creds = {}
         self.isolated_net_resources = {}
         self.ports = []
         self.name = name
-        self.config = config.TempestConfig()
+        self.config = CONF
         self.tempest_client = tempest_client
         self.interface = interface
         self.password = password
@@ -44,11 +44,11 @@ class IsolatedCreds(object):
             self._get_admin_clients())
 
     def _get_official_admin_clients(self):
-        username = self.config.identity.admin_username
-        password = self.config.identity.admin_password
-        tenant_name = self.config.identity.admin_tenant_name
-        auth_url = self.config.identity.uri
-        dscv = self.config.identity.disable_ssl_certificate_validation
+        username = CONF.identity.admin_username
+        password = CONF.identity.admin_password
+        tenant_name = CONF.identity.admin_tenant_name
+        auth_url = CONF.identity.uri
+        dscv = CONF.identity.disable_ssl_certificate_validation
         identity_client = keystoneclient.Client(username=username,
                                                 password=password,
                                                 tenant_name=tenant_name,
@@ -147,24 +147,24 @@ class IsolatedCreds(object):
             self.identity_admin_client.tenants.delete(tenant)
 
     def _create_creds(self, suffix=None, admin=False):
-        rand_name_root = rand_name(self.name)
+        data_utils.rand_name_root = data_utils.rand_name(self.name)
         if suffix:
-            rand_name_root += suffix
-        tenant_name = rand_name_root + "-tenant"
+            data_utils.rand_name_root += suffix
+        tenant_name = data_utils.rand_name_root + "-tenant"
         tenant_desc = tenant_name + "-desc"
         tenant = self._create_tenant(name=tenant_name,
                                      description=tenant_desc)
         if suffix:
-            rand_name_root += suffix
-        username = rand_name_root + "-user"
-        email = rand_name_root + "@example.com"
+            data_utils.rand_name_root += suffix
+        username = data_utils.rand_name_root + "-user"
+        email = data_utils.rand_name_root + "@example.com"
         user = self._create_user(username, self.password,
                                  tenant, email)
         if admin:
             role = None
             try:
                 roles = self._list_roles()
-                admin_role = self.config.identity.admin_role
+                admin_role = CONF.identity.admin_role
                 if self.tempest_client:
                     role = next(r for r in roles if r['name'] == admin_role)
                 else:
@@ -197,15 +197,33 @@ class IsolatedCreds(object):
         network = None
         subnet = None
         router = None
-        rand_name_root = rand_name(self.name)
-        network_name = rand_name_root + "-network"
-        network = self._create_network(network_name, tenant_id)
+        # Make sure settings
+        if self.network_resources:
+            if self.network_resources['router']:
+                if (not self.network_resources['subnet'] or
+                    not self.network_resources['network']):
+                    raise exceptions.InvalidConfiguration(
+                        'A router requires a subnet and network')
+            elif self.network_resources['subnet']:
+                if not self.network_resources['network']:
+                    raise exceptions.InvalidConfiguration(
+                        'A subnet requires a network')
+            elif self.network_resources['dhcp']:
+                raise exceptions.InvalidConfiguration('DHCP requires a subnet')
+
+        data_utils.rand_name_root = data_utils.rand_name(self.name)
+        if not self.network_resources or self.network_resources['network']:
+            network_name = data_utils.rand_name_root + "-network"
+            network = self._create_network(network_name, tenant_id)
         try:
-            subnet_name = rand_name_root + "-subnet"
-            subnet = self._create_subnet(subnet_name, tenant_id, network['id'])
-            router_name = rand_name_root + "-router"
-            router = self._create_router(router_name, tenant_id)
-            self._add_router_interface(router['id'], subnet['id'])
+            if not self.network_resources or self.network_resources['subnet']:
+                subnet_name = data_utils.rand_name_root + "-subnet"
+                subnet = self._create_subnet(subnet_name, tenant_id,
+                                             network['id'])
+            if not self.network_resources or self.network_resources['router']:
+                router_name = data_utils.rand_name_root + "-router"
+                router = self._create_router(router_name, tenant_id)
+                self._add_router_interface(router['id'], subnet['id'])
         except Exception:
             if router:
                 self._clear_isolated_router(router['id'], router['name'])
@@ -229,14 +247,25 @@ class IsolatedCreds(object):
         if not self.tempest_client:
             body = {'subnet': {'name': subnet_name, 'tenant_id': tenant_id,
                                'network_id': network_id, 'ip_version': 4}}
-        base_cidr = netaddr.IPNetwork(self.config.network.tenant_network_cidr)
-        mask_bits = self.config.network.tenant_network_mask_bits
+            if self.network_resources:
+                body['enable_dhcp'] = self.network_resources['dhcp']
+        base_cidr = netaddr.IPNetwork(CONF.network.tenant_network_cidr)
+        mask_bits = CONF.network.tenant_network_mask_bits
         for subnet_cidr in base_cidr.subnet(mask_bits):
             try:
                 if self.tempest_client:
-                    resp, resp_body = self.network_admin_client.create_subnet(
-                        network_id, str(subnet_cidr), name=subnet_name,
-                        tenant_id=tenant_id)
+                    if self.network_resources:
+                        resp, resp_body = self.network_admin_client.\
+                            create_subnet(
+                                network_id, str(subnet_cidr),
+                                name=subnet_name,
+                                tenant_id=tenant_id,
+                                enable_dhcp=self.network_resources['dhcp'])
+                    else:
+                        resp, resp_body = self.network_admin_client.\
+                            create_subnet(network_id, str(subnet_cidr),
+                                          name=subnet_name,
+                                          tenant_id=tenant_id)
                 else:
                     body['subnet']['cidr'] = str(subnet_cidr)
                     resp_body = self.network_admin_client.create_subnet(body)
@@ -252,7 +281,7 @@ class IsolatedCreds(object):
 
     def _create_router(self, router_name, tenant_id):
         external_net_id = dict(
-            network_id=self.config.network.public_network_id)
+            network_id=CONF.network.public_network_id)
         if self.tempest_client:
             resp, resp_body = self.network_admin_client.create_router(
                 router_name,
@@ -328,7 +357,7 @@ class IsolatedCreds(object):
             self.isolated_creds['primary'] = (user, tenant)
             LOG.info("Acquired isolated creds:\n user: %s, tenant: %s"
                      % (username, tenant_name))
-            if self.config.service_available.neutron:
+            if CONF.service_available.neutron:
                 network, subnet, router = self._create_network_resources(
                     self._get_tenant_id(tenant))
                 self.isolated_net_resources['primary'] = (
@@ -347,7 +376,7 @@ class IsolatedCreds(object):
             self.isolated_creds['admin'] = (user, tenant)
             LOG.info("Acquired admin isolated creds:\n user: %s, tenant: %s"
                      % (username, tenant_name))
-            if self.config.service_available.neutron:
+            if CONF.service_available.neutron:
                 network, subnet, router = self._create_network_resources(
                     self._get_tenant_id(tenant))
                 self.isolated_net_resources['admin'] = (
@@ -366,7 +395,7 @@ class IsolatedCreds(object):
             self.isolated_creds['alt'] = (user, tenant)
             LOG.info("Acquired alt isolated creds:\n user: %s, tenant: %s"
                      % (username, tenant_name))
-            if self.config.service_available.neutron:
+            if CONF.service_available.neutron:
                 network, subnet, router = self._create_network_resources(
                     self._get_tenant_id(tenant))
                 self.isolated_net_resources['alt'] = (
@@ -412,7 +441,11 @@ class IsolatedCreds(object):
                 resp_body = self.network_admin_client.list_ports()
             self.ports = resp_body['ports']
         ports_to_delete = [
-            port for port in self.ports if port['network_id'] == network_id]
+            port
+            for port in self.ports
+            if (port['network_id'] == network_id and
+                port['device_owner'] != 'network:router_interface')
+        ]
         for port in ports_to_delete:
             try:
                 LOG.info('Cleaning up port id %s, name %s' %
@@ -426,26 +459,27 @@ class IsolatedCreds(object):
         net_client = self.network_admin_client
         for cred in self.isolated_net_resources:
             network, subnet, router = self.isolated_net_resources.get(cred)
-            try:
-                if self.tempest_client:
-                    net_client.remove_router_interface_with_subnet_id(
-                        router['id'], subnet['id'])
-                else:
-                    body = {'subnet_id': subnet['id']}
-                    net_client.remove_interface_router(router['id'], body)
-            except exceptions.NotFound:
-                LOG.warn('router with name: %s not found for delete' %
-                         router['name'])
-                pass
-            self._clear_isolated_router(router['id'], router['name'])
-            # TODO(mlavalle) This method call will be removed once patch
-            # https://review.openstack.org/#/c/46563/ merges in Neutron
-            self._cleanup_ports(network['id'])
-            self._clear_isolated_subnet(subnet['id'], subnet['name'])
-            self._clear_isolated_network(network['id'], network['name'])
-            LOG.info("Cleared isolated network resources: \n"
-                     + " network: %s, subnet: %s, router: %s"
-                     % (network['name'], subnet['name'], router['name']))
+            if self.network_resources.get('router'):
+                try:
+                    if self.tempest_client:
+                        net_client.remove_router_interface_with_subnet_id(
+                            router['id'], subnet['id'])
+                    else:
+                        body = {'subnet_id': subnet['id']}
+                        net_client.remove_interface_router(router['id'], body)
+                except exceptions.NotFound:
+                    LOG.warn('router with name: %s not found for delete' %
+                             router['name'])
+                    pass
+                self._clear_isolated_router(router['id'], router['name'])
+            if self.network_resources.get('network'):
+                # TODO(mlavalle) This method call will be removed once patch
+                # https://review.openstack.org/#/c/46563/ merges in Neutron
+                self._cleanup_ports(network['id'])
+            if self.network_resources.get('subnet'):
+                self._clear_isolated_subnet(subnet['id'], subnet['name'])
+            if self.network_resources.get('network'):
+                self._clear_isolated_network(network['id'], network['name'])
 
     def clear_isolated_creds(self):
         if not self.isolated_creds:

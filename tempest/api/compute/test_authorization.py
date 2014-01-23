@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,11 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.api import compute
 from tempest.api.compute import base
 from tempest import clients
-from tempest.common.utils.data_utils import parse_image_id
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest import exceptions
 from tempest.openstack.common import log as logging
 from tempest.test import attr
@@ -27,17 +23,17 @@ from tempest.test import attr
 LOG = logging.getLogger(__name__)
 
 
-class AuthorizationTestJSON(base.BaseComputeTest):
+class AuthorizationTestJSON(base.BaseV2ComputeTest):
     _interface = 'json'
 
     @classmethod
     def setUpClass(cls):
-        if not compute.MULTI_USER:
+        # No network resources required for this test
+        cls.set_network_resources()
+        super(AuthorizationTestJSON, cls).setUpClass()
+        if not cls.multi_user:
             msg = "Need >1 user"
             raise cls.skipException(msg)
-
-        super(AuthorizationTestJSON, cls).setUpClass()
-
         cls.client = cls.os.servers_client
         cls.images_client = cls.os.images_client
         cls.keypairs_client = cls.os.keypairs_client
@@ -59,21 +55,21 @@ class AuthorizationTestJSON(base.BaseComputeTest):
         cls.alt_security_client = cls.alt_manager.security_groups_client
 
         cls.alt_security_client._set_auth()
-        resp, server = cls.create_server(wait_until='ACTIVE')
+        resp, server = cls.create_test_server(wait_until='ACTIVE')
         resp, cls.server = cls.client.get_server(server['id'])
 
-        name = rand_name('image')
+        name = data_utils.rand_name('image')
         resp, body = cls.client.create_image(server['id'], name)
-        image_id = parse_image_id(resp['location'])
+        image_id = data_utils.parse_image_id(resp['location'])
         cls.images_client.wait_for_image_status(image_id, 'ACTIVE')
         resp, cls.image = cls.images_client.get_image(image_id)
 
-        cls.keypairname = rand_name('keypair')
+        cls.keypairname = data_utils.rand_name('keypair')
         resp, keypair = \
             cls.keypairs_client.create_keypair(cls.keypairname)
 
-        name = rand_name('security')
-        description = rand_name('description')
+        name = data_utils.rand_name('security')
+        description = data_utils.rand_name('description')
         resp, cls.security_group = cls.security_client.create_security_group(
             name, description)
 
@@ -86,7 +82,7 @@ class AuthorizationTestJSON(base.BaseComputeTest):
 
     @classmethod
     def tearDownClass(cls):
-        if compute.MULTI_USER:
+        if cls.multi_user:
             cls.images_client.delete_image(cls.image['id'])
             cls.keypairs_client.delete_keypair(cls.keypairname)
             cls.security_client.delete_security_group(cls.security_group['id'])
@@ -191,7 +187,7 @@ class AuthorizationTestJSON(base.BaseComputeTest):
         # A create keypair request should fail if the tenant id does not match
         # the current user
         # POST keypair with other user tenant
-        k_name = rand_name('keypair-')
+        k_name = data_utils.rand_name('keypair-')
         self.alt_keypairs_client._set_auth()
         self.saved_base_url = self.alt_keypairs_client.base_url
         try:
@@ -241,8 +237,8 @@ class AuthorizationTestJSON(base.BaseComputeTest):
         # A create security group request should fail if the tenant id does not
         # match the current user
         # POST security group with other user tenant
-        s_name = rand_name('security-')
-        s_description = rand_name('security')
+        s_name = data_utils.rand_name('security-')
+        s_description = data_utils.rand_name('security')
         self.saved_base_url = self.alt_security_client.base_url
         try:
             # Change the base URL to impersonate another user

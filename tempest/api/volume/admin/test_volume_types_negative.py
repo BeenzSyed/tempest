@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -22,7 +20,7 @@ from tempest import exceptions
 from tempest.test import attr
 
 
-class VolumeTypesNegativeTest(base.BaseVolumeAdminTest):
+class VolumeTypesNegativeTest(base.BaseVolumeV1AdminTest):
     _interface = 'json'
 
     @attr(type='gate')

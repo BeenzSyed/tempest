@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -17,18 +15,41 @@
 
 
 from tempest.api.compute import base
-from tempest.test import attr
+from tempest.openstack.common import log as logging
+from tempest import test
 
 
-class ExtensionsTestJSON(base.BaseComputeTest):
+LOG = logging.getLogger(__name__)
+
+
+class ExtensionsTestJSON(base.BaseV2ComputeTest):
     _interface = 'json'
 
-    @attr(type='gate')
+    @test.attr(type='gate')
     def test_list_extensions(self):
         # List of all extensions
+        if len(self.config.compute_feature_enabled.api_extensions) == 0:
+            raise self.skipException('There are not any extensions configured')
         resp, extensions = self.extensions_client.list_extensions()
-        self.assertIn("extensions", extensions)
         self.assertEqual(200, resp.status)
+        ext = self.config.compute_feature_enabled.api_extensions[0]
+        if ext == 'all':
+            self.assertIn('Hosts', map(lambda x: x['name'], extensions))
+        elif ext:
+            self.assertIn(ext, map(lambda x: x['name'], extensions))
+        else:
+            raise self.skipException('There are not any extensions configured')
+        # Log extensions list
+        extension_list = map(lambda x: x['name'], extensions)
+        LOG.debug("Nova extensions: %s" % ','.join(extension_list))
+
+    @test.requires_ext(extension='os-consoles', service='compute')
+    @test.attr(type='gate')
+    def test_get_extension(self):
+        # get the specified extensions
+        resp, extension = self.extensions_client.get_extension('os-consoles')
+        self.assertEqual(200, resp.status)
+        self.assertEqual('os-consoles', extension['alias'])
 
 
 class ExtensionsTestXML(ExtensionsTestJSON):

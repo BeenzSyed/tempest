@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -17,14 +15,16 @@
 
 from tempest.api.compute import base
 from tempest.api import utils
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest import config
 from tempest import exceptions
 from tempest.test import attr
 from tempest.test import skip_because
 
+CONF = config.CONF
 
-class ListServerFiltersTestJSON(base.BaseComputeTest):
+
+class ListServerFiltersTestJSON(base.BaseV2ComputeTest):
     _interface = 'json'
 
     @classmethod
@@ -57,23 +57,19 @@ class ListServerFiltersTestJSON(base.BaseComputeTest):
             raise RuntimeError("Image %s (image_ref_alt) was not found!" %
                                cls.image_ref_alt)
 
-        cls.s1_name = rand_name(cls.__name__ + '-instance')
-        resp, cls.s1 = cls.create_server(name=cls.s1_name,
-                                         image_id=cls.image_ref,
-                                         flavor=cls.flavor_ref,
-                                         wait_until='ACTIVE')
+        cls.s1_name = data_utils.rand_name(cls.__name__ + '-instance')
+        resp, cls.s1 = cls.create_test_server(name=cls.s1_name,
+                                              wait_until='ACTIVE')
 
-        cls.s2_name = rand_name(cls.__name__ + '-instance')
-        resp, cls.s2 = cls.create_server(name=cls.s2_name,
-                                         image_id=cls.image_ref_alt,
-                                         flavor=cls.flavor_ref,
-                                         wait_until='ACTIVE')
+        cls.s2_name = data_utils.rand_name(cls.__name__ + '-instance')
+        resp, cls.s2 = cls.create_test_server(name=cls.s2_name,
+                                              image_id=cls.image_ref_alt,
+                                              wait_until='ACTIVE')
 
-        cls.s3_name = rand_name(cls.__name__ + '-instance')
-        resp, cls.s3 = cls.create_server(name=cls.s3_name,
-                                         image_id=cls.image_ref,
-                                         flavor=cls.flavor_ref_alt,
-                                         wait_until='ACTIVE')
+        cls.s3_name = data_utils.rand_name(cls.__name__ + '-instance')
+        resp, cls.s3 = cls.create_test_server(name=cls.s3_name,
+                                              flavor=cls.flavor_ref_alt,
+                                              wait_until='ACTIVE')
 
         cls.fixed_network_name = cls.config.compute.fixed_network_name
 
@@ -121,6 +117,23 @@ class ListServerFiltersTestJSON(base.BaseComputeTest):
         self.assertIn(self.s1['id'], map(lambda x: x['id'], servers))
         self.assertIn(self.s2['id'], map(lambda x: x['id'], servers))
         self.assertIn(self.s3['id'], map(lambda x: x['id'], servers))
+
+    @attr(type='gate')
+    def test_list_servers_filter_by_shutoff_status(self):
+        # Filter the list of servers by server shutoff status
+        params = {'status': 'shutoff'}
+        self.client.stop(self.s1['id'])
+        self.client.wait_for_server_status(self.s1['id'],
+                                           'SHUTOFF')
+        resp, body = self.client.list_servers(params)
+        self.client.start(self.s1['id'])
+        self.client.wait_for_server_status(self.s1['id'],
+                                           'ACTIVE')
+        servers = body['servers']
+
+        self.assertIn(self.s1['id'], map(lambda x: x['id'], servers))
+        self.assertNotIn(self.s2['id'], map(lambda x: x['id'], servers))
+        self.assertNotIn(self.s3['id'], map(lambda x: x['id'], servers))
 
     @attr(type='gate')
     def test_list_servers_filter_by_limit(self):
@@ -214,7 +227,7 @@ class ListServerFiltersTestJSON(base.BaseComputeTest):
         self.assertNotIn(self.s3_name, map(lambda x: x['name'], servers))
 
     @skip_because(bug="1182883",
-                  condition=config.TempestConfig().service_available.neutron)
+                  condition=CONF.service_available.neutron)
     @attr(type='gate')
     def test_list_servers_filtered_by_ip_regex(self):
         # Filter servers by regex ip

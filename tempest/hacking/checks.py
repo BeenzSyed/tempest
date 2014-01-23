@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 IBM Corp.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,6 +19,7 @@ PYTHON_CLIENTS = ['cinder', 'glance', 'keystone', 'nova', 'swift', 'neutron']
 
 PYTHON_CLIENT_RE = re.compile('import (%s)client' % '|'.join(PYTHON_CLIENTS))
 TEST_DEFINITION = re.compile(r'^\s*def test.*')
+SETUPCLASS_DEFINITION = re.compile(r'^\s*def setUpClass')
 SCENARIO_DECORATOR = re.compile(r'\s*@.*services\(')
 
 
@@ -52,6 +51,14 @@ def scenario_tests_need_service_tags(physical_line, filename,
                         "T104: Scenario tests require a service decorator")
 
 
+def no_setupclass_for_unit_tests(physical_line, filename):
+    if 'tempest/tests' in filename:
+        if SETUPCLASS_DEFINITION.match(physical_line):
+            return (physical_line.find('def'),
+                    "T105: setUpClass can not be used with unit tests")
+
+
 def factory(register):
     register(import_no_clients_in_api)
     register(scenario_tests_need_service_tags)
+    register(no_setupclass_for_unit_tests)

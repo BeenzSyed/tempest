@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -19,7 +17,7 @@ from tempest.api.compute import base
 from tempest.test import attr
 
 
-class ListImagesTestJSON(base.BaseComputeTest):
+class ListImagesTestJSON(base.BaseV2ComputeTest):
     _interface = 'json'
 
     @classmethod

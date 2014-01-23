@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -15,7 +13,7 @@
 import logging
 
 from tempest.api.orchestration import base
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest import exceptions
 from tempest.test import attr
 
@@ -41,7 +39,7 @@ Resources:
     def setUpClass(cls):
         super(TemplateYAMLTestJSON, cls).setUpClass()
         cls.client = cls.orchestration_client
-        cls.stack_name = rand_name('heat')
+        cls.stack_name = data_utils.rand_name('heat')
         cls.stack_identifier = cls.create_stack(cls.stack_name, cls.template)
         cls.client.wait_for_stack_status(cls.stack_identifier,
                                          'CREATE_COMPLETE')

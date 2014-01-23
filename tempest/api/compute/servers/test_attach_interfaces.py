@@ -19,13 +19,15 @@ from tempest.test import attr
 import time
 
 
-class AttachInterfacesTestJSON(base.BaseComputeTest):
+class AttachInterfacesTestJSON(base.BaseV2ComputeTest):
     _interface = 'json'
 
     @classmethod
     def setUpClass(cls):
         if not cls.config.service_available.neutron:
             raise cls.skipException("Neutron is required")
+        # This test class requires network and subnet
+        cls.set_network_resources(network=True, subnet=True)
         super(AttachInterfacesTestJSON, cls).setUpClass()
         cls.client = cls.os.interfaces_client
 
@@ -40,8 +42,7 @@ class AttachInterfacesTestJSON(base.BaseComputeTest):
             self.assertEqual(iface['fixed_ips'][0]['ip_address'], fixed_ip)
 
     def _create_server_get_interfaces(self):
-        resp, server = self.create_server()
-        self.os.servers_client.wait_for_server_status(server['id'], 'ACTIVE')
+        resp, server = self.create_test_server(wait_until='ACTIVE')
         resp, ifs = self.client.list_interfaces(server['id'])
         resp, body = self.client.wait_for_interface_status(
             server['id'], ifs[0]['port_id'], 'ACTIVE')
@@ -93,7 +94,7 @@ class AttachInterfacesTestJSON(base.BaseComputeTest):
 
         self.assertEqual(sorted(list1), sorted(list2))
 
-    @attr(type='gate')
+    @attr(type='smoke')
     def test_create_list_show_delete_interfaces(self):
         server, ifs = self._create_server_get_interfaces()
         interface_count = len(ifs)

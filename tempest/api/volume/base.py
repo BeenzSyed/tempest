@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,10 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-
 from tempest import clients
-from tempest.common import isolated_creds
+from tempest.common.utils import data_utils
 from tempest.openstack.common import log as logging
 import tempest.test
 
@@ -31,27 +27,19 @@ class BaseVolumeTest(tempest.test.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.set_network_resources()
         super(BaseVolumeTest, cls).setUpClass()
-        cls.isolated_creds = isolated_creds.IsolatedCreds(cls.__name__)
 
         if not cls.config.service_available.cinder:
             skip_msg = ("%s skipped as Cinder is not available" % cls.__name__)
             raise cls.skipException(skip_msg)
 
-        if cls.config.compute.allow_tenant_isolation:
-            creds = cls.isolated_creds.get_primary_creds()
-            username, tenant_name, password = creds
-            os = clients.Manager(username=username,
-                                 password=password,
-                                 tenant_name=tenant_name,
-                                 interface=cls._interface)
-        else:
-            os = clients.Manager(interface=cls._interface)
+        cls.os = cls.get_client_manager()
 
-        cls.os = os
-        cls.volumes_client = os.volumes_client
-        cls.snapshots_client = os.snapshots_client
-        cls.servers_client = os.servers_client
+        cls.volumes_client = cls.os.volumes_client
+        cls.snapshots_client = cls.os.snapshots_client
+        cls.servers_client = cls.os.servers_client
+        cls.volumes_extension_client = cls.os.volumes_extension_client
         cls.image_ref = cls.config.compute.image_ref
         cls.flavor_ref = cls.config.compute.flavor_ref
         cls.build_interval = cls.config.volume.build_interval
@@ -59,17 +47,11 @@ class BaseVolumeTest(tempest.test.BaseTestCase):
         cls.snapshots = []
         cls.volumes = []
 
-        cls.volumes_client.keystone_auth(cls.os.username,
-                                         cls.os.password,
-                                         cls.os.auth_url,
-                                         cls.volumes_client.service,
-                                         cls.os.tenant_name)
-
     @classmethod
     def tearDownClass(cls):
         cls.clear_snapshots()
         cls.clear_volumes()
-        cls.isolated_creds.clear_isolated_creds()
+        cls.clear_isolated_creds()
         super(BaseVolumeTest, cls).tearDownClass()
 
     @classmethod
@@ -89,7 +71,10 @@ class BaseVolumeTest(tempest.test.BaseTestCase):
     @classmethod
     def create_volume(cls, size=1, **kwargs):
         """Wrapper utility that returns a test volume."""
-        resp, volume = cls.volumes_client.create_volume(size, **kwargs)
+        vol_name = data_utils.rand_name('Volume')
+        resp, volume = cls.volumes_client.create_volume(size,
+                                                        display_name=vol_name,
+                                                        **kwargs)
         assert 200 == resp.status
         cls.volumes.append(volume)
         cls.volumes_client.wait_for_volume_status(volume['id'], 'available')
@@ -123,27 +108,27 @@ class BaseVolumeTest(tempest.test.BaseTestCase):
             except Exception:
                 pass
 
-    def wait_for(self, condition):
-        """Repeatedly calls condition() until a timeout."""
-        start_time = int(time.time())
-        while True:
-            try:
-                condition()
-            except Exception:
-                pass
-            else:
-                return
-            if int(time.time()) - start_time >= self.build_timeout:
-                condition()
-                return
-            time.sleep(self.build_interval)
+
+class BaseVolumeV1Test(BaseVolumeTest):
+    @classmethod
+    def setUpClass(cls):
+        if not cls.config.volume_feature_enabled.api_v1:
+            msg = "Volume API v1 not supported"
+            raise cls.skipException(msg)
+        super(BaseVolumeV1Test, cls).setUpClass()
+        cls.volumes_client = cls.os.volumes_client
+        cls.volumes_client.keystone_auth(cls.os.username,
+                                         cls.os.password,
+                                         cls.os.auth_url,
+                                         cls.volumes_client.service,
+                                         cls.os.tenant_name)
 
 
-class BaseVolumeAdminTest(BaseVolumeTest):
+class BaseVolumeV1AdminTest(BaseVolumeV1Test):
     """Base test case class for all Volume Admin API tests."""
     @classmethod
     def setUpClass(cls):
-        super(BaseVolumeAdminTest, cls).setUpClass()
+        super(BaseVolumeV1AdminTest, cls).setUpClass()
         cls.adm_user = cls.config.identity.admin_username
         cls.adm_pass = cls.config.identity.admin_password
         cls.adm_tenant = cls.config.identity.admin_tenant_name
@@ -161,3 +146,4 @@ class BaseVolumeAdminTest(BaseVolumeTest):
         else:
             cls.os_adm = clients.AdminManager(interface=cls._interface)
         cls.client = cls.os_adm.volume_types_client
+        cls.hosts_client = cls.os_adm.volume_hosts_client

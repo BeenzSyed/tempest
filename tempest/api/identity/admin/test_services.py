@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -17,7 +15,7 @@
 
 
 from tempest.api.identity import base
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest import exceptions
 from tempest.test import attr
 
@@ -25,56 +23,56 @@ from tempest.test import attr
 class ServicesTestJSON(base.BaseIdentityAdminTest):
     _interface = 'json'
 
+    def _del_service(self, service_id):
+        # Deleting the service created in this method
+        resp, _ = self.client.delete_service(service_id)
+        self.assertEqual(resp['status'], '204')
+        # Checking whether service is deleted successfully
+        self.assertRaises(exceptions.NotFound, self.client.get_service,
+                          service_id)
+
     @attr(type='smoke')
     def test_create_get_delete_service(self):
         # GET Service
-        try:
-            # Creating a Service
-            name = rand_name('service-')
-            type = rand_name('type--')
-            description = rand_name('description-')
-            resp, service_data = self.client.create_service(
-                name, type, description=description)
-            self.assertTrue(resp['status'].startswith('2'))
-            # Verifying response body of create service
-            self.assertIn('id', service_data)
-            self.assertFalse(service_data['id'] is None)
-            self.assertIn('name', service_data)
-            self.assertEqual(name, service_data['name'])
-            self.assertIn('type', service_data)
-            self.assertEqual(type, service_data['type'])
-            self.assertIn('description', service_data)
-            self.assertEqual(description, service_data['description'])
-            # Get service
-            resp, fetched_service = self.client.get_service(service_data['id'])
-            self.assertTrue(resp['status'].startswith('2'))
-            # verifying the existence of service created
-            self.assertIn('id', fetched_service)
-            self.assertEqual(fetched_service['id'], service_data['id'])
-            self.assertIn('name', fetched_service)
-            self.assertEqual(fetched_service['name'], service_data['name'])
-            self.assertIn('type', fetched_service)
-            self.assertEqual(fetched_service['type'], service_data['type'])
-            self.assertIn('description', fetched_service)
-            self.assertEqual(fetched_service['description'],
-                             service_data['description'])
-        finally:
-            if 'service_data' in locals():
-                # Deleting the service created in this method
-                resp, _ = self.client.delete_service(service_data['id'])
-                self.assertEqual(resp['status'], '204')
-                # Checking whether service is deleted successfully
-                self.assertRaises(exceptions.NotFound, self.client.get_service,
-                                  service_data['id'])
+        # Creating a Service
+        name = data_utils.rand_name('service-')
+        type = data_utils.rand_name('type--')
+        description = data_utils.rand_name('description-')
+        resp, service_data = self.client.create_service(
+            name, type, description=description)
+        self.assertFalse(service_data['id'] is None)
+        self.addCleanup(self._del_service, service_data['id'])
+        self.assertTrue(resp['status'].startswith('2'))
+        # Verifying response body of create service
+        self.assertIn('id', service_data)
+        self.assertIn('name', service_data)
+        self.assertEqual(name, service_data['name'])
+        self.assertIn('type', service_data)
+        self.assertEqual(type, service_data['type'])
+        self.assertIn('description', service_data)
+        self.assertEqual(description, service_data['description'])
+        # Get service
+        resp, fetched_service = self.client.get_service(service_data['id'])
+        self.assertTrue(resp['status'].startswith('2'))
+        # verifying the existence of service created
+        self.assertIn('id', fetched_service)
+        self.assertEqual(fetched_service['id'], service_data['id'])
+        self.assertIn('name', fetched_service)
+        self.assertEqual(fetched_service['name'], service_data['name'])
+        self.assertIn('type', fetched_service)
+        self.assertEqual(fetched_service['type'], service_data['type'])
+        self.assertIn('description', fetched_service)
+        self.assertEqual(fetched_service['description'],
+                         service_data['description'])
 
     @attr(type='smoke')
     def test_list_services(self):
         # Create, List, Verify and Delete Services
         services = []
         for _ in xrange(3):
-            name = rand_name('service-')
-            type = rand_name('type--')
-            description = rand_name('description-')
+            name = data_utils.rand_name('service-')
+            type = data_utils.rand_name('type--')
+            description = data_utils.rand_name('description-')
             resp, service = self.client.create_service(
                 name, type, description=description)
             services.append(service)

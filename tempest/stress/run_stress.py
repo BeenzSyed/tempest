@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 Quanta Research Cambridge, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +22,7 @@ from testtools.testsuite import iterate_tests
 from unittest import loader
 
 from tempest.openstack.common import log as logging
+from tempest.stress import driver
 
 LOG = logging.getLogger(__name__)
 
@@ -68,8 +67,6 @@ def discover_stress_tests(path="./", filter_attr=None, call_inherited=False):
 
 
 def main(ns):
-    # NOTE(mkoderer): moved import to make "-h" possible without OpenStack
-    from tempest.stress import driver
     result = 0
     if not ns.all:
         tests = json.load(open(ns.tests, 'r'))

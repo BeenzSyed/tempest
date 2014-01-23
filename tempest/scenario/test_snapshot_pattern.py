@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 NEC Corporation
 # All Rights Reserved.
 #
@@ -15,8 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from tempest.openstack.common import log
 from tempest.scenario import manager
 from tempest.test import services
+
+
+LOG = log.getLogger(__name__)
 
 
 class TestSnapshotPattern(manager.OfficialClientTest):
@@ -40,7 +42,11 @@ class TestSnapshotPattern(manager.OfficialClientTest):
         self.keypair = self.create_keypair()
 
     def _ssh_to_server(self, server_or_ip):
-        linux_client = self.get_remote_client(server_or_ip)
+        try:
+            linux_client = self.get_remote_client(server_or_ip)
+        except Exception:
+            LOG.exception()
+            self._log_console_output()
         return linux_client.ssh_client
 
     def _write_timestamp(self, server_or_ip):
@@ -65,7 +71,7 @@ class TestSnapshotPattern(manager.OfficialClientTest):
     def test_snapshot_pattern(self):
         # prepare for booting a instance
         self._add_keypair()
-        self.create_loginable_secgroup_rule()
+        self._create_loginable_secgroup_rule_nova()
 
         # boot a instance and create a timestamp file in it
         server = self._boot_image(self.config.compute.image_ref)

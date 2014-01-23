@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -18,7 +16,7 @@
 
 from tempest.api.network import base
 from tempest import clients
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest.test import attr
 
 
@@ -55,8 +53,8 @@ class QuotasTest(base.BaseNetworkTest):
     @attr(type='gate')
     def test_quotas(self):
         # Add a tenant to conduct the test
-        test_tenant = rand_name('test_tenant_')
-        test_description = rand_name('desc_')
+        test_tenant = data_utils.rand_name('test_tenant_')
+        test_description = data_utils.rand_name('desc_')
         _, tenant = self.identity_admin_client.create_tenant(
             name=test_tenant,
             description=test_description)
@@ -74,12 +72,13 @@ class QuotasTest(base.BaseNetworkTest):
         resp, non_default_quotas = self.admin_client.list_quotas()
         self.assertEqual('200', resp['status'])
         found = False
-        for qs in non_default_quotas:
+        for qs in non_default_quotas['quotas']:
             if qs['tenant_id'] == tenant_id:
                 found = True
         self.assertTrue(found)
         # Confirm from APi quotas were changed as requested for tenant
         resp, quota_set = self.admin_client.show_quotas(tenant_id)
+        quota_set = quota_set['quota']
         self.assertEqual('200', resp['status'])
         self.assertEqual(0, quota_set['network'])
         self.assertEqual(0, quota_set['security_group'])
@@ -88,5 +87,5 @@ class QuotasTest(base.BaseNetworkTest):
         self.assertEqual('204', resp['status'])
         resp, non_default_quotas = self.admin_client.list_quotas()
         self.assertEqual('200', resp['status'])
-        for q in non_default_quotas:
+        for q in non_default_quotas['quotas']:
             self.assertNotEqual(tenant_id, q['tenant_id'])

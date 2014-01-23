@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -274,9 +272,48 @@ class IdentityV3ClientJSON(RestClient):
         body = json.loads(body)
         return resp, body['group']
 
+    def get_group(self, group_id):
+        """Get group details."""
+        resp, body = self.get('groups/%s' % group_id, self.headers)
+        body = json.loads(body)
+        return resp, body['group']
+
+    def update_group(self, group_id, **kwargs):
+        """Updates a group."""
+        resp, body = self.get_group(group_id)
+        name = kwargs.get('name', body['name'])
+        description = kwargs.get('description', body['description'])
+        post_body = {
+            'name': name,
+            'description': description
+        }
+        post_body = json.dumps({'group': post_body})
+        resp, body = self.patch('groups/%s' % group_id, post_body,
+                                self.headers)
+        body = json.loads(body)
+        return resp, body['group']
+
     def delete_group(self, group_id):
         """Delete a group."""
         resp, body = self.delete('groups/%s' % str(group_id))
+        return resp, body
+
+    def add_group_user(self, group_id, user_id):
+        """Add user into group."""
+        resp, body = self.put('groups/%s/users/%s' % (group_id, user_id),
+                              None, self.headers)
+        return resp, body
+
+    def list_group_users(self, group_id):
+        """List users in group."""
+        resp, body = self.get('groups/%s/users' % group_id, self.headers)
+        body = json.loads(body)
+        return resp, body['users']
+
+    def delete_group_user(self, group_id, user_id):
+        """Delete user in group."""
+        resp, body = self.delete('groups/%s/users/%s' % (group_id, user_id),
+                                 self.headers)
         return resp, body
 
     def assign_user_role_on_project(self, project_id, user_id, role_id):
@@ -357,6 +394,66 @@ class IdentityV3ClientJSON(RestClient):
         """Delete role of a user on a domain."""
         resp, body = self.delete('domains/%s/groups/%s/roles/%s' %
                                  (domain_id, group_id, role_id))
+        return resp, body
+
+    def create_trust(self, trustor_user_id, trustee_user_id, project_id,
+                     role_names, impersonation, expires_at):
+        """Creates a trust."""
+        roles = [{'name': n} for n in role_names]
+        post_body = {
+            'trustor_user_id': trustor_user_id,
+            'trustee_user_id': trustee_user_id,
+            'project_id': project_id,
+            'impersonation': impersonation,
+            'roles': roles,
+            'expires_at': expires_at
+        }
+        post_body = json.dumps({'trust': post_body})
+        resp, body = self.post('OS-TRUST/trusts', post_body, self.headers)
+        body = json.loads(body)
+        return resp, body['trust']
+
+    def delete_trust(self, trust_id):
+        """Deletes a trust."""
+        resp, body = self.delete("OS-TRUST/trusts/%s" % trust_id)
+        return resp, body
+
+    def get_trusts(self, trustor_user_id=None, trustee_user_id=None):
+        """GET trusts."""
+        if trustor_user_id:
+            resp, body = self.get("OS-TRUST/trusts?trustor_user_id=%s"
+                                  % trustor_user_id)
+        elif trustee_user_id:
+            resp, body = self.get("OS-TRUST/trusts?trustee_user_id=%s"
+                                  % trustee_user_id)
+        else:
+            resp, body = self.get("OS-TRUST/trusts")
+        body = json.loads(body)
+        return resp, body['trusts']
+
+    def get_trust(self, trust_id):
+        """GET trust."""
+        resp, body = self.get("OS-TRUST/trusts/%s" % trust_id)
+        body = json.loads(body)
+        return resp, body['trust']
+
+    def get_trust_roles(self, trust_id):
+        """GET roles delegated by a trust."""
+        resp, body = self.get("OS-TRUST/trusts/%s/roles" % trust_id)
+        body = json.loads(body)
+        return resp, body['roles']
+
+    def get_trust_role(self, trust_id, role_id):
+        """GET role delegated by a trust."""
+        resp, body = self.get("OS-TRUST/trusts/%s/roles/%s"
+                              % (trust_id, role_id))
+        body = json.loads(body)
+        return resp, body['role']
+
+    def check_trust_role(self, trust_id, role_id):
+        """HEAD Check if role is delegated by a trust."""
+        resp, body = self.head("OS-TRUST/trusts/%s/roles/%s"
+                               % (trust_id, role_id))
         return resp, body
 
 

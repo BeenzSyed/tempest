@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,41 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.api.network import base
-from tempest.common.utils import data_utils
+from tempest.api.network import base_security_groups as base
 from tempest.test import attr
 
 
-class SecGroupTest(base.BaseNetworkTest):
+class SecGroupTest(base.BaseSecGroupTest):
     _interface = 'json'
-
-    @classmethod
-    def setUpClass(cls):
-        super(SecGroupTest, cls).setUpClass()
-
-    def _delete_security_group(self, secgroup_id):
-        resp, _ = self.client.delete_security_group(secgroup_id)
-        self.assertEqual(204, resp.status)
-        # Asserting that the security group is not found in the list
-        # after deletion
-        resp, list_body = self.client.list_security_groups()
-        self.assertEqual('200', resp['status'])
-        secgroup_list = list()
-        for secgroup in list_body['security_groups']:
-            secgroup_list.append(secgroup['id'])
-        self.assertNotIn(secgroup_id, secgroup_list)
-
-    def _delete_security_group_rule(self, rule_id):
-        resp, _ = self.client.delete_security_group_rule(rule_id)
-        self.assertEqual(204, resp.status)
-        # Asserting that the security group is not found in the list
-        # after deletion
-        resp, list_body = self.client.list_security_group_rules()
-        self.assertEqual('200', resp['status'])
-        rules_list = list()
-        for rule in list_body['security_group_rules']:
-            rules_list.append(rule['id'])
-        self.assertNotIn(rule_id, rules_list)
 
     @attr(type='smoke')
     def test_list_security_groups(self):
@@ -66,13 +35,7 @@ class SecGroupTest(base.BaseNetworkTest):
 
     @attr(type='smoke')
     def test_create_show_delete_security_group(self):
-        # Create a security group
-        name = data_utils.rand_name('secgroup-')
-        resp, group_create_body = self.client.create_security_group(name)
-        self.assertEqual('201', resp['status'])
-        self.addCleanup(self._delete_security_group,
-                        group_create_body['security_group']['id'])
-        self.assertEqual(group_create_body['security_group']['name'], name)
+        group_create_body, name = self._create_security_group()
 
         # Show details of the created security group
         resp, show_body = self.client.show_security_group(
@@ -90,13 +53,7 @@ class SecGroupTest(base.BaseNetworkTest):
 
     @attr(type='smoke')
     def test_create_show_delete_security_group_rule(self):
-        # Create a security group
-        name = data_utils.rand_name('secgroup-')
-        resp, group_create_body = self.client.create_security_group(name)
-        self.assertEqual('201', resp['status'])
-        self.addCleanup(self._delete_security_group,
-                        group_create_body['security_group']['id'])
-        self.assertEqual(group_create_body['security_group']['name'], name)
+        group_create_body, _ = self._create_security_group()
 
         # Create rules for each protocol
         protocols = ['tcp', 'udp', 'icmp']
@@ -122,6 +79,36 @@ class SecGroupTest(base.BaseNetworkTest):
         rule_list = [rule['id']
                      for rule in rule_list_body['security_group_rules']]
         self.assertIn(rule_create_body['security_group_rule']['id'], rule_list)
+
+    @attr(type='smoke')
+    def test_create_security_group_rule_with_additional_args(self):
+        # Verify creating security group rule with the following
+        # arguments works: "protocol": "tcp", "port_range_max": 77,
+        # "port_range_min": 77, "direction":"ingress".
+        group_create_body, _ = self._create_security_group()
+
+        direction = 'ingress'
+        protocol = 'tcp'
+        port_range_min = 77
+        port_range_max = 77
+        resp, rule_create_body = self.client.create_security_group_rule(
+            group_create_body['security_group']['id'],
+            direction=direction,
+            protocol=protocol,
+            port_range_min=port_range_min,
+            port_range_max=port_range_max
+        )
+
+        self.assertEqual('201', resp['status'])
+        sec_group_rule = rule_create_body['security_group_rule']
+        self.addCleanup(self._delete_security_group_rule,
+                        sec_group_rule['id']
+                        )
+
+        self.assertEqual(sec_group_rule['direction'], direction)
+        self.assertEqual(sec_group_rule['protocol'], protocol)
+        self.assertEqual(int(sec_group_rule['port_range_min']), port_range_min)
+        self.assertEqual(int(sec_group_rule['port_range_max']), port_range_max)
 
 
 class SecGroupTestXML(SecGroupTest):

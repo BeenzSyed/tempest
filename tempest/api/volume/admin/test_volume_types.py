@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,13 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.api.volume.base import BaseVolumeTest
-from tempest.common.utils.data_utils import rand_name
+from tempest.api.volume import base
+from tempest.common.utils import data_utils
 from tempest.services.volume.json.admin import volume_types_client
 from tempest.test import attr
 
 
-class VolumeTypesTest(BaseVolumeTest):
+class VolumeTypesTest(base.BaseVolumeV1Test):
     _interface = "json"
 
     @classmethod
@@ -58,8 +56,8 @@ class VolumeTypesTest(BaseVolumeTest):
     def test_create_get_delete_volume_with_volume_type_and_extra_specs(self):
         # Create/get/delete volume with volume_type and extra spec.
         volume = {}
-        vol_name = rand_name("volume-")
-        vol_type_name = rand_name("volume-type-")
+        vol_name = data_utils.rand_name("volume-")
+        vol_type_name = data_utils.rand_name("volume-type-")
         proto = self.config.volume.storage_protocol
         vendor = self.config.volume.vendor_name
         extra_specs = {"storage_protocol": proto,
@@ -99,31 +97,14 @@ class VolumeTypesTest(BaseVolumeTest):
                          'from the created Volume')
 
     @attr(type='smoke')
-    def test_volume_type_create_delete(self):
-        # Create/Delete volume type.
-        name = rand_name("volume-type-")
-        extra_specs = {"storage_protocol": "iSCSI",
-                       "vendor_name": "Open Source"}
-        resp, body = self.client.create_volume_type(
-            name,
-            extra_specs=extra_specs)
-        self.assertEqual(200, resp.status)
-        self.assertIn('id', body)
-        self.addCleanup(self._delete_volume_type, body['id'])
-        self.assertIn('name', body)
-        self.assertEqual(body['name'], name,
-                         "The created volume_type name is not equal "
-                         "to the requested name")
-        self.assertTrue(body['id'] is not None,
-                        "Field volume_type id is empty or not found.")
-
-    @attr(type='smoke')
-    def test_volume_type_create_get(self):
+    def test_volume_type_create_get_delete(self):
         # Create/get volume type.
         body = {}
-        name = rand_name("volume-type-")
-        extra_specs = {"storage_protocol": "iSCSI",
-                       "vendor_name": "Open Source"}
+        name = data_utils.rand_name("volume-type-")
+        proto = self.config.volume.storage_protocol
+        vendor = self.config.volume.vendor_name
+        extra_specs = {"storage_protocol": proto,
+                       "vendor_name": vendor}
         resp, body = self.client.create_volume_type(
             name,
             extra_specs=extra_specs)

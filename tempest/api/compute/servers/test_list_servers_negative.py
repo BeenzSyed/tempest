@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -17,71 +15,19 @@
 
 import datetime
 
-from tempest.api import compute
 from tempest.api.compute import base
-from tempest import clients
 from tempest import exceptions
 from tempest.test import attr
 
 
-class ListServersNegativeTestJSON(base.BaseComputeTest):
+class ListServersNegativeTestJSON(base.BaseV2ComputeTest):
     _interface = 'json'
-
-    @classmethod
-    def _ensure_no_servers(cls, servers, username, tenant_name):
-        """
-        If there are servers and there is tenant isolation then a
-        skipException is raised to skip the test since it requires no servers
-        to already exist for the given user/tenant.
-        If there are servers and there is not tenant isolation then the test
-        blocks while the servers are being deleted.
-        """
-        if len(servers):
-            if not cls.config.compute.allow_tenant_isolation:
-                for srv in servers:
-                    cls.client.wait_for_server_termination(srv['id'],
-                                                           ignore_error=True)
-            else:
-                msg = ("User/tenant %(u)s/%(t)s already have "
-                       "existing server instances. Skipping test." %
-                       {'u': username, 't': tenant_name})
-                raise cls.skipException(msg)
+    force_tenant_isolation = True
 
     @classmethod
     def setUpClass(cls):
         super(ListServersNegativeTestJSON, cls).setUpClass()
         cls.client = cls.servers_client
-        cls.servers = []
-
-        if compute.MULTI_USER:
-            if cls.config.compute.allow_tenant_isolation:
-                creds = cls.isolated_creds.get_alt_creds()
-                username, tenant_name, password = creds
-                cls.alt_manager = clients.Manager(username=username,
-                                                  password=password,
-                                                  tenant_name=tenant_name)
-            else:
-                # Use the alt_XXX credentials in the config file
-                cls.alt_manager = clients.AltManager()
-            cls.alt_client = cls.alt_manager.servers_client
-
-        # Under circumstances when there is not a tenant/user
-        # created for the test case, the test case checks
-        # to see if there are existing servers for the
-        # either the normal user/tenant or the alt user/tenant
-        # and if so, the whole test is skipped. We do this
-        # because we assume a baseline of no servers at the
-        # start of the test instead of destroying any existing
-        # servers.
-        resp, body = cls.client.list_servers()
-        cls._ensure_no_servers(body['servers'],
-                               cls.os.username,
-                               cls.os.tenant_name)
-
-        resp, body = cls.alt_client.list_servers()
-        cls._ensure_no_servers(body['servers'],
-                               cls.alt_manager.username,
-                               cls.alt_manager.tenant_name)
 
         # The following servers are created for use
         # by the test methods in this class. These
@@ -91,10 +37,10 @@ class ListServersNegativeTestJSON(base.BaseComputeTest):
         cls.deleted_fixtures = []
         cls.start_time = datetime.datetime.utcnow()
         for x in xrange(2):
-            resp, srv = cls.create_server()
+            resp, srv = cls.create_test_server()
             cls.existing_fixtures.append(srv)
 
-        resp, srv = cls.create_server()
+        resp, srv = cls.create_test_server()
         cls.client.delete_server(srv['id'])
         # We ignore errors on termination because the server may
         # be put into ERROR status on a quick spawn, then delete,
@@ -188,7 +134,9 @@ class ListServersNegativeTestJSON(base.BaseComputeTest):
         # changes-since returns all instances, including deleted.
         num_expected = (len(self.existing_fixtures) +
                         len(self.deleted_fixtures))
-        self.assertEqual(num_expected, len(body['servers']))
+        self.assertEqual(num_expected, len(body['servers']),
+                         "Number of servers %d is wrong in %s" %
+                         (num_expected, body['servers']))
 
     @attr(type=['negative', 'gate'])
     def test_list_servers_by_changes_since_invalid_date(self):

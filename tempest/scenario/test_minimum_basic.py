@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 NEC Corporation
 # All Rights Reserved.
 #
@@ -15,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest.openstack.common import log as logging
 from tempest.scenario import manager
 from tempest.test import services
@@ -48,7 +46,7 @@ class TestMinimumBasicScenario(manager.OfficialClientTest):
             self.volume_client.volumes, volume_id, status)
 
     def _image_create(self, name, fmt, path, properties={}):
-        name = rand_name('%s-' % name)
+        name = data_utils.rand_name('%s-' % name)
         image_file = open(path, 'rb')
         self.addCleanup(image_file.close)
         params = {
@@ -131,7 +129,12 @@ class TestMinimumBasicScenario(manager.OfficialClientTest):
         self.server.add_floating_ip(self.floating_ip)
 
     def ssh_to_server(self):
-        self.linux_client = self.get_remote_client(self.floating_ip.ip)
+        try:
+            self.linux_client = self.get_remote_client(self.floating_ip.ip)
+        except Exception:
+            LOG.exception('ssh to server failed')
+            self._log_console_output()
+            raise
 
     def check_partitions(self):
         partitions = self.linux_client.get_partitions()
@@ -161,7 +164,7 @@ class TestMinimumBasicScenario(manager.OfficialClientTest):
 
         self.nova_floating_ip_create()
         self.nova_floating_ip_add()
-        self.create_loginable_secgroup_rule()
+        self._create_loginable_secgroup_rule_nova()
         self.ssh_to_server()
         self.check_partitions()
 

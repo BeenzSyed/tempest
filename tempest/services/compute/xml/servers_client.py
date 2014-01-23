@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2012 IBM Corp.
 # Copyright 2013 Hewlett-Packard Development Company, L.P.
 # All Rights Reserved.
@@ -194,6 +192,10 @@ class ServersClientXML(RestClientXML):
         server = self._parse_server(etree.fromstring(body))
         return resp, server
 
+    def migrate_server(self, server_id, **kwargs):
+        """Migrates the given server ."""
+        return self.action(server_id, 'migrate', None, **kwargs)
+
     def lock_server(self, server_id, **kwargs):
         """Locks the given server."""
         return self.action(server_id, 'lock', None, **kwargs)
@@ -217,6 +219,14 @@ class ServersClientXML(RestClientXML):
     def unpause_server(self, server_id, **kwargs):
         """Un-pauses the provided server."""
         return self.action(server_id, 'unpause', None, **kwargs)
+
+    def shelve_server(self, server_id, **kwargs):
+        """Shelves the provided server."""
+        return self.action(server_id, 'shelve', None, **kwargs)
+
+    def unshelve_server(self, server_id, **kwargs):
+        """Un-shelves the provided server."""
+        return self.action(server_id, 'unshelve', None, **kwargs)
 
     def reset_state(self, server_id, state='error'):
         """Resets the state of a server to active/error."""
@@ -251,7 +261,7 @@ class ServersClientXML(RestClientXML):
         return resp, {"servers": servers}
 
     def update_server(self, server_id, name=None, meta=None, accessIPv4=None,
-                      accessIPv6=None):
+                      accessIPv6=None, disk_config=None):
         doc = Document()
         server = Element("server")
         doc.append(server)
@@ -262,6 +272,10 @@ class ServersClientXML(RestClientXML):
             server.add_attr("accessIPv4", accessIPv4)
         if accessIPv6 is not None:
             server.add_attr("accessIPv6", accessIPv6)
+        if disk_config is not None:
+            server.add_attr('xmlns:OS-DCF', "http://docs.openstack.org/"
+                            "compute/ext/disk_config/api/v1.1")
+            server.add_attr("OS-DCF:diskConfig", disk_config)
         if meta is not None:
             metadata = Element("metadata")
             server.append(metadata)
@@ -348,9 +362,12 @@ class ServersClientXML(RestClientXML):
         server = self._parse_server(etree.fromstring(body))
         return resp, server
 
-    def wait_for_server_status(self, server_id, status):
+    def wait_for_server_status(self, server_id, status, extra_timeout=0,
+                               raise_on_error=True):
         """Waits for a server to reach a given status."""
-        return waiters.wait_for_server_status(self, server_id, status)
+        return waiters.wait_for_server_status(self, server_id, status,
+                                              extra_timeout=extra_timeout,
+                                              raise_on_error=raise_on_error)
 
     def wait_for_server_termination(self, server_id, ignore_error=False):
         """Waits for server to reach termination."""
@@ -408,9 +425,31 @@ class ServersClientXML(RestClientXML):
             body = xml_to_json(etree.fromstring(body))
         return resp, body
 
+    def create_backup(self, server_id, backup_type, rotation, name):
+        """Backup a server instance."""
+        return self.action(server_id, "createBackup", None,
+                           backup_type=backup_type,
+                           rotation=rotation,
+                           name=name)
+
     def change_password(self, server_id, password):
         return self.action(server_id, "changePassword", None,
                            adminPass=password)
+
+    def get_password(self, server_id):
+        resp, body = self.get("servers/%s/os-server-password" %
+                              str(server_id), self.headers)
+        body = xml_to_json(etree.fromstring(body))
+        return resp, body
+
+    def delete_password(self, server_id):
+        """
+        Removes the encrypted server password from the metadata server
+        Note that this does not actually change the instance server
+        password.
+        """
+        return self.delete("servers/%s/os-server-password" %
+                           str(server_id))
 
     def reboot(self, server_id, reboot_type):
         return self.action(server_id, "reboot", None, type=reboot_type)
@@ -555,9 +594,9 @@ class ServersClientXML(RestClientXML):
         virt_int = self._parse_xml_virtual_interfaces(etree.fromstring(body))
         return resp, virt_int
 
-    def rescue_server(self, server_id, adminPass=None):
+    def rescue_server(self, server_id, **kwargs):
         """Rescue the provided server."""
-        return self.action(server_id, 'rescue', None, adminPass=adminPass)
+        return self.action(server_id, 'rescue', None, **kwargs)
 
     def unrescue_server(self, server_id):
         """Unrescue the provided server."""
@@ -597,3 +636,11 @@ class ServersClientXML(RestClientXML):
                               (server_id, request_id), self.headers)
         body = xml_to_json(etree.fromstring(body))
         return resp, body
+
+    def force_delete_server(self, server_id, **kwargs):
+        """Force delete a server."""
+        return self.action(server_id, 'forceDelete', None, **kwargs)
+
+    def restore_soft_deleted_server(self, server_id, **kwargs):
+        """Restore a soft-deleted server."""
+        return self.action(server_id, 'restore', None, **kwargs)

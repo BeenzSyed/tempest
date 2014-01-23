@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -22,6 +20,7 @@ from lxml import etree
 from tempest.common.rest_client import RestClientXML
 from tempest.services.compute.xml.common import Document
 from tempest.services.compute.xml.common import Element
+from tempest.services.compute.xml.common import Text
 from tempest.services.compute.xml.common import xml_to_json
 from tempest.services.compute.xml.common import XMLNS_11
 
@@ -29,7 +28,7 @@ from tempest.services.compute.xml.common import XMLNS_11
 XMLNS_OS_FLV_EXT_DATA = \
     "http://docs.openstack.org/compute/ext/flavor_extra_data/api/v1.1"
 XMLNS_OS_FLV_ACCESS = \
-    "http://docs.openstack.org/compute/ext/flavor_access/api/v1.1"
+    "http://docs.openstack.org/compute/ext/flavor_access/api/v2"
 
 
 class FlavorsClientXML(RestClientXML):
@@ -42,12 +41,20 @@ class FlavorsClientXML(RestClientXML):
     def _format_flavor(self, f):
         flavor = {'links': []}
         for k, v in f.items():
+            if k == 'id':
+                flavor['id'] = v
+                continue
+
             if k == 'link':
                 flavor['links'].append(v)
                 continue
 
             if k == '{%s}ephemeral' % XMLNS_OS_FLV_EXT_DATA:
                 k = 'OS-FLV-EXT-DATA:ephemeral'
+
+            if k == '{%s}is_public' % XMLNS_OS_FLV_ACCESS:
+                k = 'os-flavor-access:is_public'
+                v = True if v == 'True' else False
 
             if k == 'extra_specs':
                 k = 'OS-FLV-WITH-EXT-SPECS:extra_specs'
@@ -148,6 +155,31 @@ class FlavorsClientXML(RestClientXML):
         body = xml_to_json(etree.fromstring(body))
         return resp, body
 
+    def get_flavor_extra_spec_with_key(self, flavor_id, key):
+        """Gets extra Specs key-value of the mentioned flavor and key."""
+        resp, xml_body = self.get('flavors/%s/os-extra_specs/%s' %
+                                  (str(flavor_id), key), self.headers)
+        body = {}
+        element = etree.fromstring(xml_body)
+        key = element.get('key')
+        body[key] = xml_to_json(element)
+        return resp, body
+
+    def update_flavor_extra_spec(self, flavor_id, key, **kwargs):
+        """Update extra Specs details of the mentioned flavor and key."""
+        doc = Document()
+        for (k, v) in kwargs.items():
+            element = Element(k)
+            doc.append(element)
+            value = Text(v)
+            element.append(value)
+
+        resp, body = self.put('flavors/%s/os-extra_specs/%s' %
+                              (flavor_id, key),
+                              str(doc), self.headers)
+        body = xml_to_json(etree.fromstring(body))
+        return resp, {key: body}
+
     def unset_flavor_extra_spec(self, flavor_id, key):
         """Unsets an extra spec based on the mentioned flavor and key."""
         return self.delete('flavors/%s/os-extra_specs/%s' % (str(flavor_id),
@@ -155,6 +187,13 @@ class FlavorsClientXML(RestClientXML):
 
     def _parse_array_access(self, node):
         return [xml_to_json(x) for x in node]
+
+    def list_flavor_access(self, flavor_id):
+        """Gets flavor access information given the flavor id."""
+        resp, body = self.get('flavors/%s/os-flavor-access' % str(flavor_id),
+                              self.headers)
+        body = self._parse_array(etree.fromstring(body))
+        return resp, body
 
     def add_flavor_access(self, flavor_id, tenant_id):
         """Add flavor access for the specified tenant."""

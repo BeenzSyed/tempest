@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -128,6 +126,22 @@ class VolumesClientJSON(RestClient):
         resp, body = self.post(url, post_body, self.headers)
         return resp, body
 
+    def reserve_volume(self, volume_id):
+        """Reserves a volume."""
+        post_body = {}
+        post_body = json.dumps({'os-reserve': post_body})
+        url = 'volumes/%s/action' % (volume_id)
+        resp, body = self.post(url, post_body, self.headers)
+        return resp, body
+
+    def unreserve_volume(self, volume_id):
+        """Restore a reserved volume ."""
+        post_body = {}
+        post_body = json.dumps({'os-unreserve': post_body})
+        url = 'volumes/%s/action' % (volume_id)
+        resp, body = self.post(url, post_body, self.headers)
+        return resp, body
+
     def wait_for_volume_status(self, volume_id, status):
         """Waits for a Volume to reach a given status."""
         resp, body = self.get_volume(volume_id)
@@ -154,3 +168,133 @@ class VolumesClientJSON(RestClient):
         except exceptions.NotFound:
             return True
         return False
+
+    def extend_volume(self, volume_id, extend_size):
+        """Extend a volume."""
+        post_body = {
+            'new_size': extend_size
+        }
+        post_body = json.dumps({'os-extend': post_body})
+        url = 'volumes/%s/action' % (volume_id)
+        resp, body = self.post(url, post_body, self.headers)
+        return resp, body
+
+    def reset_volume_status(self, volume_id, status):
+        """Reset the Specified Volume's Status."""
+        post_body = json.dumps({'os-reset_status': {"status": status}})
+        resp, body = self.post('volumes/%s/action' % volume_id, post_body,
+                               self.headers)
+        return resp, body
+
+    def volume_begin_detaching(self, volume_id):
+        """Volume Begin Detaching."""
+        post_body = json.dumps({'os-begin_detaching': {}})
+        resp, body = self.post('volumes/%s/action' % volume_id, post_body,
+                               self.headers)
+        return resp, body
+
+    def volume_roll_detaching(self, volume_id):
+        """Volume Roll Detaching."""
+        post_body = json.dumps({'os-roll_detaching': {}})
+        resp, body = self.post('volumes/%s/action' % volume_id, post_body,
+                               self.headers)
+        return resp, body
+
+    def create_volume_transfer(self, vol_id, display_name=None):
+        """Create a volume transfer."""
+        post_body = {
+            'volume_id': vol_id
+        }
+        if display_name:
+            post_body['name'] = display_name
+        post_body = json.dumps({'transfer': post_body})
+        resp, body = self.post('os-volume-transfer',
+                               post_body,
+                               self.headers)
+        body = json.loads(body)
+        return resp, body['transfer']
+
+    def get_volume_transfer(self, transfer_id):
+        """Returns the details of a volume transfer."""
+        url = "os-volume-transfer/%s" % str(transfer_id)
+        resp, body = self.get(url, self.headers)
+        body = json.loads(body)
+        return resp, body['transfer']
+
+    def list_volume_transfers(self, params=None):
+        """List all the volume transfers created."""
+        url = 'os-volume-transfer'
+        if params:
+            url += '?%s' % urllib.urlencode(params)
+        resp, body = self.get(url)
+        body = json.loads(body)
+        return resp, body['transfers']
+
+    def delete_volume_transfer(self, transfer_id):
+        """Delete a volume transfer."""
+        return self.delete("os-volume-transfer/%s" % str(transfer_id))
+
+    def accept_volume_transfer(self, transfer_id, transfer_auth_key):
+        """Accept a volume transfer."""
+        post_body = {
+            'auth_key': transfer_auth_key,
+        }
+        url = 'os-volume-transfer/%s/accept' % transfer_id
+        post_body = json.dumps({'accept': post_body})
+        resp, body = self.post(url, post_body, self.headers)
+        body = json.loads(body)
+        return resp, body['transfer']
+
+    def update_volume_readonly(self, volume_id, readonly):
+        """Update the Specified Volume readonly."""
+        post_body = {
+            'readonly': readonly
+        }
+        post_body = json.dumps({'os-update_readonly_flag': post_body})
+        url = 'volumes/%s/action' % (volume_id)
+        resp, body = self.post(url, post_body, self.headers)
+        return resp, body
+
+    def force_delete_volume(self, volume_id):
+        """Force Delete Volume."""
+        post_body = json.dumps({'os-force_delete': {}})
+        resp, body = self.post('volumes/%s/action' % volume_id, post_body,
+                               self.headers)
+        return resp, body
+
+    def create_volume_metadata(self, volume_id, metadata):
+        """Create metadata for the volume."""
+        put_body = json.dumps({'metadata': metadata})
+        url = "volumes/%s/metadata" % str(volume_id)
+        resp, body = self.post(url, put_body, self.headers)
+        body = json.loads(body)
+        return resp, body['metadata']
+
+    def get_volume_metadata(self, volume_id):
+        """Get metadata of the volume."""
+        url = "volumes/%s/metadata" % str(volume_id)
+        resp, body = self.get(url, self.headers)
+        body = json.loads(body)
+        return resp, body['metadata']
+
+    def update_volume_metadata(self, volume_id, metadata):
+        """Update metadata for the volume."""
+        put_body = json.dumps({'metadata': metadata})
+        url = "volumes/%s/metadata" % str(volume_id)
+        resp, body = self.put(url, put_body, self.headers)
+        body = json.loads(body)
+        return resp, body['metadata']
+
+    def update_volume_metadata_item(self, volume_id, id, meta_item):
+        """Update metadata item for the volume."""
+        put_body = json.dumps({'meta': meta_item})
+        url = "volumes/%s/metadata/%s" % (str(volume_id), str(id))
+        resp, body = self.put(url, put_body, self.headers)
+        body = json.loads(body)
+        return resp, body['meta']
+
+    def delete_volume_metadata_item(self, volume_id, id):
+        """Delete metadata item for the volume."""
+        url = "volumes/%s/metadata/%s" % (str(volume_id), str(id))
+        resp, body = self.delete(url, self.headers)
+        return resp, body

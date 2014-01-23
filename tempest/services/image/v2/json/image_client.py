@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2013 IBM Corp.
 # All Rights Reserved.
 #
@@ -31,7 +29,8 @@ class ImageClientV2JSON(rest_client.RestClient):
         super(ImageClientV2JSON, self).__init__(config, username, password,
                                                 auth_url, tenant_name)
         self.service = self.config.images.catalog_type
-        self.http = self._get_http()
+        if config.service_available.glance:
+            self.http = self._get_http()
 
     def _get_http(self):
         token, endpoint = self.keystone_auth(self.user, self.password,
@@ -100,7 +99,7 @@ class ImageClientV2JSON(rest_client.RestClient):
         self._validate_schema(body, type='images')
         return resp, body['images']
 
-    def get_image_metadata(self, image_id):
+    def get_image(self, image_id):
         url = 'v2/images/%s' % image_id
         resp, body = self.get(url)
         body = json.loads(body)
@@ -108,7 +107,7 @@ class ImageClientV2JSON(rest_client.RestClient):
 
     def is_resource_deleted(self, id):
         try:
-            self.get_image_metadata(id)
+            self.get_image(id)
         except exceptions.NotFound:
             return True
         return False
@@ -123,4 +122,38 @@ class ImageClientV2JSON(rest_client.RestClient):
     def get_image_file(self, image_id):
         url = 'v2/images/%s/file' % image_id
         resp, body = self.get(url)
+        return resp, body
+
+    def add_image_tag(self, image_id, tag):
+        url = 'v2/images/%s/tags/%s' % (image_id, tag)
+        resp, body = self.put(url, body=None, headers=self.headers)
+        return resp, body
+
+    def delete_image_tag(self, image_id, tag):
+        url = 'v2/images/%s/tags/%s' % (image_id, tag)
+        resp, _ = self.delete(url)
+        return resp
+
+    def get_image_membership(self, image_id):
+        url = 'v2/images/%s/members' % image_id
+        resp, body = self.get(url)
+        body = json.loads(body)
+        self.expected_success(200, resp)
+        return resp, body
+
+    def add_member(self, image_id, member_id):
+        url = 'v2/images/%s/members' % image_id
+        data = json.dumps({'member': member_id})
+        resp, body = self.post(url, data, self.headers)
+        body = json.loads(body)
+        self.expected_success(200, resp)
+        return resp, body
+
+    def update_member_status(self, image_id, member_id, status):
+        """Valid status are: ``pending``, ``accepted``,  ``rejected``."""
+        url = 'v2/images/%s/members/%s' % (image_id, member_id)
+        data = json.dumps({'status': status})
+        resp, body = self.put(url, data, self.headers)
+        body = json.loads(body)
+        self.expected_success(200, resp)
         return resp, body

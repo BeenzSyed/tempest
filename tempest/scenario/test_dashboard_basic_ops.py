@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -34,6 +32,7 @@ class TestDashboardBasicOps(manager.OfficialClientTest):
 
     @classmethod
     def setUpClass(cls):
+        cls.set_network_resources()
         super(TestDashboardBasicOps, cls).setUpClass()
 
         if not cls.config.service_available.horizon:

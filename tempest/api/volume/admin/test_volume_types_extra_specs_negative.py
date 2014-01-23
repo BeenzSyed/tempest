@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -18,18 +16,18 @@
 import uuid
 
 from tempest.api.volume import base
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest import exceptions
 from tempest.test import attr
 
 
-class ExtraSpecsNegativeTest(base.BaseVolumeAdminTest):
+class ExtraSpecsNegativeTest(base.BaseVolumeV1AdminTest):
     _interface = 'json'
 
     @classmethod
     def setUpClass(cls):
         super(ExtraSpecsNegativeTest, cls).setUpClass()
-        vol_type_name = rand_name('Volume-type-')
+        vol_type_name = data_utils.rand_name('Volume-type-')
         cls.extra_specs = {"spec1": "val1"}
         resp, cls.volume_type = cls.client.create_volume_type(vol_type_name,
                                                               extra_specs=

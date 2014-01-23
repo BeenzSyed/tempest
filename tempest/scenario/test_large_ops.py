@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 NEC Corporation
 # All Rights Reserved.
 #
@@ -15,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest.openstack.common import log as logging
 from tempest.scenario import manager
 from tempest.test import services
@@ -36,6 +34,11 @@ class TestLargeOpsScenario(manager.NetworkScenarioTest):
 
     """
 
+    @classmethod
+    def setUpClass(cls):
+        cls.set_network_resources()
+        super(TestLargeOpsScenario, cls).setUpClass()
+
     def _wait_for_server_status(self, status):
         for server in self.servers:
             self.status_timeout(
@@ -47,7 +50,7 @@ class TestLargeOpsScenario(manager.NetworkScenarioTest):
             self.volume_client.volumes, volume_id, status)
 
     def _image_create(self, name, fmt, path, properties={}):
-        name = rand_name('%s-' % name)
+        name = data_utils.rand_name('%s-' % name)
         image_file = open(path, 'rb')
         self.addCleanup(image_file.close)
         params = {
@@ -82,10 +85,10 @@ class TestLargeOpsScenario(manager.NetworkScenarioTest):
                                         properties=properties)
 
     def nova_boot(self):
-        name = rand_name('scenario-server-')
+        name = data_utils.rand_name('scenario-server-')
         client = self.compute_client
         flavor_id = self.config.compute.flavor_ref
-        secgroup = self._create_security_group()
+        secgroup = self._create_security_group_nova()
         self.servers = client.servers.create(
             name=name, image=self.image,
             flavor=flavor_id,

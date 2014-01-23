@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -22,6 +20,7 @@ from tempest import exceptions
 from tempest.openstack.common import log as logging
 from tempest.services.compute.xml.common import Document
 from tempest.services.compute.xml.common import Element
+from tempest.services.compute.xml.common import Text
 from tempest.services.compute.xml.common import xml_to_json
 from tempest.services.compute.xml.common import XMLNS_11
 
@@ -147,3 +146,80 @@ class SnapshotsClientXML(RestClientXML):
         except exceptions.NotFound:
             return True
         return False
+
+    def reset_snapshot_status(self, snapshot_id, status):
+        """Reset the specified snapshot's status."""
+        post_body = Element("os-reset_status",
+                            status=status
+                            )
+        url = 'snapshots/%s/action' % str(snapshot_id)
+        resp, body = self.post(url, str(Document(post_body)), self.headers)
+        if body:
+            body = xml_to_json(etree.fromstring(body))
+        return resp, body
+
+    def update_snapshot_status(self, snapshot_id, status, progress):
+        """Update the specified snapshot's status."""
+        post_body = Element("os-update_snapshot_status",
+                            status=status,
+                            progress=progress
+                            )
+        url = 'snapshots/%s/action' % str(snapshot_id)
+        resp, body = self.post(url, str(Document(post_body)), self.headers)
+        if body:
+            body = xml_to_json(etree.fromstring(body))
+        return resp, body
+
+    def _metadata_body(self, meta):
+        post_body = Element('metadata')
+        for k, v in meta.items():
+            data = Element('meta', key=k)
+            data.append(Text(v))
+            post_body.append(data)
+        return post_body
+
+    def _parse_key_value(self, node):
+        """Parse <foo key='key'>value</foo> data into {'key': 'value'}."""
+        data = {}
+        for node in node.getchildren():
+            data[node.get('key')] = node.text
+        return data
+
+    def create_snapshot_metadata(self, snapshot_id, metadata):
+        """Create metadata for the snapshot."""
+        post_body = self._metadata_body(metadata)
+        resp, body = self.post('snapshots/%s/metadata' % snapshot_id,
+                               str(Document(post_body)),
+                               self.headers)
+        body = self._parse_key_value(etree.fromstring(body))
+        return resp, body
+
+    def get_snapshot_metadata(self, snapshot_id):
+        """Get metadata of the snapshot."""
+        url = "snapshots/%s/metadata" % str(snapshot_id)
+        resp, body = self.get(url, self.headers)
+        body = self._parse_key_value(etree.fromstring(body))
+        return resp, body
+
+    def update_snapshot_metadata(self, snapshot_id, metadata):
+        """Update metadata for the snapshot."""
+        put_body = self._metadata_body(metadata)
+        url = "snapshots/%s/metadata" % str(snapshot_id)
+        resp, body = self.put(url, str(Document(put_body)), self.headers)
+        body = self._parse_key_value(etree.fromstring(body))
+        return resp, body
+
+    def update_snapshot_metadata_item(self, snapshot_id, id, meta_item):
+        """Update metadata item for the snapshot."""
+        for k, v in meta_item.items():
+            put_body = Element('meta', key=k)
+            put_body.append(Text(v))
+        url = "snapshots/%s/metadata/%s" % (str(snapshot_id), str(id))
+        resp, body = self.put(url, str(Document(put_body)), self.headers)
+        body = xml_to_json(etree.fromstring(body))
+        return resp, body
+
+    def delete_snapshot_metadata_item(self, snapshot_id, id):
+        """Delete metadata item for the snapshot."""
+        url = "snapshots/%s/metadata/%s" % (str(snapshot_id), str(id))
+        return self.delete(url)

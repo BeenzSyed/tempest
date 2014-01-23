@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -17,7 +15,7 @@ import logging
 
 from tempest.api.orchestration import base
 from tempest import clients
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest.test import attr
 
 
@@ -101,7 +99,7 @@ Resources:
         if not cls.config.service_available.neutron:
             raise cls.skipException("Neutron support is required")
         cls.network_client = os.network_client
-        cls.stack_name = rand_name('heat')
+        cls.stack_name = data_utils.rand_name('heat')
         cls.keypair_name = (cls.orchestration_cfg.keypair_name or
                             cls._create_keypair()['name'])
         cls.external_router_id = cls._get_external_router_id()

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -18,12 +16,9 @@
 from __future__ import print_function
 
 import os
-import sys
-
 
 from oslo.config import cfg
 
-from tempest.common.utils.misc import singleton
 from tempest.openstack.common import log as logging
 
 
@@ -86,7 +81,7 @@ IdentityGroup = [
                secret=True),
     cfg.StrOpt('admin_username',
                default='admin',
-               help="Administrative Username to use for"
+               help="Administrative Username to use for "
                     "Keystone API requests."),
     cfg.StrOpt('admin_tenant_name',
                default='admin',
@@ -96,6 +91,16 @@ IdentityGroup = [
                default='pass',
                help="API key to use when authenticating as admin.",
                secret=True),
+]
+
+identity_feature_group = cfg.OptGroup(name='identity-feature-enabled',
+                                      title='Enabled Identity Features')
+
+IdentityFeatureGroup = [
+    cfg.BoolOpt('trust',
+                default=True,
+                help='Does the identity service have delegation and '
+                     'impersonation enabled')
 ]
 
 compute_group = cfg.OptGroup(name='compute',
@@ -108,25 +113,17 @@ ComputeGroup = [
                      "users. This option enables isolated test cases and "
                      "better parallel execution, but also requires that "
                      "OpenStack Identity API admin credentials are known."),
-    cfg.BoolOpt('allow_tenant_reuse',
-                default=True,
-                help="If allow_tenant_isolation is True and a tenant that "
-                     "would be created for a given test already exists (such "
-                     "as from a previously-failed run), re-use that tenant "
-                     "instead of failing because of the conflict. Note that "
-                     "this would result in the tenant being deleted at the "
-                     "end of a subsequent successful run."),
     cfg.StrOpt('image_ref',
                default="{$IMAGE_ID}",
                help="Valid secondary image reference to be used in tests."),
     cfg.StrOpt('image_ref_alt',
                default="{$IMAGE_ID_ALT}",
                help="Valid secondary image reference to be used in tests."),
-    cfg.IntOpt('flavor_ref',
-               default=1,
+    cfg.StrOpt('flavor_ref',
+               default="1",
                help="Valid primary flavor to use in tests."),
-    cfg.IntOpt('flavor_ref_alt',
-               default=2,
+    cfg.StrOpt('flavor_ref_alt',
+               default="2",
                help='Valid secondary flavor to be used in tests.'),
     cfg.StrOpt('image_ssh_user',
                default="root",
@@ -142,28 +139,6 @@ ComputeGroup = [
                default="password",
                help="Password used to authenticate to an instance using "
                     "the alternate image."),
-    cfg.BoolOpt('resize_available',
-                default=False,
-                help="Does the test environment support resizing?"),
-    cfg.BoolOpt('live_migration_available',
-                default=False,
-                help="Does the test environment support live migration "
-                     "available?"),
-    cfg.BoolOpt('use_block_migration_for_live_migration',
-                default=False,
-                help="Does the test environment use block devices for live "
-                     "migration"),
-    cfg.BoolOpt('block_migrate_supports_cinder_iscsi',
-                default=False,
-                help="Does the test environment block migration support "
-                     "cinder iSCSI volumes"),
-    cfg.BoolOpt('change_password_available',
-                default=False,
-                help="Does the test environment support changing the admin "
-                     "password?"),
-    cfg.BoolOpt('create_image_enabled',
-                default=False,
-                help="Does the test environment support snapshots?"),
     cfg.IntOpt('build_interval',
                default=10,
                help="Time in seconds between build status checks."),
@@ -172,7 +147,7 @@ ComputeGroup = [
                help="Timeout in seconds to wait for an instance to build."),
     cfg.BoolOpt('run_ssh',
                 default=False,
-                help="Does the test environment support snapshots?"),
+                help="Should the tests ssh to instances?"),
     cfg.StrOpt('ssh_user',
                default='root',
                help="User name used to authenticate to an instance."),
@@ -213,21 +188,68 @@ ComputeGroup = [
                     "of identity.region is used instead. If no such region "
                     "is found in the service catalog, the first found one is "
                     "used."),
+    cfg.StrOpt('catalog_v3_type',
+               default='computev3',
+               help="Catalog type of the Compute v3 service."),
     cfg.StrOpt('path_to_private_key',
                default=None,
                help="Path to a private key file for SSH access to remote "
                     "hosts"),
-    cfg.BoolOpt('disk_config_enabled',
-                default=True,
-                help="If false, skip disk config tests"),
-    cfg.BoolOpt('flavor_extra_enabled',
-                default=True,
-                help="If false, skip flavor extra data test"),
     cfg.StrOpt('volume_device_name',
                default='vdb',
                help="Expected device name when a volume is attached to "
-                    "an instance")
+                    "an instance"),
+    cfg.IntOpt('shelved_offload_time',
+               default=0,
+               help='Time in seconds before a shelved instance is eligible '
+                    'for removing from a host.  -1 never offload, 0 offload '
+                    'when shelved. This time should be the same as the time '
+                    'of nova.conf, and some tests will run for as long as the '
+                    'time.')
 ]
+
+compute_features_group = cfg.OptGroup(name='compute-feature-enabled',
+                                      title="Enabled Compute Service Features")
+
+ComputeFeaturesGroup = [
+    cfg.BoolOpt('api_v3',
+                default=True,
+                help="If false, skip all nova v3 tests."),
+    cfg.BoolOpt('disk_config',
+                default=True,
+                help="If false, skip disk config tests"),
+    cfg.ListOpt('api_extensions',
+                default=['all'],
+                help='A list of enabled extensions with a special entry all '
+                     'which indicates every extension is enabled'),
+    cfg.ListOpt('api_v3_extensions',
+                default=['all'],
+                help='A list of enabled v3 extensions with a special entry all'
+                     ' which indicates every extension is enabled'),
+    cfg.BoolOpt('change_password',
+                default=False,
+                help="Does the test environment support changing the admin "
+                     "password?"),
+    cfg.BoolOpt('create_image',
+                default=False,
+                help="Does the test environment support snapshots?"),
+    cfg.BoolOpt('resize',
+                default=False,
+                help="Does the test environment support resizing?"),
+    cfg.BoolOpt('live_migration',
+                default=False,
+                help="Does the test environment support live migration "
+                     "available?"),
+    cfg.BoolOpt('block_migration_for_live_migration',
+                default=False,
+                help="Does the test environment use block devices for live "
+                     "migration"),
+    cfg.BoolOpt('block_migrate_cinder_iscsi',
+                default=False,
+                help="Does the test environment block migration support "
+                     "cinder iSCSI volumes")
+]
+
 
 compute_admin_group = cfg.OptGroup(name='compute-admin',
                                    title="Compute Admin Options")
@@ -250,9 +272,6 @@ image_group = cfg.OptGroup(name='image',
                            title="Image Service Options")
 
 ImageGroup = [
-    cfg.StrOpt('api_version',
-               default='1',
-               help="Version of the API"),
     cfg.StrOpt('catalog_type',
                default='image',
                help='Catalog type of the Image service.'),
@@ -268,6 +287,17 @@ ImageGroup = [
                help='http accessible image')
 ]
 
+image_feature_group = cfg.OptGroup(name='image-feature-enabled',
+                                   title='Enabled image service features')
+
+ImageFeaturesGroup = [
+    cfg.BoolOpt('api_v2',
+                default=True,
+                help="Is the v2 image API enabled"),
+    cfg.BoolOpt('api_v1',
+                default=True,
+                help="Is the v1 image API enabled"),
+]
 
 network_group = cfg.OptGroup(name='network',
                              title='Network Service Options')
@@ -302,6 +332,16 @@ NetworkGroup = [
                     "connectivity"),
 ]
 
+network_feature_group = cfg.OptGroup(name='network-feature-enabled',
+                                     title='Enabled network service features')
+
+NetworkFeaturesGroup = [
+    cfg.ListOpt('api_extensions',
+                default=['all'],
+                help='A list of enabled extensions with a special entry all '
+                     'which indicates every extension is enabled'),
+]
+
 volume_group = cfg.OptGroup(name='volume',
                             title='Block Storage Options')
 
@@ -314,7 +354,7 @@ VolumeGroup = [
                help='Timeout in seconds to wait for a volume to become'
                     'available.'),
     cfg.StrOpt('catalog_type',
-               default='Volume',
+               default='volume',
                help="Catalog type of the Volume Service"),
     cfg.StrOpt('region',
                default='',
@@ -322,9 +362,6 @@ VolumeGroup = [
                     "of identity.region is used instead. If no such region "
                     "is found in the service catalog, the first found one is "
                     "used."),
-    cfg.BoolOpt('multi_backend_enabled',
-                default=False,
-                help="Runs Cinder multi-backend test (requires 2 backends)"),
     cfg.StrOpt('backend1_name',
                default='BACKEND_1',
                help="Name of the backend1 (must be declared in cinder.conf)"),
@@ -342,6 +379,22 @@ VolumeGroup = [
                help='Disk format to use when copying a volume to image'),
 ]
 
+volume_feature_group = cfg.OptGroup(name='volume-feature-enabled',
+                                    title='Enabled Cinder Features')
+
+VolumeFeaturesGroup = [
+    cfg.BoolOpt('multi_backend',
+                default=False,
+                help="Runs Cinder multi-backend test (requires 2 backends)"),
+    cfg.ListOpt('api_extensions',
+                default=['all'],
+                help='A list of enabled extensions with a special entry all '
+                     'which indicates every extension is enabled'),
+    cfg.BoolOpt('api_v1',
+                default=True,
+                help="Is the v1 volume API enabled"),
+]
+
 
 object_storage_group = cfg.OptGroup(name='object-storage',
                                     title='Object Storage Service Options')
@@ -356,25 +409,30 @@ ObjectStoreGroup = [
                     "value of identity.region is used instead. If no such "
                     "region is found in the service catalog, the first found "
                     "one is used."),
-    cfg.StrOpt('container_sync_timeout',
+    cfg.IntOpt('container_sync_timeout',
                default=120,
-               help="Number of seconds to time on waiting for a container"
+               help="Number of seconds to time on waiting for a container "
                     "to container synchronization complete."),
-    cfg.StrOpt('container_sync_interval',
+    cfg.IntOpt('container_sync_interval',
                default=5,
-               help="Number of seconds to wait while looping to check the"
+               help="Number of seconds to wait while looping to check the "
                     "status of a container to container synchronization"),
-    cfg.BoolOpt('accounts_quotas_available',
-                default=True,
-                help="Set to True if the Account Quota middleware is enabled"),
-    cfg.BoolOpt('container_quotas_available',
-                default=True,
-                help="Set to True if the container quota middleware "
-                     "is enabled"),
     cfg.StrOpt('operator_role',
                default='Member',
                help="Role to add to users created for swift tests to "
                     "enable creating containers"),
+]
+
+object_storage_feature_group = cfg.OptGroup(
+    name='object-storage-feature-enabled',
+    title='Enabled object-storage features')
+
+ObjectStoreFeaturesGroup = [
+    cfg.ListOpt('discoverable_apis',
+                default=['all'],
+                help="A list of the enabled optional discoverable apis. "
+                     "A single entry, all, indicates that all of these "
+                     "features are expected to be enabled"),
 ]
 
 
@@ -421,8 +479,18 @@ OrchestrationGroup = [
                default=None,
                help="Region(s) to deploy to."),
     cfg.IntOpt('max_template_size',
-               default=32768,
+               default=524288,
                help="Value must match heat configuration of the same name."),
+]
+
+
+telemetry_group = cfg.OptGroup(name='telemetry',
+                               title='Telemetry Service Options')
+
+TelemetryGroup = [
+    cfg.StrOpt('catalog_type',
+               default='metering',
+               help="Catalog type of the Telemetry service."),
 ]
 
 
@@ -436,6 +504,16 @@ DashboardGroup = [
     cfg.StrOpt('login_url',
                default='http://localhost/auth/login/',
                help="Login page for the dashboard"),
+]
+
+
+data_processing_group = cfg.OptGroup(name="data_processing",
+                                     title="Data Processing options")
+
+DataProcessingGroup = [
+    cfg.StrOpt('catalog_type',
+               default='data_processing',
+               help="Catalog type of the data processing service.")
 ]
 
 
@@ -510,10 +588,10 @@ StressGroup = [
     cfg.StrOpt('target_logfiles',
                default=None,
                help='regexp for list of log files.'),
-    cfg.StrOpt('log_check_interval',
+    cfg.IntOpt('log_check_interval',
                default=60,
                help='time (in seconds) between log file error checks.'),
-    cfg.StrOpt('default_thread_number_per_action',
+    cfg.IntOpt('default_thread_number_per_action',
                default=4,
                help='The number of threads created while stress test.')
 ]
@@ -568,9 +646,18 @@ ServiceAvailableGroup = [
     cfg.BoolOpt('heat',
                 default=False,
                 help="Whether or not Heat is expected to be available"),
+    cfg.BoolOpt('ceilometer',
+                default=True,
+                help="Whether or not Ceilometer is expected to be available"),
     cfg.BoolOpt('horizon',
                 default=True,
                 help="Whether or not Horizon is expected to be available"),
+    cfg.BoolOpt('savanna',
+                default=False,
+                help="Whether or not Savanna is expected to be available"),
+    cfg.BoolOpt('ironic',
+                default=False,
+                help="Whether or not Ironic is expected to be available"),
 ]
 
 debug_group = cfg.OptGroup(name="debug",
@@ -581,6 +668,7 @@ DebugGroup = [
                 default=True,
                 help="Enable diagnostic commands"),
 ]
+
 
 database_group = cfg.OptGroup(name='database', title='Database Test Options')
 
@@ -599,8 +687,40 @@ def register_database_opts(conf):
     for opt in DatabaseGroup:
         conf.register_opt(opt, group='database')
 
-@singleton
-class TempestConfig:
+input_scenario_group = cfg.OptGroup(name="input-scenario",
+                                    title="Filters and values for"
+                                          " input scenarios")
+
+InputScenarioGroup = [
+    cfg.StrOpt('image_regex',
+               default='^cirros-0.3.1-x86_64-uec$',
+               help="Matching images become parameters for scenario tests"),
+    cfg.StrOpt('flavor_regex',
+               default='^m1.(micro|nano|tiny)$',
+               help="Matching flavors become parameters for scenario tests"),
+    cfg.StrOpt('non_ssh_image_regex',
+               default='^.*[Ww]in.*$',
+               help="SSH verification in tests is skipped"
+                    "for matching images"),
+    cfg.StrOpt('ssh_user_regex',
+               default="[[\"^.*[Cc]irros.*$\", \"root\"]]",
+               help="List of user mapped to regex "
+                    "to matching image names."),
+]
+
+
+baremetal_group = cfg.OptGroup(name='baremetal',
+                               title='Baremetal provisioning service options')
+
+BaremetalGroup = [
+    cfg.StrOpt('catalog_type',
+               default='baremetal',
+               help="Catalog type of the baremetal provisioning service."),
+]
+
+
+# this should never be called outside of this class
+class TempestConfigPrivate(object):
     """Provides OpenStack configuration information."""
 
     DEFAULT_CONFIG_DIR = os.path.join(
@@ -609,8 +729,9 @@ class TempestConfig:
 
     DEFAULT_CONFIG_FILE = "tempest.conf"
 
-    def __init__(self):
+    def __init__(self, parse_conf=True):
         """Initialize a configuration from a conf directory and conf file."""
+        super(TempestConfigPrivate, self).__init__()
         config_files = []
         failsafe_path = "/etc/tempest/" + self.DEFAULT_CONFIG_FILE
 
@@ -627,10 +748,9 @@ class TempestConfig:
                 'TEMPEST_CONFIG' in os.environ):
             path = failsafe_path
 
-        if not os.path.exists(path):
-            msg = "Config file %s not found" % path
-            print(RuntimeError(msg), file=sys.stderr)
-        else:
+        # only parse the config file if we expect one to exist. This is needed
+        # to remove an issue with the config file up to date checker.
+        if parse_conf:
             config_files.append(path)
 
         cfg.CONF([], project='tempest', default_config_files=config_files)
@@ -653,13 +773,27 @@ class TempestConfig:
         # register_database_opts(cfg.CONF)
 
         register_opt_group(cfg.CONF, compute_group, ComputeGroup)
+        register_opt_group(cfg.CONF, compute_features_group,
+                           ComputeFeaturesGroup)
         register_opt_group(cfg.CONF, identity_group, IdentityGroup)
+        register_opt_group(cfg.CONF, identity_feature_group,
+                           IdentityFeatureGroup)
         register_opt_group(cfg.CONF, image_group, ImageGroup)
+        register_opt_group(cfg.CONF, image_feature_group, ImageFeaturesGroup)
         register_opt_group(cfg.CONF, network_group, NetworkGroup)
+        register_opt_group(cfg.CONF, network_feature_group,
+                           NetworkFeaturesGroup)
         register_opt_group(cfg.CONF, volume_group, VolumeGroup)
+        register_opt_group(cfg.CONF, volume_feature_group,
+                           VolumeFeaturesGroup)
         register_opt_group(cfg.CONF, object_storage_group, ObjectStoreGroup)
+        register_opt_group(cfg.CONF, object_storage_feature_group,
+                           ObjectStoreFeaturesGroup)
         register_opt_group(cfg.CONF, orchestration_group, OrchestrationGroup)
+        register_opt_group(cfg.CONF, telemetry_group, TelemetryGroup)
         register_opt_group(cfg.CONF, dashboard_group, DashboardGroup)
+        register_opt_group(cfg.CONF, data_processing_group,
+                           DataProcessingGroup)
         register_opt_group(cfg.CONF, boto_group, BotoGroup)
         register_opt_group(cfg.CONF, compute_admin_group, ComputeAdminGroup)
         register_opt_group(cfg.CONF, stress_group, StressGroup)
@@ -668,14 +802,26 @@ class TempestConfig:
                            ServiceAvailableGroup)
         register_opt_group(cfg.CONF, debug_group, DebugGroup)
 
+        register_opt_group(cfg.CONF, baremetal_group, BaremetalGroup)
+        register_opt_group(cfg.CONF, input_scenario_group, InputScenarioGroup)
+
         self.compute = cfg.CONF.compute
+        self.compute_feature_enabled = cfg.CONF['compute-feature-enabled']
         self.identity = cfg.CONF.identity
+        self.identity_feature_enabled = cfg.CONF['identity-feature-enabled']
         self.images = cfg.CONF.image
+        self.image_feature_enabled = cfg.CONF['image-feature-enabled']
         self.network = cfg.CONF.network
+        self.network_feature_enabled = cfg.CONF['network-feature-enabled']
         self.volume = cfg.CONF.volume
+        self.volume_feature_enabled = cfg.CONF['volume-feature-enabled']
         self.object_storage = cfg.CONF['object-storage']
+        self.object_storage_feature_enabled = cfg.CONF[
+            'object-storage-feature-enabled']
         self.orchestration = cfg.CONF.orchestration
+        self.telemetry = cfg.CONF.telemetry
         self.dashboard = cfg.CONF.dashboard
+        self.data_processing = cfg.CONF.data_processing
         self.boto = cfg.CONF.boto
         self.compute_admin = cfg.CONF['compute-admin']
         self.stress = cfg.CONF.stress
@@ -686,7 +832,23 @@ class TempestConfig:
         self.service_available = cfg.CONF.service_available
         self.debug = cfg.CONF.debug
 
+        self.baremetal = cfg.CONF.baremetal
+        self.input_scenario = cfg.CONF['input-scenario']
+
         if not self.compute_admin.username:
             self.compute_admin.username = self.identity.admin_username
             self.compute_admin.password = self.identity.admin_password
             self.compute_admin.tenant_name = self.identity.admin_tenant_name
+
+
+class TempestConfigProxy(object):
+    _config = None
+
+    def __getattr__(self, attr):
+        if not self._config:
+            self._config = TempestConfigPrivate()
+
+        return getattr(self._config, attr)
+
+
+CONF = TempestConfigProxy()

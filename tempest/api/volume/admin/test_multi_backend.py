@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -13,7 +11,7 @@
 #    under the License.
 
 from tempest.api.volume import base
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest.openstack.common import log as logging
 from tempest.services.volume.json.admin import volume_types_client
 from tempest.services.volume.json import volumes_client
@@ -22,13 +20,14 @@ from tempest.test import attr
 LOG = logging.getLogger(__name__)
 
 
-class VolumeMultiBackendTest(base.BaseVolumeAdminTest):
+class VolumeMultiBackendTest(base.BaseVolumeV1AdminTest):
     _interface = "json"
 
     @classmethod
     def setUpClass(cls):
         super(VolumeMultiBackendTest, cls).setUpClass()
-        if not cls.config.volume.multi_backend_enabled:
+        if not cls.config.volume_feature_enabled.multi_backend:
+            cls.tearDownClass()
             raise cls.skipException("Cinder multi-backend feature disabled")
 
         cls.backend1_name = cls.config.volume.backend1_name
@@ -54,8 +53,8 @@ class VolumeMultiBackendTest(base.BaseVolumeAdminTest):
         cls.volume_id_list = []
         try:
             # Volume/Type creation (uses backend1_name)
-            type1_name = rand_name('Type-')
-            vol1_name = rand_name('Volume-')
+            type1_name = data_utils.rand_name('Type-')
+            vol1_name = data_utils.rand_name('Volume-')
             extra_specs1 = {"volume_backend_name": cls.backend1_name}
             resp, cls.type1 = cls.type_client.create_volume_type(
                 type1_name, extra_specs=extra_specs1)
@@ -69,8 +68,8 @@ class VolumeMultiBackendTest(base.BaseVolumeAdminTest):
 
             if cls.backend1_name != cls.backend2_name:
                 # Volume/Type creation (uses backend2_name)
-                type2_name = rand_name('Type-')
-                vol2_name = rand_name('Volume-')
+                type2_name = data_utils.rand_name('Type-')
+                vol2_name = data_utils.rand_name('Volume-')
                 extra_specs2 = {"volume_backend_name": cls.backend2_name}
                 resp, cls.type2 = cls.type_client.create_volume_type(
                     type2_name, extra_specs=extra_specs2)
@@ -89,12 +88,14 @@ class VolumeMultiBackendTest(base.BaseVolumeAdminTest):
     @classmethod
     def tearDownClass(cls):
         # volumes deletion
-        for volume_id in cls.volume_id_list:
+        volume_id_list = getattr(cls, 'volume_id_list', [])
+        for volume_id in volume_id_list:
             cls.volume_client.delete_volume(volume_id)
             cls.volume_client.wait_for_resource_deletion(volume_id)
 
         # volume types deletion
-        for volume_type_id in cls.volume_type_id_list:
+        volume_type_id_list = getattr(cls, 'volume_type_id_list', [])
+        for volume_type_id in volume_type_id_list:
             cls.type_client.delete_volume_type(volume_type_id)
 
         super(VolumeMultiBackendTest, cls).tearDownClass()

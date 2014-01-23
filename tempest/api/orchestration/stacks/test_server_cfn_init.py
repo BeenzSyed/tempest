@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -16,20 +14,19 @@ import json
 import testtools
 
 from tempest.api.orchestration import base
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest.common.utils.linux.remote_client import RemoteClient
-import tempest.config
+from tempest import config
 from tempest.openstack.common import log as logging
 from tempest.test import attr
 
-
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
 class ServerCfnInitTestJSON(base.BaseOrchestrationTest):
     _interface = 'json'
-    existing_keypair = (tempest.config.TempestConfig().
-                        orchestration.keypair_name is not None)
+    existing_keypair = CONF.orchestration.keypair_name is not None
 
     template = """
 HeatTemplateFormatVersion: '2012-12-12'
@@ -132,7 +129,7 @@ Outputs:
             raise cls.skipException("No image available to test")
         cls.client = cls.orchestration_client
 
-        stack_name = rand_name('heat')
+        stack_name = data_utils.rand_name('heat')
         if cls.orchestration_cfg.keypair_name:
             keypair_name = cls.orchestration_cfg.keypair_name
         else:
@@ -169,9 +166,9 @@ Outputs:
             body['physical_resource_id'])
 
         # Check that the user can authenticate with the generated password
-        linux_client = RemoteClient(
-            server, 'ec2-user', pkey=self.keypair['private_key'])
-        self.assertTrue(linux_client.can_authenticate())
+        linux_client = RemoteClient(server, 'ec2-user',
+                                    pkey=self.keypair['private_key'])
+        linux_client.validate_authentication()
 
     @attr(type='slow')
     def test_stack_wait_condition_data(self):

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -16,11 +14,10 @@
 #    under the License.
 
 from tempest.api.compute import base
-from tempest import exceptions
 from tempest.test import attr
 
 
-class FlavorsTestJSON(base.BaseComputeTest):
+class FlavorsTestJSON(base.BaseV2ComputeTest):
     _interface = 'json'
 
     @classmethod
@@ -48,13 +45,7 @@ class FlavorsTestJSON(base.BaseComputeTest):
     def test_get_flavor(self):
         # The expected flavor details should be returned
         resp, flavor = self.client.get_flavor_details(self.flavor_ref)
-        self.assertEqual(self.flavor_ref, int(flavor['id']))
-
-    @attr(type=['negative', 'gate'])
-    def test_get_non_existant_flavor(self):
-        # flavor details are not returned for non-existent flavors
-        self.assertRaises(exceptions.NotFound, self.client.get_flavor_details,
-                          999)
+        self.assertEqual(self.flavor_ref, flavor['id'])
 
     @attr(type='gate')
     def test_list_flavors_limit_results(self):
@@ -135,24 +126,6 @@ class FlavorsTestJSON(base.BaseComputeTest):
         params = {'minRam': flavors[0]['ram'] + 1}
         resp, flavors = self.client.list_flavors(params)
         self.assertFalse(any([i for i in flavors if i['id'] == flavor_id]))
-
-    @attr(type=['negative', 'gate'])
-    def test_invalid_minRam_filter(self):
-        self.assertRaises(exceptions.BadRequest,
-                          self.client.list_flavors_with_detail,
-                          {'minRam': 'invalid'})
-
-    @attr(type=['negative', 'gate'])
-    def test_invalid_minDisk_filter(self):
-        self.assertRaises(exceptions.BadRequest,
-                          self.client.list_flavors_with_detail,
-                          {'minDisk': 'invalid'})
-
-    @attr(type=['negative', 'gate'])
-    def test_get_flavor_details_for_invalid_flavor_id(self):
-        # Ensure 404 returned for non-existent flavor ID
-        self.assertRaises(exceptions.NotFound, self.client.get_flavor_details,
-                          9999)
 
 
 class FlavorsTestXML(FlavorsTestJSON):

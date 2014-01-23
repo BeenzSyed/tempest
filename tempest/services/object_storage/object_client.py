@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -15,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import urllib
+
 from tempest.common import http
 from tempest.common.rest_client import RestClient
 from tempest import exceptions
@@ -27,13 +27,16 @@ class ObjectClient(RestClient):
 
         self.service = self.config.object_storage.catalog_type
 
-    def create_object(self, container, object_name, data):
+    def create_object(self, container, object_name, data, params=None):
         """Create storage object."""
 
         headers = dict(self.headers)
         if not data:
             headers['content-length'] = '0'
         url = "%s/%s" % (str(container), str(object_name))
+        if params:
+            url += '?%s' % urllib.urlencode(params)
+
         resp, body = self.put(url, data, headers)
         return resp, body
 
@@ -41,9 +44,11 @@ class ObjectClient(RestClient):
         """Upload data to replace current storage object."""
         return self.create_object(container, object_name, data)
 
-    def delete_object(self, container, object_name):
+    def delete_object(self, container, object_name, params=None):
         """Delete storage object."""
         url = "%s/%s" % (str(container), str(object_name))
+        if params:
+            url += '?%s' % urllib.urlencode(params)
         resp, body = self.delete(url)
         return resp, body
 
@@ -126,14 +131,6 @@ class ObjectClient(RestClient):
         url = "{0}/{1}/{2}".format(container, object_name, segment)
         resp, body = self.put(url, data, self.headers)
         return resp, body
-
-    def get_object_using_temp_url(self, url):
-        """Retrieve object's data using temp URL."""
-        return self.get(url)
-
-    def put_object_using_temp_url(self, url, data):
-        """Put data in an object using temp URL."""
-        return self.put(url, data, None)
 
 
 class ObjectClientCustomizedHeader(RestClient):

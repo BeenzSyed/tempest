@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2013 IBM Corp.
 # All Rights Reserved.
 #
@@ -36,7 +34,8 @@ class ImageClientJSON(RestClient):
         super(ImageClientJSON, self).__init__(config, username, password,
                                               auth_url, tenant_name)
         self.service = self.config.images.catalog_type
-        self.http = self._get_http()
+        if config.service_available.glance:
+            self.http = self._get_http()
 
     def _image_meta_from_headers(self, headers):
         meta = {'properties': {}}
@@ -175,7 +174,7 @@ class ImageClientJSON(RestClient):
 
     def delete_image(self, image_id):
         url = 'v1/images/%s' % image_id
-        self.delete(url)
+        return self.delete(url)
 
     def image_list(self, **kwargs):
         url = 'v1/images'
@@ -187,8 +186,14 @@ class ImageClientJSON(RestClient):
         body = json.loads(body)
         return resp, body['images']
 
-    def image_list_detail(self, **kwargs):
+    def image_list_detail(self, properties=dict(), **kwargs):
         url = 'v1/images/detail'
+
+        params = {}
+        for key, value in properties.items():
+            params['property-%s' % key] = value
+
+        kwargs.update(params)
 
         if len(kwargs) > 0:
             url += '?%s' % urllib.urlencode(kwargs)
@@ -265,9 +270,12 @@ class ImageClientJSON(RestClient):
                 LOG.info('Value transition from "%s" to "%s"'
                          'in %d second(s).', old_value,
                          value, dtime)
-            if (value == status):
+            if value == status:
                 return value
 
+            if value == 'killed':
+                raise exceptions.ImageKilledException(image_id=image_id,
+                                                      status=status)
             if dtime > self.build_timeout:
                 message = ('Time Limit Exceeded! (%ds)'
                            'while waiting for %s, '

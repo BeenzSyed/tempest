@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -16,15 +14,18 @@
 #    under the License.
 
 from tempest.api.compute import base
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest import config
 from tempest import exceptions
 from tempest.test import attr
 from tempest.test import skip_because
 
+CONF = config.CONF
 
-class QuotasAdminTestJSON(base.BaseComputeAdminTest):
+
+class QuotasAdminTestJSON(base.BaseV2ComputeAdminTest):
     _interface = 'json'
+    force_tenant_isolation = True
 
     @classmethod
     def setUpClass(cls):
@@ -35,16 +36,10 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
         cls.identity_admin_client = cls._get_identity_admin_client()
         cls.sg_client = cls.security_groups_client
 
-        resp, tenants = cls.identity_admin_client.list_tenants()
-
         # NOTE(afazekas): these test cases should always create and use a new
         # tenant most of them should be skipped if we can't do that
-        if cls.config.compute.allow_tenant_isolation:
-            cls.demo_tenant_id = cls.isolated_creds.get_primary_user().get(
-                'tenantId')
-        else:
-            cls.demo_tenant_id = [tnt['id'] for tnt in tenants if tnt['name']
-                                  == cls.config.identity.tenant_name][0]
+        cls.demo_tenant_id = cls.isolated_creds.get_primary_user().get(
+            'tenantId')
 
         cls.default_quota_set = set(('injected_file_content_bytes',
                                      'metadata_items', 'injected_files',
@@ -92,7 +87,7 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
     @attr(type='gate')
     def test_get_updated_quotas(self):
         # Verify that GET shows the updated quota set
-        tenant_name = rand_name('cpu_quota_tenant_')
+        tenant_name = data_utils.rand_name('cpu_quota_tenant_')
         tenant_desc = tenant_name + '-desc'
         identity_client = self.os_adm.identity_client
         _, tenant = identity_client.create_tenant(name=tenant_name,
@@ -122,7 +117,7 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
 
         self.addCleanup(self.adm_client.update_quota_set, self.demo_tenant_id,
                         cores=default_vcpu_quota)
-        self.assertRaises(exceptions.OverLimit, self.create_server)
+        self.assertRaises(exceptions.OverLimit, self.create_test_server)
 
     @attr(type='gate')
     def test_create_server_when_memory_quota_is_full(self):
@@ -137,7 +132,7 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
 
         self.addCleanup(self.adm_client.update_quota_set, self.demo_tenant_id,
                         ram=default_mem_quota)
-        self.assertRaises(exceptions.OverLimit, self.create_server)
+        self.assertRaises(exceptions.OverLimit, self.create_test_server)
 
     @attr(type='gate')
     def test_update_quota_normal_user(self):
@@ -158,10 +153,10 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
                                          instances=instances_quota)
         self.addCleanup(self.adm_client.update_quota_set, self.demo_tenant_id,
                         instances=default_instances_quota)
-        self.assertRaises(exceptions.OverLimit, self.create_server)
+        self.assertRaises(exceptions.OverLimit, self.create_test_server)
 
     @skip_because(bug="1186354",
-                  condition=config.TempestConfig().service_available.neutron)
+                  condition=CONF.service_available.neutron)
     @attr(type=['negative', 'gate'])
     def test_security_groups_exceed_limit(self):
         # Negative test: Creation Security Groups over limit should FAIL
@@ -185,7 +180,7 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
                           "sg-overlimit", "sg-desc")
 
     @skip_because(bug="1186354",
-                  condition=config.TempestConfig().service_available.neutron)
+                  condition=CONF.service_available.neutron)
     @attr(type=['negative', 'gate'])
     def test_security_groups_rules_exceed_limit(self):
         # Negative test: Creation of Security Group Rules should FAIL
@@ -205,8 +200,8 @@ class QuotasAdminTestJSON(base.BaseComputeAdminTest):
                         self.demo_tenant_id,
                         security_group_rules=default_sg_rules_quota)
 
-        s_name = rand_name('securitygroup-')
-        s_description = rand_name('description-')
+        s_name = data_utils.rand_name('securitygroup-')
+        s_description = data_utils.rand_name('description-')
         resp, securitygroup =\
             self.sg_client.create_security_group(s_name, s_description)
         self.addCleanup(self.sg_client.delete_security_group,

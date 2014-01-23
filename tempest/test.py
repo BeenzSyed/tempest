@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -26,11 +24,14 @@ import testresources
 import testtools
 
 from tempest import clients
+from tempest.common import isolated_creds
 from tempest import config
 from tempest import exceptions
 from tempest.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
+
+CONF = config.CONF
 
 # All the successful HTTP status codes from RFC 2616
 HTTP_SUCCESS = (200, 201, 202, 203, 204, 205, 206)
@@ -109,18 +110,64 @@ def skip_because(*args, **kwargs):
 
     @param bug: bug number causing the test to skip
     @param condition: optional condition to be True for the skip to have place
+    @param interface: skip the test if it is the same as self._interface
     """
     def decorator(f):
         @functools.wraps(f)
-        def wrapper(*func_args, **func_kwargs):
-            if "bug" in kwargs:
-                if "condition" not in kwargs or kwargs["condition"] is True:
-                    msg = "Skipped until Bug: %s is resolved." % kwargs["bug"]
-                    raise testtools.TestCase.skipException(msg)
-            return f(*func_args, **func_kwargs)
+        def wrapper(self, *func_args, **func_kwargs):
+            skip = False
+            if "condition" in kwargs:
+                if kwargs["condition"] is True:
+                    skip = True
+            elif "interface" in kwargs:
+                if kwargs["interface"] == self._interface:
+                    skip = True
+            else:
+                skip = True
+            if "bug" in kwargs and skip is True:
+                msg = "Skipped until Bug: %s is resolved." % kwargs["bug"]
+                raise testtools.TestCase.skipException(msg)
+            return f(self, *func_args, **func_kwargs)
         return wrapper
     return decorator
 
+
+def requires_ext(*args, **kwargs):
+    """A decorator to skip tests if an extension is not enabled
+
+    @param extension
+    @param service
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*func_args, **func_kwargs):
+            if not is_extension_enabled(kwargs['extension'],
+                                        kwargs['service']):
+                msg = "Skipped because %s extension: %s is not enabled" % (
+                    kwargs['service'], kwargs['extension'])
+                raise testtools.TestCase.skipException(msg)
+            return func(*func_args, **func_kwargs)
+        return wrapper
+    return decorator
+
+
+def is_extension_enabled(extension_name, service):
+    """A function that will check the list of enabled extensions from config
+
+    """
+    configs = CONF
+    config_dict = {
+        'compute': configs.compute_feature_enabled.api_extensions,
+        'compute_v3': configs.compute_feature_enabled.api_v3_extensions,
+        'volume': configs.volume_feature_enabled.api_extensions,
+        'network': configs.network_feature_enabled.api_extensions,
+        'object': configs.object_storage_feature_enabled.discoverable_apis,
+    }
+    if config_dict[service][0] == 'all':
+        return True
+    if extension_name in config_dict[service]:
+        return True
+    return False
 
 # there is a mis-match between nose and testtools for older pythons.
 # testtools will set skipException to be either
@@ -164,7 +211,11 @@ def validate_tearDownClass():
     if at_exit_set:
         raise RuntimeError("tearDownClass does not calls the super's "
                            "tearDownClass in these classes: "
-                           + str(at_exit_set))
+                           + str(at_exit_set) + "\n"
+                           "If you see the exception, with another "
+                           "exception please do not report this one!"
+                           "If you are changing tempest code, make sure you",
+                           "are calling the super class's tearDownClass!")
 
 atexit.register(validate_tearDownClass)
 
@@ -173,9 +224,11 @@ class BaseTestCase(testtools.TestCase,
                    testtools.testcase.WithAttributes,
                    testresources.ResourcedTestCase):
 
-    config = config.TempestConfig()
+    config = CONF
 
     setUpClassCalled = False
+
+    network_resources = {}
 
     @classmethod
     def setUpClass(cls):
@@ -216,7 +269,37 @@ class BaseTestCase(testtools.TestCase,
             os.environ.get('OS_LOG_CAPTURE') != '0'):
             log_format = '%(asctime)-15s %(message)s'
             self.useFixture(fixtures.LoggerFixture(nuke_handlers=False,
-                                                   format=log_format))
+                                                   format=log_format,
+                                                   level=None))
+
+    @classmethod
+    def get_client_manager(cls):
+        """
+        Returns an Openstack client manager
+        """
+        cls.isolated_creds = isolated_creds.IsolatedCreds(
+            cls.__name__, network_resources=cls.network_resources)
+
+        force_tenant_isolation = getattr(cls, 'force_tenant_isolation', None)
+        if (cls.config.compute.allow_tenant_isolation or
+            force_tenant_isolation):
+            creds = cls.isolated_creds.get_primary_creds()
+            username, tenant_name, password = creds
+            os = clients.Manager(username=username,
+                                 password=password,
+                                 tenant_name=tenant_name,
+                                 interface=cls._interface)
+        else:
+            os = clients.Manager(interface=cls._interface)
+        return os
+
+    @classmethod
+    def clear_isolated_creds(cls):
+        """
+        Clears isolated creds if set
+        """
+        if getattr(cls, 'isolated_creds'):
+            cls.isolated_creds.clear_isolated_creds()
 
     @classmethod
     def _get_identity_admin_client(cls):
@@ -236,6 +319,27 @@ class BaseTestCase(testtools.TestCase,
             cls.config.identity.admin_password,
             cls.config.identity.uri
         )
+
+    @classmethod
+    def set_network_resources(self, network=False, router=False, subnet=False,
+                              dhcp=False):
+        """Specify which network resources should be created
+
+        @param network
+        @param router
+        @param subnet
+        @param dhcp
+        """
+        # network resources should be set only once from callers
+        # in order to ensure that even if it's called multiple times in
+        # a chain of overloaded methods, the attribute is set only
+        # in the leaf class
+        if not self.network_resources:
+            self.network_resources = {
+                'network': network,
+                'router': router,
+                'subnet': subnet,
+                'dhcp': dhcp}
 
 
 def call_until_true(func, duration, sleep_for):

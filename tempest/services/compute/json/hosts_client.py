@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-#
 # Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -42,5 +40,41 @@ class HostsClientJSON(RestClient):
         """Show detail information for the host."""
 
         resp, body = self.get("os-hosts/%s" % str(hostname))
+        body = json.loads(body)
+        return resp, body['host']
+
+    def update_host(self, hostname, **kwargs):
+        """Update a host."""
+
+        request_body = {
+            'status': None,
+            'maintenance_mode': None,
+        }
+        request_body.update(**kwargs)
+        request_body = json.dumps(request_body)
+
+        resp, body = self.put("os-hosts/%s" % str(hostname), request_body,
+                              self.headers)
+        body = json.loads(body)
+        return resp, body
+
+    def startup_host(self, hostname):
+        """Startup a host."""
+
+        resp, body = self.get("os-hosts/%s/startup" % str(hostname))
+        body = json.loads(body)
+        return resp, body['host']
+
+    def shutdown_host(self, hostname):
+        """Shutdown a host."""
+
+        resp, body = self.get("os-hosts/%s/shutdown" % str(hostname))
+        body = json.loads(body)
+        return resp, body['host']
+
+    def reboot_host(self, hostname):
+        """reboot a host."""
+
+        resp, body = self.get("os-hosts/%s/reboot" % str(hostname))
         body = json.loads(body)
         return resp, body['host']

@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -12,9 +10,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
+from tempest.openstack.common import log
 from tempest.scenario import manager
+import tempest.test
 from tempest.test import services
+
+
+LOG = log.getLogger(__name__)
 
 
 class TestVolumeBootPattern(manager.OfficialClientTest):
@@ -34,7 +37,7 @@ class TestVolumeBootPattern(manager.OfficialClientTest):
 
     def _create_volume_from_image(self):
         img_uuid = self.config.compute.image_ref
-        vol_name = rand_name('volume-origin')
+        vol_name = data_utils.rand_name('volume-origin')
         return self.create_volume(name=vol_name, imageRef=img_uuid)
 
     def _boot_instance_from_volume(self, vol_id, keypair):
@@ -53,7 +56,7 @@ class TestVolumeBootPattern(manager.OfficialClientTest):
 
     def _create_snapshot_from_volume(self, vol_id):
         volume_snapshots = self.volume_client.volume_snapshots
-        snap_name = rand_name('snapshot')
+        snap_name = data_utils.rand_name('snapshot')
         snap = volume_snapshots.create(volume_id=vol_id,
                                        force=True,
                                        display_name=snap_name)
@@ -64,7 +67,7 @@ class TestVolumeBootPattern(manager.OfficialClientTest):
         return snap
 
     def _create_volume_from_snapshot(self, snap_id):
-        vol_name = rand_name('volume')
+        vol_name = data_utils.rand_name('volume')
         return self.create_volume(name=vol_name, snapshot_id=snap_id)
 
     def _stop_instances(self, instances):
@@ -88,7 +91,7 @@ class TestVolumeBootPattern(manager.OfficialClientTest):
     def _ssh_to_server(self, server, keypair):
         if self.config.compute.use_floatingip_for_ssh:
             floating_ip = self.compute_client.floating_ips.create()
-            fip_name = rand_name('scenario-fip')
+            fip_name = data_utils.rand_name('scenario-fip')
             self.set_resource(fip_name, floating_ip)
             server.add_floating_ip(floating_ip)
             ip = floating_ip.ip
@@ -96,15 +99,21 @@ class TestVolumeBootPattern(manager.OfficialClientTest):
             network_name_for_ssh = self.config.compute.network_for_ssh
             ip = server.networks[network_name_for_ssh][0]
 
-        client = self.get_remote_client(ip,
-                                        private_key=keypair.private_key)
+        try:
+            client = self.get_remote_client(
+                ip,
+                private_key=keypair.private_key)
+        except Exception:
+            LOG.exception('ssh to server failed')
+            self._log_console_output()
+            raise
         return client.ssh_client
 
     def _get_content(self, ssh_client):
         return ssh_client.exec_command('cat /tmp/text')
 
     def _write_text(self, ssh_client):
-        text = rand_name('text-')
+        text = data_utils.rand_name('text-')
         ssh_client.exec_command('echo "%s" > /tmp/text; sync' % (text))
 
         return self._get_content(ssh_client)
@@ -117,10 +126,11 @@ class TestVolumeBootPattern(manager.OfficialClientTest):
         actual = self._get_content(ssh_client)
         self.assertEqual(expected, actual)
 
+    @tempest.test.skip_because(bug="1270608")
     @services('compute', 'volume', 'image')
     def test_volume_boot_pattern(self):
         keypair = self.create_keypair()
-        self.create_loginable_secgroup_rule()
+        self._create_loginable_secgroup_rule_nova()
 
         # create an instance from volume
         volume_origin = self._create_volume_from_image()

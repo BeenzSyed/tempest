@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -18,7 +16,7 @@
 import netaddr
 
 from tempest import clients
-from tempest.common.utils.data_utils import rand_name
+from tempest.common.utils import data_utils
 from tempest import exceptions
 from tempest.openstack.common import log as logging
 import tempest.test
@@ -50,6 +48,8 @@ class BaseNetworkTest(tempest.test.BaseTestCase):
 
     @classmethod
     def setUpClass(cls):
+        # Create no network resources for these test.
+        cls.set_network_resources()
         super(BaseNetworkTest, cls).setUpClass()
         os = clients.Manager(interface=cls._interface)
         cls.network_cfg = os.config.network
@@ -65,83 +65,55 @@ class BaseNetworkTest(tempest.test.BaseTestCase):
         cls.members = []
         cls.health_monitors = []
         cls.vpnservices = []
+        cls.ikepolicies = []
+        cls.floating_ips = []
 
     @classmethod
     def tearDownClass(cls):
-        has_exception = False
+        # Clean up ike policies
+        for ikepolicy in cls.ikepolicies:
+            cls.client.delete_ikepolicy(ikepolicy['id'])
+        # Clean up vpn services
         for vpnservice in cls.vpnservices:
-            try:
-                cls.client.delete_vpn_service(vpnservice['id'])
-            except Exception as exc:
-                LOG.exception(exc)
-                has_exception = True
-
+            cls.client.delete_vpnservice(vpnservice['id'])
+        # Clean up floating IPs
+        for floating_ip in cls.floating_ips:
+            cls.client.delete_floating_ip(floating_ip['id'])
+        # Clean up routers
         for router in cls.routers:
-            try:
-                resp, body = cls.client.list_router_interfaces(router['id'])
-                interfaces = body['ports']
-                for i in interfaces:
-                    cls.client.remove_router_interface_with_subnet_id(
-                        router['id'], i['fixed_ips'][0]['subnet_id'])
-            except Exception as exc:
-                LOG.exception(exc)
-                has_exception = True
-            try:
-                cls.client.delete_router(router['id'])
-            except Exception as exc:
-                LOG.exception(exc)
-                has_exception = True
-
+            resp, body = cls.client.list_router_interfaces(router['id'])
+            interfaces = body['ports']
+            for i in interfaces:
+                cls.client.remove_router_interface_with_subnet_id(
+                    router['id'], i['fixed_ips'][0]['subnet_id'])
+            cls.client.delete_router(router['id'])
+        # Clean up health monitors
         for health_monitor in cls.health_monitors:
-            try:
-                cls.client.delete_health_monitor(health_monitor['id'])
-            except Exception as exc:
-                LOG.exception(exc)
-                has_exception = True
+            cls.client.delete_health_monitor(health_monitor['id'])
+        # Clean up members
         for member in cls.members:
-            try:
-                cls.client.delete_member(member['id'])
-            except Exception as exc:
-                LOG.exception(exc)
-                has_exception = True
+            cls.client.delete_member(member['id'])
+        # Clean up vips
         for vip in cls.vips:
-            try:
-                cls.client.delete_vip(vip['id'])
-            except Exception as exc:
-                LOG.exception(exc)
-                has_exception = True
+            cls.client.delete_vip(vip['id'])
+        # Clean up pools
         for pool in cls.pools:
-            try:
-                cls.client.delete_pool(pool['id'])
-            except Exception as exc:
-                LOG.exception(exc)
-                has_exception = True
+            cls.client.delete_pool(pool['id'])
+        # Clean up ports
         for port in cls.ports:
-            try:
-                cls.client.delete_port(port['id'])
-            except Exception as exc:
-                LOG.exception(exc)
-                has_exception = True
+            cls.client.delete_port(port['id'])
+        # Clean up subnets
         for subnet in cls.subnets:
-            try:
-                cls.client.delete_subnet(subnet['id'])
-            except Exception as exc:
-                LOG.exception(exc)
-                has_exception = True
+            cls.client.delete_subnet(subnet['id'])
+        # Clean up networks
         for network in cls.networks:
-            try:
-                cls.client.delete_network(network['id'])
-            except Exception as exc:
-                LOG.exception(exc)
-                has_exception = True
+            cls.client.delete_network(network['id'])
         super(BaseNetworkTest, cls).tearDownClass()
-        if has_exception:
-            raise exceptions.TearDownException()
 
     @classmethod
     def create_network(cls, network_name=None):
         """Wrapper utility that returns a test network."""
-        network_name = network_name or rand_name('test-network-')
+        network_name = network_name or data_utils.rand_name('test-network-')
 
         resp, body = cls.client.create_network(network_name)
         network = body['network']
@@ -199,12 +171,32 @@ class BaseNetworkTest(tempest.test.BaseTestCase):
         return router
 
     @classmethod
+    def create_floating_ip(cls, external_network_id, **kwargs):
+        """Wrapper utility that returns a test floating IP."""
+        resp, body = cls.client.create_floating_ip(
+            external_network_id,
+            **kwargs)
+        fip = body['floatingip']
+        cls.floating_ips.append(fip)
+        return fip
+
+    @classmethod
     def create_pool(cls, name, lb_method, protocol, subnet):
         """Wrapper utility that returns a test pool."""
-        resp, body = cls.client.create_pool(name, lb_method, protocol,
-                                            subnet['id'])
+        resp, body = cls.client.create_pool(
+            name=name,
+            lb_method=lb_method,
+            protocol=protocol,
+            subnet_id=subnet['id'])
         pool = body['pool']
         cls.pools.append(pool)
+        return pool
+
+    @classmethod
+    def update_pool(cls, name):
+        """Wrapper utility that returns a test pool."""
+        resp, body = cls.client.update_pool(name=name)
+        pool = body['pool']
         return pool
 
     @classmethod
@@ -245,9 +237,33 @@ class BaseNetworkTest(tempest.test.BaseTestCase):
     @classmethod
     def create_vpnservice(cls, subnet_id, router_id):
         """Wrapper utility that returns a test vpn service."""
-        resp, body = cls.client.create_vpn_service(
+        resp, body = cls.client.create_vpnservice(
             subnet_id, router_id, admin_state_up=True,
-            name=rand_name("vpnservice-"))
+            name=data_utils.rand_name("vpnservice-"))
         vpnservice = body['vpnservice']
         cls.vpnservices.append(vpnservice)
         return vpnservice
+
+    @classmethod
+    def create_ikepolicy(cls, name):
+        """Wrapper utility that returns a test ike policy."""
+        resp, body = cls.client.create_ikepolicy(name)
+        ikepolicy = body['ikepolicy']
+        cls.ikepolicies.append(ikepolicy)
+        return ikepolicy
+
+
+class BaseAdminNetworkTest(BaseNetworkTest):
+
+    @classmethod
+    def setUpClass(cls):
+        super(BaseAdminNetworkTest, cls).setUpClass()
+        admin_username = cls.config.compute_admin.username
+        admin_password = cls.config.compute_admin.password
+        admin_tenant = cls.config.compute_admin.tenant_name
+        if not (admin_username and admin_password and admin_tenant):
+            msg = ("Missing Administrative Network API credentials "
+                   "in configuration.")
+            raise cls.skipException(msg)
+        cls.admin_manager = clients.AdminManager(interface=cls._interface)
+        cls.admin_client = cls.admin_manager.network_client
