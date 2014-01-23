@@ -250,6 +250,13 @@ class OrchestrationClient(rest_client.RestClient):
         body = json.loads(body)
         return resp, body
 
+    def show_stack(self, stack_identifier):
+        """Returns the parameters for the stack."""
+        url = 'stacks/%s' % stack_identifier
+        resp, body = self.get(url)
+        body = json.loads(body)
+        return resp, body
+
     def _validate_template(self, post_body):
         """Returns the validation request result."""
         post_body = json.dumps(post_body)

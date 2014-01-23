@@ -79,7 +79,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     timeout=3)
             yaml_template = yaml.safe_load(response_templates.content)
 
-            stack_name = rand_name('heat')
+            stack_name = data_utils.rand_name('heat')
             print stack_name
             # count how many stacks to start with
             resp, body = self.client.list_stacks()
@@ -101,8 +101,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     @attr(type='smoke')
     def test_stack_crud_no_resources(self):
-<<<<<<< HEAD
-
         response_templates = \
             requests.get(
                 "https://raw.github.com/heat-ci/heat-templates/master/staging/wp-single-linux-cdb.template",
@@ -111,10 +109,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #print type(response_templates.content)
         yaml_template = yaml.safe_load(response_templates.content)
 
-        stack_name = rand_name('heat')
-=======
+        #stack_name = rand_name('heat')
         stack_name = data_utils.rand_name('heat')
->>>>>>> 88eb519114e5d5da1a55bd5fb402101d5bd9626f
+
 
         # count how many stacks to start with
         #resp, stacks = self.client.list_stacks()

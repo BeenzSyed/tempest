@@ -20,6 +20,7 @@ import requests
 import yaml
 import time
 import os
+import datetime
 import ConfigParser
 import pdb
 
@@ -159,7 +160,28 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 self._send_deploy_time_graphite(env, region, template, count, "buildtime")
                 #extract region and name of template
 
+                #list resources
+                lrresp, lrbody = self.orchestration_client.list_resources(stack_id)
 
+                #resource show
+
+
+                #stack show
+                ssresp, ssbody = self.orchestration_client.show_stack(stack_id)
+
+                #update stack
+
+
+                #event list
+                evresp, evbody = self.orchestration_client.list_events(stack_id)
+
+                #stack validation
+
+
+                #suspend stack, wait 1 min
+
+                #resume stack
+                self.client.resume_stack(stack_id)
 
                 #delete stack
                 print "Deleting stack now"
@@ -182,3 +204,80 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #print cmd
         os.system(cmd)
         print "Deploy time sent to graphite"
+
+    def test_dns_resource(self):
+        env = "prod"
+        template = "wordpress-multi"
+        region = "DFW"
+        domain_name = "example%s.com" %datetime.datetime.now().microsecond
+        template_giturl = "https://raw.github" \
+                          ".com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
+        #print template_giturl
+        response_templates = requests.get(template_giturl, timeout=3)
+        yaml_template = yaml.safe_load(response_templates.content)
+
+        stack_name = rand_name("sabeen"+template)
+
+        parameters = {}
+        if 'key_name' in yaml_template['parameters']:
+                parameters['key_name'] = 'sabeen'
+        #if 'email_address' in yaml_template['parameters']:
+              # parameters['email_address'] = 'heattest@rs.com'
+       # if 'domain_record_type' in yaml_template['parameters']:
+              # parameters['domain_record_type']= 'A'
+       # if 'domain_name' in yaml_template['parameters']:
+             # parameters['domain_name'] = 'domain_name'
+
+        if 'git_url' in yaml_template['parameters']:
+                parameters['git_url'] = "https://github.com/timductive/phphelloworld"
+
+        print "\nDeploying %s in %s" % (template, region)
+        stack_identifier = self.create_stack(stack_name, region,
+                                              yaml_template , parameters)
+
+        stack_id = stack_identifier.split('/')[1]
+        count = 0
+        resp, body = self.get_stack(stack_id)
+        print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
+        while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
+                resp, body = self.get_stack(stack_id)
+                if resp['status'] != '200':
+                    print "The response is: %s" % resp
+                    self.fail(resp)
+                print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
+                time.sleep(60)
+                count += 1
+                if body['stack_status'] == 'CREATE_FAILED':
+                    print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                    print "Deleting the stack now"
+                    resp, body = self.delete_stack(stack_name, stack_id)
+                    if resp['status'] != '204':
+                        print "Delete did not work"
+                    self._send_deploy_time_graphite(region, template, count, "failtime")
+                    self.fail("Stack create failed")
+                if count == 90:
+                    print "Stack create has taken over 90 minutes. Force failing now."
+                    self._send_deploy_time_graphite(region, template, count, "failtime")
+                    resp, body = self.delete_stack(stack_name, stack_id)
+                    if resp['status'] != '204':
+                        print "Delete did not work"
+                    self.fail("Stack create took too long")
+
+        if body['stack_status'] == 'CREATE_COMPLETE':
+            print "The deployment took %s minutes" % count
+            self._send_deploy_time_graphite(region, template, count,
+                                                 "buildtime")
+            print "Testing the DNS parameters "
+            resp, body = self.orchestration_client.show_stack(
+                        stack_identifier)
+                   # self.assertEquals("heattest@rs.com", body['stack'][
+                   # 'parameters']['email_address'])
+                  # self.assertEquals("A", body['stack']['parameters'][
+                  # 'domain_record_type'])
+                  # self.assertEquals(domain_name, body['stack'][
+                  # 'parameters']['domain_name'])
+            self.assertEquals("sabeen", body['stack']['parameters']['key_name'])
+            print "Deleting stack after DNS verification"
+            resp, body = self.delete_stack(stack_name, stack_id)
+            if resp['status'] != '204':
+                print "Delete did not work"
