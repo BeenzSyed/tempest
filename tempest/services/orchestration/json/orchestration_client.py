@@ -250,6 +250,13 @@ class OrchestrationClient(rest_client.RestClient):
         body = json.loads(body)
         return resp, body
 
+    def resource_template(self, type_name):
+        """Returns the template for the stack."""
+        url = ('resource_types/{type_name}/template'.format(**locals()))
+        resp, body = self.get(url)
+        body = json.loads(body)
+        return resp, body
+
     def show_stack(self, stack_identifier):
         """Returns the parameters for the stack."""
         url = 'stacks/%s' % stack_identifier

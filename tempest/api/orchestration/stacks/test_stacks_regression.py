@@ -160,28 +160,79 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 self._send_deploy_time_graphite(env, region, template, count, "buildtime")
                 #extract region and name of template
 
-                #list resources
-                lrresp, lrbody = self.orchestration_client.list_resources(stack_id)
-
-                #resource show
-
-
-                #stack show
-                ssresp, ssbody = self.orchestration_client.show_stack(stack_id)
-
-                #update stack
-
-
-                #event list
-                evresp, evbody = self.orchestration_client.list_events(stack_id)
-
-                #stack validation
-
-
-                #suspend stack, wait 1 min
-
-                #resume stack
-                self.client.resume_stack(stack_id)
+                # #list resources
+                # print "list resources"
+                # lrresp, lrbody = self.orchestration_client.list_resources(stack_id)
+                # print lrresp
+                # print lrbody
+                #
+                # #resource metadata
+                # print "resource metadata"
+                # rsname = "php_app"
+                # rmresp, rmbody = self.orchestration_client.show_resource_metadata(stack_id, rsname)
+                # print rmresp
+                # print rmbody
+                #
+                # #resource show
+                # print "get resources"
+                # rsresp, rsbody = self.orchestration_client.get_resource(stack_id, rsname)
+                # print rsresp
+                # print rsbody
+                #
+                # #resource-template
+                # print "resource template"
+                # # rtresp, rtbody = self.orchestration_client.resource_template(typename)
+                # # print rtresp
+                # # print rtbody
+                #
+                # #stack-list
+                # print "stack list"
+                # slresp, slbody = self.orchestration_client.list_stacks()
+                # print slresp
+                # print slbody
+                #
+                # #stack show
+                # print "show stack"
+                # ssresp, ssbody = self.orchestration_client.show_stack(stack_id)
+                # print ssresp
+                # print ssbody
+                #
+                # #update stack
+                # print "update stack"
+                # usresp, usbody = self.orchestration_client.update_stack(stack_id, "new name", yaml_template, parameters)
+                # print usresp
+                # print usbody
+                #
+                # #event list
+                # print "event list"
+                # evresp, evbody = self.orchestration_client.list_events(stack_id)
+                # print evresp
+                # print evbody
+                #
+                # #event show
+                # print "event show"
+                # # esresp, esbody = self.orchestration_client.show_event(stack_id, rsname, eventid)
+                # # print esresp
+                # # print esbody
+                #
+                # #suspend stack, wait 1 min
+                # print "suspend stack"
+                # ssresp, ssbody = self.orchestration_client.suspend_stack(stack_id)
+                # print ssresp
+                # print ssbody
+                #
+                # #resume stack
+                # #self.client.resume_stack(stack_id)
+                #
+                # #template show
+                # print "template show"
+                # tsresp, tsbody = self.orchestration_client.show_template(stack_id)
+                # print tsresp
+                # print tsbody
+                #
+                # #template validate
+                # print "template validate"
+                # tvresp, tvbody = self.orchestration_client.validate_template()
 
                 #delete stack
                 print "Deleting stack now"
