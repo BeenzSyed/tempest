@@ -152,10 +152,10 @@ class RestClient(object):
 
         headers = {'Content-Type': 'application/json'}
         body = json.dumps(creds)
-        self._log_request('POST', token_url, headers, body)
+        #self._log_request('POST', token_url, headers, body)
         resp, resp_body = self.http_obj.request(token_url, 'POST',
                                                 headers=headers, body=body)
-        self._log_response(resp, resp_body)
+        #self._log_response(resp, resp_body)
         if resp.status == 200:
             try:
                 auth_data = json.loads(resp_body)['access']
@@ -193,10 +193,10 @@ class RestClient(object):
 
         headers = {'Content-Type': 'application/json'}
         body = json.dumps(creds)
-        self._log_request('POST', auth_url, headers, body)
+        #self._log_request('POST', auth_url, headers, body)
         resp, resp_body = self.http_obj.request(auth_url, 'POST',
                                                 headers=headers, body=body)
-        self._log_response(resp, resp_body)
+        #self._log_response(resp, resp_body)
         if resp.status == 200:
             try:
                 auth_data = json.loads(resp_body)['access']
@@ -271,10 +271,10 @@ class RestClient(object):
 
         headers = {'Content-Type': 'application/json'}
         body = json.dumps(creds)
-        self._log_request('POST', auth_url, headers, body)
+        #self._log_request('POST', auth_url, headers, body)
         resp, resp_body = self.http_obj.request(auth_url, 'POST',
                                                 headers=headers, body=body)
-        self._log_response(resp, resp_body)
+        #self._log_response(resp, resp_body)
         #print resp.status
         if resp.status == 200:
             try:
@@ -404,17 +404,17 @@ class RestClient(object):
         # print body
         return self.request('POST', url, region, headers, body)
 
-    def get(self, url, headers=None):
-        return self.request('GET', url, headers)
+    def get(self, url, region, headers=None):
+        return self.request('GET', url, region, headers)
 
-    def delete(self, url, headers=None):
-        return self.request('DELETE', url, headers)
+    def delete(self, url, region, headers=None):
+        return self.request('DELETE', url, region, headers)
 
     def patch(self, url, body, headers):
         return self.request('PATCH', url, headers, body)
 
-    def put(self, url, body, headers):
-        return self.request('PUT', url, headers, body)
+    def put(self, url, region, body, headers):
+        return self.request('PUT', url, region, headers, body)
 
     def head(self, url, headers=None):
         return self.request('HEAD', url, headers)
@@ -513,7 +513,7 @@ class RestClient(object):
                 #print "region in base url: %s" % ep['region']
                 if region == ep['region']:
                     self.base_url = ep['publicURL']
-                    print "base url is: %s" % self.base_url
+                    #print "base url is: %s" % self.base_url
             if self.base_url is None:
                     raise exceptions.EndpointNotFound()
             # for key in ep.keys():
@@ -525,7 +525,7 @@ class RestClient(object):
         req_url = urlparse(url)
         if req_url.scheme in ['http', 'https']:
             req_url = url
-        else :
+        else:
             req_url = "%s/%s" % (self.base_url, url)
 
         resp, resp_body = self.http_obj.request(req_url, method,
@@ -543,6 +543,8 @@ class RestClient(object):
             self._set_auth(region)
         #print "base url is: %s" % self.base_url
         #print "url is: %s" % url
+        #print "token is %s" % self.token
+        #pdb.set_trace()
         if headers is None:
             headers = {}
         headers['X-Auth-Token'] = self.token
@@ -552,7 +554,7 @@ class RestClient(object):
         # print method
         # print url
         # print headers
-        #print body
+        # print body
         resp, resp_body = self._request(method, url, region,
                                         headers=headers, body=body)
 
@@ -566,8 +568,8 @@ class RestClient(object):
             time.sleep(delay)
             resp, resp_body = self._request(method, url,
                                             headers=headers, body=body)
-        self._error_checker(method, url, headers, body,
-                            resp, resp_body)
+        # self._error_checker(method, url, headers, body,
+        #                     resp, resp_body)
         return resp, resp_body
 
     def _error_checker(self, method, url,

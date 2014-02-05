@@ -83,15 +83,17 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
             #template_url='https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template',
             template=template_data,
             parameters=parameters)
+        print resp
+        print body
         stack_id = resp['location'].split('/')[-1]
         stack_identifier = '%s/%s' % (stack_name, stack_id)
         cls.stacks.append(stack_identifier)
         return stack_identifier
 
     @classmethod
-    def get_stack(cls, stackid):
+    def get_stack(cls, stackid, region):
         """Returns the details of a single stack."""
-        resp, body = cls.client.get_stack(stackid)
+        resp, body = cls.client.get_stack(stackid, region)
         # url = "stacks/%s" % stackid
         # resp, body = self.get(url)
         # body = json.loads(body)

@@ -61,7 +61,7 @@ class AutoScalingTest(manager.OrchestrationScenarioTest):
         if not self.config.orchestration.keypair_name:
             self.set_resource('stack', self.stack)
 
-    @skip_because(bug="1257575")
+    #@skip_because(bug="1257575")
     @attr(type='slow')
     @services('orchestration', 'compute')
     def test_scale_up_then_down(self):

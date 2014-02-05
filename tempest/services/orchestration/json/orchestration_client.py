@@ -18,6 +18,7 @@ import re
 import time
 import urllib
 import datetime
+import pdb
 
 from tempest.common import rest_client
 from tempest import exceptions
@@ -34,14 +35,14 @@ class OrchestrationClient(rest_client.RestClient):
         self.build_interval = self.config.orchestration.build_interval
         self.build_timeout = self.config.orchestration.build_timeout
 
-    def list_stacks(self, params=None):
+    def list_stacks(self, region, params=None):
         """Lists all stacks for a user."""
 
         uri = 'stacks'
         if params:
             uri += '?%s' % urllib.urlencode(params)
 
-        resp, body = self.get(uri)
+        resp, body = self.get(uri, region)
         body = json.loads(body)
         return resp, body['stacks']
 
@@ -58,7 +59,7 @@ class OrchestrationClient(rest_client.RestClient):
         resp, body = self.post(uri, region, headers=headers, body=body)
         return resp, body
 
-    def update_stack(self, stack_identifier, name, disable_rollback=True,
+    def update_stack(self, stack_identifier, name, region, disable_rollback=True,
                      parameters={}, timeout_mins=60, template=None,
                      template_url=None):
         headers, body = self._prepare_update_create(
@@ -70,7 +71,7 @@ class OrchestrationClient(rest_client.RestClient):
             template_url)
 
         uri = "stacks/%s" % stack_identifier
-        resp, body = self.put(uri, headers=headers, body=body)
+        resp, body = self.put(uri, region, headers=headers, body=body)
         return resp, body
 
     def _prepare_update_create(self, name, disable_rollback=True,
@@ -99,10 +100,10 @@ class OrchestrationClient(rest_client.RestClient):
         headers['X-Auth-User'] = self.user
         return headers, body
 
-    def get_stack(self, stack_identifier):
+    def get_stack(self, stack_identifier, region):
         """Returns the details of a single stack."""
         url = "stacks/%s" % stack_identifier
-        resp, body = self.get(url)
+        resp, body = self.get(url, region)
         body = json.loads(body)
         return resp, body
 
@@ -110,23 +111,21 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the details of a single stack."""
         url = "stacks/%s" % stack_name
         resp, body = self.get(url)
-        print resp
-        print body
         body = json.loads(body)
         return resp, body['stack']
 
-    def suspend_stack(self, stack_identifier):
+    def suspend_stack(self, stack_identifier, region):
         """Suspend a stack."""
         url = 'stacks/%s/actions' % stack_identifier
         body = {'suspend': None}
-        resp, body = self.post(url, json.dumps(body), self.headers)
+        resp, body = self.post(url, region, json.dumps(body), self.headers)
         return resp, body
 
-    def resume_stack(self, stack_identifier):
+    def resume_stack(self, stack_identifier, region):
         """Resume a stack."""
         url = 'stacks/%s/actions' % stack_identifier
         body = {'resume': None}
-        resp, body = self.post(url, json.dumps(body), self.headers)
+        resp, body = self.post(url, region, json.dumps(body), self.headers)
 
     def get_api_version(self, region):
         """Returns api version with response."""
@@ -136,23 +135,29 @@ class OrchestrationClient(rest_client.RestClient):
         body = json.loads(body)
         return resp, body
 
-    def list_resources(self, stack_identifier):
+    def list_resources(self, stack_identifier, region):
         """Returns the details of a single resource."""
         url = "stacks/%s/resources" % stack_identifier
-        resp, body = self.get(url)
-        body = json.loads(body)
-        return resp, body['resources']
+        resp, body = self.get(url, region)
+        if resp == '200':
+            body = json.loads(body)
+            return resp, body['resources']
+        else:
+            return resp, body
 
-    def get_resource(self, stack_identifier, resource_name):
+    def get_resource(self, stack_identifier, resource_name, region):
         """Returns the details of a single resource."""
         url = "stacks/%s/resources/%s" % (stack_identifier, resource_name)
-        resp, body = self.get(url)
-        body = json.loads(body)
-        return resp, body['resource']
+        resp, body = self.get(url, region)
+        if resp == '200':
+            body = json.loads(body)
+            return resp, body['resource']
+        else:
+            return resp, body
 
-    def delete_stack(self, stack_name, stack_id):
+    def delete_stack(self, stack_name, stack_id, region):
         """Deletes the specified Stack."""
-        return self.delete("stacks/%s/%s" % (str(stack_name), str(stack_id)))
+        return self.delete("stacks/%s/%s" % (str(stack_name), str(stack_id)), region)
 
     def wait_for_resource_status(self, stack_identifier, resource_name,
                                  status, failure_pattern='^.*_FAILED$'):
@@ -212,20 +217,26 @@ class OrchestrationClient(rest_client.RestClient):
                 raise exceptions.TimeoutException(message)
             time.sleep(self.build_interval)
 
-    def show_resource_metadata(self, stack_identifier, resource_name):
+    def show_resource_metadata(self, stack_identifier, resource_name, region):
         """Returns the resource's metadata."""
         url = ('stacks/{stack_identifier}/resources/{resource_name}'
                '/metadata'.format(**locals()))
-        resp, body = self.get(url)
-        body = json.loads(body)
-        return resp, body['metadata']
+        resp, body = self.get(url, region)
+        if resp == '200':
+            body = json.loads(body)
+            return resp, body['metadata']
+        else:
+            return resp, body
 
-    def list_events(self, stack_identifier):
+    def list_events(self, stack_identifier, region):
         """Returns list of all events for a stack."""
         url = 'stacks/{stack_identifier}/events'.format(**locals())
-        resp, body = self.get(url)
-        body = json.loads(body)
-        return resp, body['events']
+        resp, body = self.get(url, region)
+        if resp == '200':
+            body = json.loads(body)
+            return resp, body['events']
+        else:
+            return resp, body
 
     def list_resource_events(self, stack_identifier, resource_name):
         """Returns list of all events for a resource from stack."""
@@ -235,49 +246,55 @@ class OrchestrationClient(rest_client.RestClient):
         body = json.loads(body)
         return resp, body['events']
 
-    def show_event(self, stack_identifier, resource_name, event_id):
+    def show_event(self, stack_name, stack_identifier, resource_name, event_id, region):
         """Returns the details of a single stack's event."""
-        url = ('stacks/{stack_identifier}/resources/{resource_name}/events'
-               '/{event_id}'.format(**locals()))
-        resp, body = self.get(url)
-        body = json.loads(body)
-        return resp, body['event']
+        url = ('stacks/{stack_name}/{stack_identifier}/resources/{resource_name}/events'
+                '/{event_id}'.format(**locals()))
+        #url = ('stacks/{stack_name}/{stack_identifier}/resources/{resource_name}/events'.format(**locals()))
+        #print "url for show event %s" % url
+        resp, body = self.get(url, region)
+        if resp == '200':
+            body = json.loads(body)
+            return resp, body['event']
+        else:
+            return resp, body
 
-    def show_template(self, stack_identifier):
+    def show_template(self, stack_identifier, region):
         """Returns the template for the stack."""
         url = ('stacks/{stack_identifier}/template'.format(**locals()))
-        resp, body = self.get(url)
+        resp, body = self.get(url, region)
         body = json.loads(body)
         return resp, body
 
-    def resource_template(self, type_name):
+    def resource_template(self, type_name, region):
         """Returns the template for the stack."""
         url = ('resource_types/{type_name}/template'.format(**locals()))
-        resp, body = self.get(url)
+        resp, body = self.get(url, region)
         body = json.loads(body)
         return resp, body
 
-    def show_stack(self, stack_identifier):
+    def show_stack(self, stack_identifier, region):
         """Returns the parameters for the stack."""
         url = 'stacks/%s' % stack_identifier
-        resp, body = self.get(url)
+        resp, body = self.get(url, region)
         body = json.loads(body)
         return resp, body
 
-    def _validate_template(self, post_body):
+    def _validate_template(self, region, post_body):
         """Returns the validation request result."""
-        post_body = json.dumps(post_body)
-        resp, body = self.post('validate', post_body, self.headers)
+        post_body = json.dumps(post_body, default=datehandler)
+        resp, body = self.post('validate', region, post_body, self.headers)
+        #body = json.dumps(body, default=datehandler)
         body = json.loads(body)
         return resp, body
 
-    def validate_template(self, template, parameters={}):
+    def validate_template(self, region, template, parameters={}):
         """Returns the validation result for a template with parameters."""
         post_body = {
             'template': template,
             'parameters': parameters,
         }
-        return self._validate_template(post_body)
+        return self._validate_template(region, post_body)
 
     def validate_template_url(self, template_url, parameters={}):
         """Returns the validation result for a template with parameters."""
