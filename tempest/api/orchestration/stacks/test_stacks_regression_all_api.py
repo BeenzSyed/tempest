@@ -13,17 +13,12 @@
 #    under the License.
 
 from tempest.api.orchestration import base
-from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
 from tempest.test import attr
 import requests
 import yaml
-import time
 import os
-import datetime
-from path import path
-import ConfigParser
-import pdb
+
 
 LOG = logging.getLogger(__name__)
 

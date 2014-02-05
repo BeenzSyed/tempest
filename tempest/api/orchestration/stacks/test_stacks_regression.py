@@ -20,10 +20,6 @@ import requests
 import yaml
 import time
 import os
-import datetime
-from path import path
-import ConfigParser
-import pdb
 
 LOG = logging.getLogger(__name__)
 
