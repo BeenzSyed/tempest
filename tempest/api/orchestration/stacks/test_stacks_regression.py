@@ -117,54 +117,57 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             print "\nDeploying %s in %s" % (template, region)
             stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
-            stack_id = stack_identifier.split('/')[1]
-            count = 0
-            resp, body = self.get_stack(stack_id, region)
-            print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
-
-            while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
-                resp, body = self.get_stack(stack_id, region)
-                if resp['status'] != '200':
-                    print "The response is: %s" % resp
-                    self.fail(resp)
-                print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
-                time.sleep(60)
-                count += 1
-                if body['stack_status'] == 'CREATE_FAILED':
-                    print "Stack create failed. Here's why: %s" % body['stack_status_reason']
-                    self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                    if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
-                        print "Deleting the stack now"
-                        dresp, dbody = self.delete_stack(stack_name, stack_id)
-                        if dresp['status'] != '204':
-                            print "Delete did not work"
-                    pf += 1
-                elif count == 90:
-                    print "Stack create has taken over 90 minutes. Force failing now."
-                    self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                    if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
-                        print "Stack create took too long. Deleting stack now."
-                        dresp, dbody = self.delete_stack(stack_name, stack_id)
-                        if dresp['status'] != '204':
-                            print "Delete did not work"
-                    pf += 1
-
-            if body['stack_status'] == 'CREATE_COMPLETE':
-                print "The deployment took %s minutes" % count
-                self._send_deploy_time_graphite(env, region, template, count, "buildtime")
-
-                #delete stack
-                print "Deleting stack now"
-                resp, body = self.delete_stack(stack_name, stack_id)
-                if resp['status'] != '204':
-                    print "Delete did not work"
-
-            else:
-                print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
+            if stack_identifier == '0':
                 self.fail("Stack build failed.")
+            else:
+                stack_id = stack_identifier.split('/')[1]
+                count = 0
+                resp, body = self.get_stack(stack_id, region)
+                print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
 
-        if pf > 0:
-            self.fail("Stack build failed.")
+                while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
+                    resp, body = self.get_stack(stack_id, region)
+                    if resp['status'] != '200':
+                        print "The response is: %s" % resp
+                        self.fail(resp)
+                    print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
+                    time.sleep(60)
+                    count += 1
+                    if body['stack_status'] == 'CREATE_FAILED':
+                        print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                        self._send_deploy_time_graphite(env, region, template, count, "failtime")
+                        if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
+                            print "Deleting the stack now"
+                            dresp, dbody = self.delete_stack(stack_name, stack_id, region)
+                            if dresp['status'] != '204':
+                                print "Delete did not work"
+                        pf += 1
+                    elif count == 90:
+                        print "Stack create has taken over 90 minutes. Force failing now."
+                        self._send_deploy_time_graphite(env, region, template, count, "failtime")
+                        if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
+                            print "Stack create took too long. Deleting stack now."
+                            dresp, dbody = self.delete_stack(stack_name, stack_id, region)
+                            if dresp['status'] != '204':
+                                print "Delete did not work"
+                        pf += 1
+
+                if body['stack_status'] == 'CREATE_COMPLETE':
+                    print "The deployment took %s minutes" % count
+                    self._send_deploy_time_graphite(env, region, template, count, "buildtime")
+
+                    #delete stack
+                    print "Deleting stack now"
+                    resp, body = self.delete_stack(stack_name, stack_id, region)
+                    if resp['status'] != '204':
+                        print "Delete did not work"
+
+                else:
+                    print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
+                    self.fail("Stack build failed.")
+
+                if pf > 0:
+                    self.fail("Stack build failed.")
 
     def _send_deploy_time_graphite(self, env, region, template, deploy_time, buildfail):
         cmd = 'echo "heat.' + env + '.build-tests.' + region + '.' + template \
