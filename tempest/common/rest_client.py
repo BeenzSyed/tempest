@@ -129,7 +129,7 @@ class RestClient(object):
                       self.tenant_name, region))
 
         #print "token is: %s" % self.token
-        print "base urls are: %s" % self.all_urls
+        #print "base urls are: %s" % self.all_urls
 
     def identity_auth_v3_token(self, user, password, auth_url, service, tenant_name,
                       region):
@@ -176,7 +176,7 @@ class RestClient(object):
 
     def keystone_auth_urls(self, user, password, auth_url, service, tenant_name,
                       region):
-        print "region in keystone_auth is: %s" % region
+        #print "region in keystone_auth is: %s" % region
         # Normalize URI to ensure /tokens is in it.
         if 'tokens' not in auth_url:
             auth_url = auth_url.rstrip('/') + '/tokens'
@@ -528,6 +528,7 @@ class RestClient(object):
         else:
             req_url = "%s/%s" % (self.base_url, url)
 
+        print req_url
         resp, resp_body = self.http_obj.request(req_url, method,
                                                 headers=headers, body=body)
         #uncomment below to see responses

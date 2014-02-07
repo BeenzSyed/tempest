@@ -102,11 +102,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         #print parameters
 
-        stack_id = "bb68dec9-add5-4418-816e-8bba509f52d1"
-        stack_name = "isthisworking"
-        region = "Staging"
-        rstype = "Rackspace::Cloud::WinServer"
-        rsname = "lb"
+        stack_id = "26aad777-2058-478e-b04a-1df8e70f6462"
+        stack_name = "qe_devstackDev-tempest-2064847262"
+        region = "Dev"
+        rstype = "Rackspace::Cloud::Server"
+        rsname = "devstack_server"
         event_id = '97bd2404-bb1a-45ff-afc0-c73299562426'
 
         #update stack
@@ -117,17 +117,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #-------  Stacks  --------------
         #create stack
         #print "create stack"
-        ssresp, ssbody = self.orchestration_client.create_stack(stack_name, region, yaml_template, parameters)
+        ssresp, ssbody = self.orchestration_client.create_stack("isthisworking", region, yaml_template, parameters)
         self._check_resp(ssresp, ssbody, "create stack")
 
-        #update show
+        #update stack
         #print "update stack"
         ssresp, ssbody = self.orchestration_client.update_stack(stack_id, stack_name, region, yaml_template, parameters)
         self._check_resp(ssresp, ssbody, "update stack")
 
         #stack show
         #print "show stack"
-        ssresp, ssbody = self.orchestration_client.show_stack(stack_name, region)
+        ssresp, ssbody = self.orchestration_client.show_stack(stack_name, stack_id, region)
         self._check_resp(ssresp, ssbody, "show stack")
 
         #stack-list
@@ -140,11 +140,21 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         ssresp, ssbody = self.orchestration_client.delete_stack(stack_name, stack_id, region)
         self._check_resp(ssresp, ssbody, "delete stack")
 
+        #abandon stack
+        #print "abandon stack"
+        asresp, asbody, = self.orchestration_client.abandon_stack(stack_name, stack_id, region)
+        self._check_resp(asresp, asbody, "abandon stack")
+
+        #adopt stack
+        #print "adopt stack"
+        asresp, asbody, = self.orchestration_client.abandon_stack(stack_name, stack_id, region)
+        self._check_resp(asresp, asbody, "adopt stack")
+
 
         #-------  Stack events  ----------
         #event list
         #print "event list"
-        evresp, evbody = self.orchestration_client.list_events(stack_name, region)
+        evresp, evbody = self.orchestration_client.list_events(stack_name, stack_id, region)
         self._check_resp(evresp, evbody, "event list")
 
         #event show
@@ -156,7 +166,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #-------  Templates  -------------
         #template show
         #print "template show"
-        tsresp, tsbody = self.orchestration_client.show_template(stack_name, region)
+        tsresp, tsbody = self.orchestration_client.show_template(stack_name, stack_id, region)
         self._check_resp(tsresp, tsbody, "template show")
 
         #template validate
@@ -166,26 +176,33 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
 
         #--------  Stack resources  --------
-        #list resources
+        #Lists resources in a stack.
         #print "list resources"
-        lrresp, lrbody = self.orchestration_client.list_resources(stack_name, region)
+        lrresp, lrbody = self.orchestration_client.list_resources(stack_name, stack_id, region)
         self._check_resp(lrresp, lrbody, "list resources")
 
-        #resource metadata
+        #Gets metadata for a specified resource.
         #print "resource metadata"
-        rmresp, rmbody = self.orchestration_client.show_resource_metadata(stack_name, rsname, region)
+        rmresp, rmbody = self.orchestration_client.show_resource_metadata(stack_name, stack_id, rsname, region)
         self._check_resp(rmresp, rmbody, "resource metadata")
 
-        #resource show
+        #Gets data for a specified resource.
         #print "get resources"
-        rsresp, rsbody = self.orchestration_client.get_resource(stack_name, rsname, region)
+        rsresp, rsbody = self.orchestration_client.get_resource(stack_name, stack_id, rsname, region)
         self._check_resp(rsresp, rsbody, "get resources")
 
-        #resource-template
+        #Gets a template representation for a specified resource type.
         #print "resource template"
         rtresp, rtbody = self.orchestration_client.resource_template(rstype, region)
         self._check_resp(rtresp, rtbody, "resource template")
 
+        #Lists the supported template resource types.
+        rtresp, rtbody = self.orchestration_client.template_resource(region)
+        self._check_resp(rtresp, rtbody, "template resource types")
+
+        #Gets the interface schema for a specified resource type.
+        rtresp, rtbody = self.orchestration_client.resource_schema(rstype, region)
+        self._check_resp(rtresp, rtbody, "schema for resource type")
 
 
         # #suspend stack, wait 1 min

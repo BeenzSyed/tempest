@@ -83,14 +83,15 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
             #template_url='https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template',
             template=template_data,
             parameters=parameters)
-        if resp == '200':
+        #print "resp is %s" % resp
+        if (resp['status'] == '200' or resp['status'] == '201'):
             stack_id = resp['location'].split('/')[-1]
             stack_identifier = '%s/%s' % (stack_name, stack_id)
             cls.stacks.append(stack_identifier)
             return stack_identifier
         else:
-            print "There was an error with stack create: %s" % body
-            return resp
+            print "There was an error with stack create: %s, %s" % (resp, body)
+            return 0
 
     @classmethod
     def get_stack(cls, stackid, region):
@@ -98,7 +99,8 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         resp, body = cls.client.get_stack(stackid, region)
         # url = "stacks/%s" % stackid
         # resp, body = self.get(url)
-        # body = json.loads(body)
+        if resp['status'] == '200':
+            body = json.loads(body)
         return resp, body['stack']
 
     @classmethod
