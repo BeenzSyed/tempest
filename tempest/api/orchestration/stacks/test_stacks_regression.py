@@ -82,16 +82,24 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_rackconnect_realDeployment(self):
         self._test_stack("php-app")
 
+    def test_wordpress_multi_dns_realDeployment(self):
+        self._test_stack("wordpress-multi-dns")
+
     @attr(type='smoke')
     def _test_stack(self, template):
         print os.environ.get('TEMPEST_CONFIG')
 
         env = self.config.orchestration['env']
+        env = "dev"
 
         #templates on github
         template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
         response_templates = requests.get(template_giturl, timeout=3)
-        yaml_template = yaml.safe_load(response_templates.content)
+        if response_templates.status_code != requests.codes.ok:
+            print "This template does not exist: %s" % template_giturl
+            self.fail("The template does not exist.")
+        else:
+            yaml_template = yaml.safe_load(response_templates.content)
 
         #templates on my laptop
         # template_giturl = "/Users/sabe6191/Documents/autoscale.template"
@@ -123,6 +131,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 stack_id = stack_identifier.split('/')[1]
                 count = 0
                 resp, body = self.get_stack(stack_id, region)
+                if resp['status'] != '200':
+                        print "The response is: %s" % resp
+                        self.fail(resp)
                 print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
 
                 while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
@@ -155,6 +166,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 if body['stack_status'] == 'CREATE_COMPLETE':
                     print "The deployment took %s minutes" % count
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
+
+                    #check DNS resource
+                    if 'dns' in yaml_template['resources']:
+                        domain_url = "domains"
+                        test = self.dns_client.list_domain_id(domain_url)
+                        print test
 
                     #delete stack
                     print "Deleting stack now"

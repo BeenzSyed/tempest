@@ -188,6 +188,7 @@ from tempest.services.volume.xml.snapshots_client import SnapshotsClientXML
 from tempest.services.volume.xml.volumes_client import VolumesClientXML
 from tempest.services.database.json.flavors_client import \
     DatabaseFlavorsClientJSON
+from tempest.services.orchestration.json.dns_client import DnsClient
 
 CONF = config.CONF
 LOG = logging.getLogger(__name__)
@@ -543,6 +544,7 @@ class Manager(object):
             AccountClientCustomizedHeader(*client_args)
         self.database_client = DatabaseClient(*client_args)
         self.data_processing_client = DataProcessingClient(*client_args)
+        self.dns_client = DnsClient(*client_args)
 
 
 class AltManager(Manager):
@@ -618,6 +620,24 @@ class OrchestrationManager(object):
         self.network_client = NETWORKS_CLIENTS[interface](*client_args)
         self.orchestration_client = OrchestrationClient(*client_args)
 
+
+class DnsManager(object):
+    """
+    Manager object that uses the admin credentials for its
+    """
+    def __init__(self,
+                 username=None,
+                 password=None,
+                 tenant_name=None):
+        self.config = config.TempestConfigPrivate()
+        self.username = username or self.config.identity.username
+        self.password = password or self.config.identity.password
+        self.tenant_name = tenant_name or self.config.identity.tenant_name
+        self.auth_url = self.config.identity.uri
+        self.dns = self.config.dns.url
+        client_args = (self.config, self.username, self.password,
+                       self.auth_url, self.tenant_name)
+        self.dns_client = DnsClient(*client_args)
 
 class DatabaseManager(object):
     """

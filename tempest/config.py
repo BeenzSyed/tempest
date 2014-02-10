@@ -681,6 +681,24 @@ DatabaseGroup = [
                help="Valid primary flavor to use in tests.")
 ]
 
+dns_group = cfg.OptGroup(name='dns',
+                                   title='Dns Service Options')
+
+DnsGroup = [
+
+    cfg.StrOpt('catalog_type',
+               default='rax:dns',
+               help="Catalog type of the dns."),
+    cfg.StrOpt('url',
+               default=None,
+               help="for dns url"),
+    cfg.StrOpt('region',
+               default='STAGING',
+               help="The orchestration region name to use. If empty, the "
+                    "value of identity.region is used instead. If no such "
+                    "region is found in the service catalog, the first found "
+                    "one is used.")
+]
 
 def register_database_opts(conf):
     conf.register_group(database_group)
@@ -801,7 +819,7 @@ class TempestConfigPrivate(object):
         register_opt_group(cfg.CONF, service_available_group,
                            ServiceAvailableGroup)
         register_opt_group(cfg.CONF, debug_group, DebugGroup)
-
+        register_opt_group(cfg.CONF, dns_group, DnsGroup)
         register_opt_group(cfg.CONF, baremetal_group, BaremetalGroup)
         register_opt_group(cfg.CONF, input_scenario_group, InputScenarioGroup)
 
@@ -831,7 +849,7 @@ class TempestConfigPrivate(object):
         self.scenario = cfg.CONF.scenario
         self.service_available = cfg.CONF.service_available
         self.debug = cfg.CONF.debug
-
+        self.dns = cfg.CONF.dns
         self.baremetal = cfg.CONF.baremetal
         self.input_scenario = cfg.CONF['input-scenario']
 

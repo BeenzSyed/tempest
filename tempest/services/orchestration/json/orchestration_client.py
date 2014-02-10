@@ -318,7 +318,7 @@ class OrchestrationClient(rest_client.RestClient):
     def _validate_template(self, region, post_body):
         """Returns the validation request result."""
         post_body = json.dumps(post_body, default=datehandler)
-        resp, body = self.post('validate_template', region, post_body, self.headers)
+        resp, body = self.post('validate', region, post_body, self.headers)
         if resp == '200':
             body = json.loads(body)
         return resp, body

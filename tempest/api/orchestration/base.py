@@ -28,6 +28,11 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(BaseOrchestrationTest, cls).setUpClass()
+
+        dns = clients.DnsManager()
+        cls.dns = dns
+        cls.dns_client = dns.dns_client
+
         os = clients.OrchestrationManager()
         cls.orchestration_cfg = os.config.orchestration
         cls.compute_cfg = os.config.compute
@@ -101,7 +106,10 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         # resp, body = self.get(url)
         if resp['status'] == '200':
             body = json.loads(body)
-        return resp, body['stack']
+            return resp, body['stack']
+        else:
+            return resp, body
+
 
     @classmethod
     def delete_stack(cls,stackname, stackid, region):

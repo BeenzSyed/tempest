@@ -99,11 +99,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             }
         if 'git_url' in yaml_template['parameters']:
             parameters['git_url'] = "https://github.com/timductive/phphelloworld"
+            #https://github.com/beenzsyed/phphelloworld
 
         #print parameters
-
-        stack_id = "26aad777-2058-478e-b04a-1df8e70f6462"
-        stack_name = "qe_devstackDev-tempest-2064847262"
+        stack_id = "77e36391-6494-4d69-9bca-a1f86ba81004"
+        stack_name = "qe_devstackDev-tempest-729419543"
         region = "Dev"
         rstype = "Rackspace::Cloud::Server"
         rsname = "devstack_server"
