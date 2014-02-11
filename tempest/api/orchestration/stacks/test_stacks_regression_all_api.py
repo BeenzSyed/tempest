@@ -102,8 +102,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #https://github.com/beenzsyed/phphelloworld
 
         #print parameters
-        stack_id = "77e36391-6494-4d69-9bca-a1f86ba81004"
-        stack_name = "qe_devstackDev-tempest-729419543"
+        stack_id = "daf0074a-ed25-421e-bb71-9e44a7813308"
+        stack_name = "qe_wordpress-multiDev-tempest-675044195"
         region = "Dev"
         rstype = "Rackspace::Cloud::Server"
         rsname = "devstack_server"
@@ -113,6 +113,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         # print "update stack"
         # usresp, usbody = self.orchestration_client.update_stack(stack_id, region, "sabeenlovesheat", yaml_template, parameters)
         # self._check_resp(usresp, usbody, "update stack")
+        # flavors
 
         #-------  Stacks  --------------
         #create stack
@@ -122,6 +123,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         #update stack
         #print "update stack"
+        parameters = {
+                'key_name': 'sabeen',
+                'flavors': '2GB Standard Instance'
+        }
         ssresp, ssbody = self.orchestration_client.update_stack(stack_id, stack_name, region, yaml_template, parameters)
         self._check_resp(ssresp, ssbody, "update stack")
 

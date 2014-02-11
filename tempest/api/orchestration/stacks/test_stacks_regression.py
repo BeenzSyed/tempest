@@ -125,7 +125,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             print "\nDeploying %s in %s" % (template, region)
             stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
-            if stack_identifier == '0':
+
+            if stack_identifier == 0:
                 self.fail("Stack build failed.")
             else:
                 stack_id = stack_identifier.split('/')[1]
