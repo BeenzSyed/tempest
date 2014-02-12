@@ -20,6 +20,7 @@ import requests
 import yaml
 import time
 import os
+from path import path
 
 LOG = logging.getLogger(__name__)
 
@@ -93,19 +94,20 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         env = "dev"
 
         #templates on github
-        template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
-        response_templates = requests.get(template_giturl, timeout=3)
-        if response_templates.status_code != requests.codes.ok:
-            print "This template does not exist: %s" % template_giturl
-            self.fail("The template does not exist.")
-        else:
-            yaml_template = yaml.safe_load(response_templates.content)
+       # template_giturl = "https://raw2.github
+       # .com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
+       # response_templates = requests.get(template_giturl, timeout=3)
+       # if response_templates.status_code != requests.codes.ok:
+         #   print "This template does not exist: %s" % template_giturl
+         #   self.fail("The template does not exist.")
+       # else:
+          #  yaml_template = yaml.safe_load(response_templates.content)
 
         #templates on my laptop
-        # template_giturl = "/Users/sabe6191/Documents/autoscale.template"
-        # print template_giturl
-        # template_content = path(template_giturl).bytes()
-        # yaml_template = yaml.safe_load(template_content)
+        template_giturl = "/users/sjain/Documents/autoscale.template"
+        print template_giturl
+        template_content = path(template_giturl).bytes()
+        yaml_template = yaml.safe_load(template_content)
 
         #pf is the variable that stays 0 if no failures occur, turns to 1 if a build fails
         pf = 0
@@ -272,3 +274,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     #         resp, body = self.delete_stack(stack_name, stack_id)
     #         if resp['status'] != '204':
     #             print "Delete did not work"
+
+    def test_verify_dns_entries(self):
+        #Create Stack with DNS
+        # Take DNS name and verify that for same tenant
+        url = "domains"
+        test = self.dns_client.list_domain_id(url)
+        print test
+        #Verify DNS exist
