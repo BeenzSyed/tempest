@@ -18,6 +18,7 @@ from tempest.test import attr
 import requests
 import yaml
 import os
+import pdb
 
 
 LOG = logging.getLogger(__name__)
@@ -86,6 +87,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print os.environ.get('TEMPEST_CONFIG')
 
         env = self.config.orchestration['env']
+        env = "prod"
         template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
         #print template_giturl
         response_templates = requests.get(template_giturl, timeout=3)
@@ -102,9 +104,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #https://github.com/beenzsyed/phphelloworld
 
         #print parameters
-        stack_id = "daf0074a-ed25-421e-bb71-9e44a7813308"
-        stack_name = "qe_wordpress-multiDev-tempest-675044195"
-        region = "Dev"
+        stack_id = "2d4fd9bc-5b9d-438e-b614-fe9b8e24da6f"
+        stack_name = "sabeenstack"
+        region = "IAD"
         rstype = "Rackspace::Cloud::Server"
         rsname = "devstack_server"
         event_id = '97bd2404-bb1a-45ff-afc0-c73299562426'
@@ -115,20 +117,26 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         # self._check_resp(usresp, usbody, "update stack")
         # flavors
 
-        #-------  Stacks  --------------
-        #create stack
-        #print "create stack"
-        ssresp, ssbody = self.orchestration_client.create_stack("isthisworking", region, yaml_template, parameters)
-        self._check_resp(ssresp, ssbody, "create stack")
+        # #-------  Stacks  --------------
+        # #create stack
+        # print "create stack"
+        # ssresp, ssbody = self.orchestration_client.create_stack("isthisworking", region, yaml_template, parameters)
+        # stack_identifier = self.create_stack("isthisworking", region, yaml_template, parameters)
+        # self._check_resp(ssresp, ssbody, "create stack")
+
+        # #stack show
+        # #print "show stack"
+        ssresp, ssbody = self.orchestration_client.show_stack(stack_name, stack_id, region)
+        self._check_resp(ssresp, ssbody, "show stack")
 
         #update stack
         #print "update stack"
-        parameters = {
-                'key_name': 'sabeen',
-                'flavors': '2GB Standard Instance'
-        }
-        ssresp, ssbody = self.orchestration_client.update_stack(stack_id, stack_name, region, yaml_template, parameters)
-        self._check_resp(ssresp, ssbody, "update stack")
+        # parameters = {
+        #         'key_name': 'sabeen',
+        #         'flavor': '1GB Standard Instance'
+        # }
+        # ssresp, ssbody = self.update_stack(stack_id, stack_name, region, yaml_template, parameters)
+        # self._check_resp(ssresp, ssbody, "update stack")
 
         #stack show
         #print "show stack"
@@ -140,22 +148,24 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         slresp, slbody = self.orchestration_client.list_stacks(region)
         self._check_resp(slresp, slbody, "stack list")
 
-        #delete stack
-        #print "delete stack"
-        ssresp, ssbody = self.orchestration_client.delete_stack(stack_name, stack_id, region)
-        self._check_resp(ssresp, ssbody, "delete stack")
-
+        # #delete stack
+        # #print "delete stack"
+        # ssresp, ssbody = self.orchestration_client.delete_stack(stack_name, stack_id, region)
+        # self._check_resp(ssresp, ssbody, "delete stack")
+        #
         #abandon stack
         #print "abandon stack"
-        asresp, asbody, = self.orchestration_client.abandon_stack(stack_name, stack_id, region)
+        #asresp, asbody, = self.orchestration_client.abandon_stack(stack_name, stack_id, region)
+        asresp, asbody, = self.abandon_stack(stack_id, stack_name, region)
         self._check_resp(asresp, asbody, "abandon stack")
 
-        #adopt stack
-        #print "adopt stack"
-        asresp, asbody, = self.orchestration_client.abandon_stack(stack_name, stack_id, region)
-        self._check_resp(asresp, asbody, "adopt stack")
-
-
+        #
+        # #adopt stack
+        # #print "adopt stack"
+        # asresp, asbody, = self.orchestration_client.abandon_stack(stack_name, stack_id, region)
+        # self._check_resp(asresp, asbody, "adopt stack")
+        #
+        #
         #-------  Stack events  ----------
         #event list
         #print "event list"
@@ -306,9 +316,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print "Deploy time sent to graphite"
 
     def _check_resp(self, resp, body, apiname):
-        if resp['status'] == '200':
+        if resp['status'] == '200' or resp['status'] == '202':
             print "%s worked! The response is: %s" % (apiname, resp['status'])
             #print "%s worked! The response is: %s The info you need is: %s" % (apiname, resp, body)
         else:
-            print "%s did not work. The response is: %s" % (apiname, resp['status'])
+            print "%s did not work. The response is: %s %s" % (apiname, resp['status'], body)
             #print "%s did not work. The response is: %s" % (apiname, resp)

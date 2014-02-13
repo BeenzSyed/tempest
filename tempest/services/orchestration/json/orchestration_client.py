@@ -50,7 +50,7 @@ class OrchestrationClient(rest_client.RestClient):
             return resp, body
 
     def create_stack(self, name, region, disable_rollback=True, parameters={},
-                     timeout_mins=60, template=None, template_url=None):
+                     timeout_mins=120, template=None, template_url=None):
         headers, body = self._prepare_update_create(
             name,
             disable_rollback,
@@ -77,8 +77,28 @@ class OrchestrationClient(rest_client.RestClient):
         resp, body = self.put(uri, region, headers=headers, body=body)
         return resp, body
 
+    def abandon_stack(self, stack_identifier, name, region, disable_rollback=True,
+                     parameters={}, timeout_mins=60, template=None,
+                     template_url=None):
+        headers, body = self._prepare_update_create(
+            name,
+            disable_rollback,
+            parameters,
+            timeout_mins,
+            template,
+            template_url)
+        uri = "stacks/%s/%s/abandon" % (name, stack_identifier)
+        resp, body = self.delete(uri, region, headers=headers)
+        return resp, body
+
+    # def abandon_stack(self, stack_name, stack_identifier, region):
+    #     """Returns the details of a single resource."""
+    #     url = "stacks/%s/%s/abandon" % (stack_name, stack_identifier)
+    #     resp, body = self.delete(url, region)
+    #     return resp, body
+
     def _prepare_update_create(self, name, disable_rollback=True,
-                               parameters={}, timeout_mins=60,
+                               parameters={}, timeout_mins=120,
                                template=None, template_url=None):
         post_body = {
             "stack_name": name,
@@ -160,12 +180,6 @@ class OrchestrationClient(rest_client.RestClient):
             return resp, body['resource']
         else:
             return resp, body
-
-    def abandon_stack(self, stack_name, stack_identifier, region):
-        """Returns the details of a single resource."""
-        url = "stacks/%s/%s/abandon" % (stack_name, stack_identifier)
-        resp, body = self.delete(url, region)
-        return resp, body
 
     def delete_stack(self, stack_name, stack_id, region):
         """Deletes the specified Stack."""
@@ -297,7 +311,6 @@ class OrchestrationClient(rest_client.RestClient):
         if resp == '200':
             body = json.loads(body)
         return resp, body
-
 
     def resource_template(self, type_name, region):
         """Returns the template for the stack."""

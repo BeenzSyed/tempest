@@ -99,6 +99,28 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
             return 0
 
     @classmethod
+    def update_stack(cls, stack_identifier, stack_name, region, template_data, parameters={}):
+        # parameters = {
+        # #     'InstanceType': self.orchestration_cfg.instance_type,
+        # #     'ImageId': self.orchestration_cfg.image_ref,
+        #     'key_name': "sabeen"
+        # }
+        resp, body = cls.client.update_stack(
+            stack_identifier,
+            stack_name,
+            region,
+            #template_url='https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template',
+            template=template_data,
+            parameters=parameters)
+        #print "resp is %s" % resp
+        return resp, body
+
+    @classmethod
+    def abandon_stack(cls, stackid, stackname, region):
+        resp, body = cls.orchestration_client.abandon_stack(stackid, stackname, region)
+        return resp, body
+
+    @classmethod
     def get_stack(cls, stackid, region):
         """Returns the details of a single stack."""
         resp, body = cls.client.get_stack(stackid, region)
