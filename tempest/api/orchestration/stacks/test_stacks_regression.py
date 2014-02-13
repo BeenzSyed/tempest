@@ -102,10 +102,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             yaml_template = yaml.safe_load(response_templates.content)
 
         #templates on my laptop
-        # template_giturl = "/Users/sabe6191/Documents/autoscale.template"
-        # print template_giturl
-        # template_content = path(template_giturl).bytes()
-        # yaml_template = yaml.safe_load(template_content)
+        #template_giturl = "/users/sjain/Documents/autoscale.template"
+        #print template_giturl
+        #template_content = path(template_giturl).bytes()
+        #yaml_template = yaml.safe_load(template_content)
 
         #pf is the variable that stays 0 if no failures occur, turns to 1 if a build fails
         pf = 0
