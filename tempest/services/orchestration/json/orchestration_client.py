@@ -324,8 +324,8 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the parameters for the stack."""
         url = 'stacks/%s/%s' % (stack_name, stack_identifier)
         resp, body = self.get(url, region)
-        if resp == '200':
-            body = json.loads(body)
+        if resp['status'] == '200':
+           body = json.loads(body)
         return resp, body
 
     def _validate_template(self, region, post_body):
@@ -351,6 +351,11 @@ class OrchestrationClient(rest_client.RestClient):
             'parameters': parameters,
         }
         return self._validate_template(post_body)
+
+    def validate_autoscale_response(self, url ,region):
+        """Returns the response for Autoscale url for the stack."""
+        resp, body = self.post(url,region ,body=None,headers=self.headers)
+        return resp , body
 
 def datehandler(obj):
     if isinstance(obj, datetime.date):

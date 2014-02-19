@@ -86,7 +86,7 @@ class AutoScalingTest(manager.OrchestrationScenarioTest):
         # inside that nested stack
         resource = self.client.resources.get(sid, 'SmokeServerGroup')
         nested_stack_id = resource.physical_resource_id
-
+        self.client
         def server_count():
             # the number of servers is the number of resources
             # in the nested stack
