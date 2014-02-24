@@ -20,7 +20,7 @@ import requests
 import yaml
 import time
 import os
-from path import path
+#from path import path
 import datetime
 
 LOG = logging.getLogger(__name__)
