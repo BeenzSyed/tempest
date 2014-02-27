@@ -398,6 +398,10 @@ class RestClient(object):
                 raise exceptions.InvalidHttpSuccessCode(details)
 
     def post(self, url, region, body, headers):
+        # print url
+        # print region
+        # print body
+        # print headers
         return self.request('POST', url, region, headers, body)
 
     def get(self, url, region, headers=None):

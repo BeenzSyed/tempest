@@ -43,7 +43,7 @@ class OrchestrationClient(rest_client.RestClient):
             uri += '?%s' % urllib.urlencode(params)
 
         resp, body = self.get(uri, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
             return resp, body['stacks']
         else:
@@ -91,6 +91,29 @@ class OrchestrationClient(rest_client.RestClient):
         resp, body = self.delete(uri, region, headers=headers)
         return resp, body
 
+    def adopt_stack(self, name, region, adopt_stack_data,
+                    disable_rollback=True, parameters={},
+                     timeout_mins=120, template=None, template_url=None):
+        # print "name is %s" % name
+        # print "region is %s" % region
+        # print "adopt stack data is %s" % adopt_stack_data
+        # print "disable rollback is %s" % disable_rollback
+        # print "parameters are %s" % parameters
+        # print "template %s" % template
+        # print "template url %s" % template_url
+        disable_rollback = True
+        headers, body = self._prepare_adopt(
+            name,
+            adopt_stack_data,
+            disable_rollback,
+            parameters,
+            timeout_mins,
+            template,
+            template_url)
+        uri = 'stacks'
+        resp, body = self.post(uri, region, headers=headers, body=body)
+        return resp, body
+
     # def abandon_stack(self, stack_name, stack_identifier, region):
     #     """Returns the details of a single resource."""
     #     url = "stacks/%s/%s/abandon" % (stack_name, stack_identifier)
@@ -123,6 +146,40 @@ class OrchestrationClient(rest_client.RestClient):
         headers['X-Auth-User'] = self.user
         return headers, body
 
+    def _prepare_adopt(self, name, adopt_stack_data, disable_rollback=True,
+                               parameters={}, timeout_mins=120,
+                               template=None, template_url=None):
+        # print "stack name is %s" % name
+        # print "adopt stack data is %s" % adopt_stack_data
+        # print "rollback is %s" % disable_rollback
+        # print "parameters are %s" % parameters
+        # print "timeout is %s" % timeout_mins
+        # print template
+        # print template_url
+        post_body = {
+            "stack_name": name,
+            "adopt_stack_data": adopt_stack_data,
+            "disable_rollback": disable_rollback,
+            "parameters": parameters,
+            "timeout_mins": timeout_mins
+            #"template": "HeatTemplateFormatVersion: '2013-05-23'\n"
+        }
+        if template:
+            post_body['template'] = template
+        if template_url:
+            post_body['template_url'] = template_url
+        body = json.dumps(post_body, default=datehandler)
+        # uri = 'stacks'
+        # resp, body = self.post(uri, headers=self.headers, body=body)
+        # return resp, body
+
+        # Password must be provided on stack create so that heat
+        # can perform future operations on behalf of the user
+        headers = dict(self.headers)
+        headers['X-Auth-Key'] = self.password
+        headers['X-Auth-User'] = self.user
+        return headers, body
+
     def get_stack(self, stack_identifier, region):
         """Returns the details of a single stack."""
         url = "stacks/%s" % stack_identifier
@@ -134,7 +191,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the details of a single stack."""
         url = "stacks/%s" % stack_name
         resp, body = self.get(url)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
             return resp, body['stack']
         else:
@@ -165,7 +222,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the details of a single resource."""
         url = "stacks/%s/%s/resources" % (stack_name, stack_identifier)
         resp, body = self.get(url, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
             return resp, body['resources']
         else:
@@ -175,7 +232,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the details of a single resource."""
         url = "stacks/%s/%s/resources/%s" % (stack_name, stack_identifier, resource_name)
         resp, body = self.get(url, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
             return resp, body['resource']
         else:
@@ -248,7 +305,7 @@ class OrchestrationClient(rest_client.RestClient):
         url = ('stacks/{stack_name}/{stack_identifier}/resources/{resource_name}'
                '/metadata'.format(**locals()))
         resp, body = self.get(url, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
             return resp, body['metadata']
         else:
@@ -258,7 +315,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns list of all events for a stack."""
         url = 'stacks/{stack_name}/{stack_identifier}/events'.format(**locals())
         resp, body = self.get(url, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
             return resp, body['events']
         else:
@@ -269,7 +326,7 @@ class OrchestrationClient(rest_client.RestClient):
         url = ('stacks/{stack_identifier}/resources/{resource_name}'
                '/events'.format(**locals()))
         resp, body = self.get(url)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
             return resp, body['events']
         else:
@@ -282,7 +339,7 @@ class OrchestrationClient(rest_client.RestClient):
         #url = ('stacks/{stack_name}/{stack_identifier}/resources/{resource_name}/events'.format(**locals()))
         #print "url for show event %s" % url
         resp, body = self.get(url, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
             return resp, body['event']
         else:
@@ -292,7 +349,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the template for the stack."""
         url = ('stacks/{stack_name}/{stack_identifier}/template'.format(**locals()))
         resp, body = self.get(url, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
         return resp, body
 
@@ -300,7 +357,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Lists the supported template resource types."""
         url = ('resource_types'.format(**locals()))
         resp, body = self.get(url, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
         return resp, body
 
@@ -308,7 +365,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Gets the interface schema for a specified resource type. """
         url = ('resource_types/{type_name}'.format(**locals()))
         resp, body = self.get(url, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
         return resp, body
 
@@ -316,7 +373,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the template for the stack."""
         url = ('resource_types/{type_name}/template'.format(**locals()))
         resp, body = self.get(url, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
         return resp, body
 
@@ -324,7 +381,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the parameters for the stack."""
         url = 'stacks/%s/%s' % (stack_name, stack_identifier)
         resp, body = self.get(url, region)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
         return resp, body
 
@@ -332,7 +389,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the validation request result."""
         post_body = json.dumps(post_body, default=datehandler)
         resp, body = self.post('validate', region, post_body, self.headers)
-        if resp == '200':
+        if resp['status'] == '200':
             body = json.loads(body)
         return resp, body
 

@@ -93,10 +93,36 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
             stack_id = resp['location'].split('/')[-1]
             stack_identifier = '%s/%s' % (stack_name, stack_id)
             cls.stacks.append(stack_identifier)
-            return stack_identifier
+            #print "create stack worked! The response is: %s" % resp['status']
+            return resp, body, stack_identifier
         else:
-            print "There was an error with stack create: %s, %s" % (resp, body)
-            return 0
+            #print "create stack did not work. The response is: %s %s" % (resp['status'], body)
+            return resp, body, 0
+
+    @classmethod
+    def adopt_stack(cls, stack_name, region, stack_adopt_data, template_data, parameters={}):
+        # parameters = {
+        # #     'InstanceType': self.orchestration_cfg.instance_type,
+        # #     'ImageId': self.orchestration_cfg.image_ref,
+        #     'key_name': "sabeen"
+        # }
+        resp, body = cls.client.adopt_stack(
+            stack_name,
+            region,
+            stack_adopt_data,
+            #template_url='https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template',
+            template=template_data,
+            parameters=parameters)
+        #print "resp is %s" % resp
+        if (resp['status'] == '200' or resp['status'] == '201'):
+            stack_id = resp['location'].split('/')[-1]
+            stack_identifier = '%s/%s' % (stack_name, stack_id)
+            cls.stacks.append(stack_identifier)
+            #print "adopt stack worked! The response is: %s" % resp['status']
+            return resp, body, stack_identifier
+        else:
+            #print "adopt stack did not work. The response is: %s %s" % (resp['status'], body)
+            return resp, body, 0
 
     @classmethod
     def update_stack(cls, stack_identifier, stack_name, region, template_data, parameters={}):

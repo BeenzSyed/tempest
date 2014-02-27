@@ -85,15 +85,21 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_wordpress_multi_dns_realDeployment(self):
         self._test_stack("wordpress-multi-dns")
 
+    def test_ubuntu(self):
+        self._test_stack("hello-world", "ubuntu")
+
+    def test_centos(self):
+        self._test_stack("hello-world", "centos")
+
     @attr(type='smoke')
-    def _test_stack(self, template):
+    def _test_stack(self, template, image=None):
         print os.environ.get('TEMPEST_CONFIG')
 
         env = self.config.orchestration['env']
         env = "dev"
 
         #templates on github
-        template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
+        template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
         response_templates = requests.get(template_giturl, timeout=3)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
@@ -122,9 +128,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 }
             if 'git_url' in yaml_template['parameters']:
                 parameters['git_url'] = "https://github.com/timductive/phphelloworld"
+            if 'image_id' in yaml_template['parameters'] and image=="ubuntu":
+                parameters['image_id'] = "80fbcb55-b206-41f9-9bc2-2dd7aac6c061"
+            if 'image_id' in yaml_template['parameters'] and image=="centos":
+                parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
 
             print "\nDeploying %s in %s" % (template, region)
-            stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
+            csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
 
             if stack_identifier == 0:
                 self.fail("Stack build failed.")
