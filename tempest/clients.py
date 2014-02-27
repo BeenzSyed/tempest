@@ -634,9 +634,10 @@ class DnsManager(object):
         self.password = password or self.config.identity.password
         self.tenant_name = tenant_name or self.config.identity.tenant_name
         self.auth_url = self.config.identity.uri
+        self.token_url = self.config.identity.uri_token
         self.dns = self.config.dns.url
         client_args = (self.config, self.username, self.password,
-                       self.auth_url, self.tenant_name)
+                       self.auth_url,self.token_url, self.tenant_name)
         self.dns_client = DnsClient(*client_args)
 
 class DatabaseManager(object):

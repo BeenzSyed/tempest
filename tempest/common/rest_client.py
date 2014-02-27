@@ -511,8 +511,16 @@ class RestClient(object):
                 #pdb.set_trace()
                 #print "region passed in: %s" % region
                 #print "region in base url: %s" % ep['region']
-                if region == ep['region']:
-                    self.base_url = ep['publicURL']
+                ############
+               if ep.get('region') and region == ep['region']:
+                     self.base_url = ep['publicURL']
+                     # mgmt_url = _ep[self.endpoint_url]
+                      #print mgmt_url
+               else :
+                    self.base_url = ep[self.endpoint_url]
+                ##############
+                # if region == ep['region']:
+                #     self.base_url = ep['publicURL']
                     #print "base url is: %s" % self.base_url
             if self.base_url is None:
                     raise exceptions.EndpointNotFound()

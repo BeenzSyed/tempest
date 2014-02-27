@@ -409,6 +409,11 @@ class OrchestrationClient(rest_client.RestClient):
         }
         return self._validate_template(post_body)
 
+    def validate_autoscale_response(self, url ,region):
+        """Returns the response for Autoscale url for the stack."""
+        resp, body = self.post(url,region ,body=None,headers=self.headers)
+        return resp , body
+
 def datehandler(obj):
     if isinstance(obj, datetime.date):
         return str(obj)
