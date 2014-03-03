@@ -21,6 +21,7 @@ import requests
 import yaml
 import time
 import os
+import pdb
 
 
 LOG = logging.getLogger(__name__)
@@ -98,8 +99,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print os.environ.get('TEMPEST_CONFIG')
 
         env = self.config.orchestration['env']
-        env = "dev"
-
+        #env = "dev"
+        #pdb.set_trace()
         #templates on github
         template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
         response_templates = requests.get(template_giturl, timeout=3)
@@ -148,6 +149,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
 
             if stack_identifier == 0:
+                print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
                 self.fail("Stack build failed.")
             else:
                 stack_id = stack_identifier.split('/')[1]

@@ -337,7 +337,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         apiname = "stack list"
         slresp, stacklist = self.orchestration_client.list_stacks(region)
         self._check_resp(slresp, stacklist, apiname)
-        #self._test_RBAC(usertype, apiname, slresp)
 
         #create stack
         apiname = "create stack"
@@ -354,13 +353,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         updateStackName, updateStackId = self._get_stacks("UPDATE_", stacklist)
         ssresp, ssbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
         self._check_resp(ssresp, ssbody, apiname)
-        #self._test_RBAC(usertype, apiname, ssresp)
 
         #stack show
         apiname = "show stack"
         ssresp, ssbody = self.orchestration_client.show_stack(updateStackName, updateStackId, region)
         self._check_resp(ssresp, ssbody, apiname)
-        #self._test_RBAC(usertype, apiname, ssresp)
 
         #delete stack
         apiname = "delete stack"
@@ -483,22 +480,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         for stackname in body:
             return stackname['id']
 
-    def _test_RBAC(self, user, apiname, resp):
-        if user == 'heat.admin':
-            if apiname == 'create stack' or apiname == '':
-                print ""
-        elif user == 'heat.creator':
-            if apiname == 'stack list' or apiname == 'stack create':
-                self.assertEquals('200', resp, "heat.creator has access")
-            elif apiname == 'delete stack' or apiname == 'stack abandon':
-                self.assertEquals('405', resp, "heat.creator does not have access")
-        elif user == 'heat.observer':
-            if apiname == 'stack list' or apiname == 'resource list':
-                self.assertEquals('200', resp, "heat.observer has access")
-            elif apiname == 'delete stack' or apiname == 'stack abandon':
-                self.assertEquals('405', resp, "heat.observer does not have access")
-        else:
-            print "%s does not exist." % user
 
 
 

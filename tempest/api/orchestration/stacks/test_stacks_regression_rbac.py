@@ -327,119 +327,107 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         rstype = "Rackspace::Cloud::Server"
         rsname = "devstack_server"
 
-        print "User is: %s" % self.config.identity['username']
+        usertype = self.config.identity['username']
+        print "User is: %s" % usertype
 
         # #-------  Stacks  --------------
         #stack-list
-        #print "stack list"
+        apiname = "stack list"
+        #pdb.set_trace()
         slresp, stacklist = self.orchestration_client.list_stacks(region)
-        self._check_resp(slresp, stacklist, "stack list")
+        self._test_RBAC(usertype, apiname, slresp)
 
-        # #create stack
-        # print "create stack"
+        #create stack
+        apiname = "create stack"
         create_stack_name = "CREATE_%s" %datetime.datetime.now().microsecond
-        stack_identifier = self.create_stack(create_stack_name, region, yaml_template, parameters)
-        #print stack_identifier
+        csresp, csbody, stack_identifier = self.create_stack(create_stack_name, region, yaml_template, parameters)
+        self._test_RBAC(usertype, apiname, csresp)
 
         #update stack
-        #print "update stack"
+        apiname = "update stack"
         parameters = {
                 'key_name': 'sabeen',
                 'flavor': '1GB Standard Instance'
         }
         updateStackName, updateStackId = self._get_stacks("UPDATE_", stacklist)
-        ssresp, ssbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
-        self._check_resp(ssresp, ssbody, "update stack")
+        usresp, usbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
+        self._test_RBAC(usertype, apiname, usresp)
 
         #stack show
-        #print "show stack"
+        apiname = "show stack"
         ssresp, ssbody = self.orchestration_client.show_stack(updateStackName, updateStackId, region)
-        self._check_resp(ssresp, ssbody, "show stack")
+        self._test_RBAC(usertype, apiname, ssresp)
 
         #delete stack
-        #print "delete stack"
+        apiname = "delete stack"
         deleteStackName, deleteStackId = self._get_stacks("CREATE_", stacklist)
-        ssresp, ssbody = self.orchestration_client.delete_stack(deleteStackName, deleteStackId, region)
-        self._check_resp(ssresp, ssbody, "delete stack")
-        #
+        dsresp, dsbody = self.orchestration_client.delete_stack(deleteStackName, deleteStackId, region)
+        self._test_RBAC(usertype, apiname, dsresp)
+
         #abandon stack
-        #print "abandon stack"
+        apiname = "abandon stack"
         abandonStackName, abandonStackId = self._get_stacks("ADOPT_", stacklist)
         asresp, asbody, = self.abandon_stack(abandonStackId, abandonStackName, region)
-        self._check_resp(asresp, asbody, "abandon stack")
+        self._test_RBAC(usertype, apiname, asresp)
 
         adopt_stack_name = "ADOPT_%s" %datetime.datetime.now().microsecond
-        #print adopt_stack_name
-        stack_identifier = self.adopt_stack(adopt_stack_name, region, asbody, yaml_template, parameters)
-        #print stack_identifier
+        apiname = "adopt stack"
+        asresp, asbody, stack_identifier = self.adopt_stack(adopt_stack_name, region, asbody, yaml_template, parameters)
+        self._test_RBAC(usertype, apiname, asresp)
 
         #-------  Stack events  ----------
         #event list
-        #print "event list"
+        apiname = "list event"
         evresp, evbody = self.orchestration_client.list_events(updateStackName, updateStackId, region)
-        #print evbody
-        self._check_resp(evresp, evbody, "event list")
+        self._test_RBAC(usertype, apiname, evresp)
 
-        # #event show
-        # #print "event show"
+        #event show
+        apiname = "show event"
         event_id = self._get_event_id(evbody)
-        #print event_id
         esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rsname, event_id, region)
-        self._check_resp(esresp, esbody, "event show")
+        self._test_RBAC(usertype, apiname, esresp)
 
         #-------  Templates  -------------
         #template show
-        #print "template show"
+        apiname = "template show"
         tsresp, tsbody = self.orchestration_client.show_template(updateStackName, updateStackId, region)
-        self._check_resp(tsresp, tsbody, "template show")
+        self._test_RBAC(usertype, apiname, tsresp)
 
         #template validate
-        #print "template validate"
+        apiname = "template validate"
         tvresp, tvbody = self.orchestration_client.validate_template(region, yaml_template, parameters)
-        self._check_resp(tvresp, tvbody, "template validate")
+        self._test_RBAC(usertype, apiname, tvresp)
 
         #--------  Stack resources  --------
         #Lists resources in a stack.
-        #print "list resources"
+        apiname = "list resources"
         lrresp, lrbody = self.orchestration_client.list_resources(updateStackName, updateStackId, region)
-        self._check_resp(lrresp, lrbody, "list resources")
+        self._test_RBAC(usertype, apiname, lrresp)
 
         #Gets metadata for a specified resource.
-        #print "resource metadata"
+        apiname = "resource metadata"
         rmresp, rmbody = self.orchestration_client.show_resource_metadata(updateStackName, updateStackId, rsname, region)
-        self._check_resp(rmresp, rmbody, "resource metadata")
+        self._test_RBAC(usertype, apiname, rmresp)
 
         #Gets data for a specified resource.
-        #print "get resources"
+        apiname = "get resources"
         rsresp, rsbody = self.orchestration_client.get_resource(updateStackName, updateStackId, rsname, region)
-        self._check_resp(rsresp, rsbody, "get resources")
+        self._test_RBAC(usertype, apiname, rsresp)
 
         #Gets a template representation for a specified resource type.
-        #print "resource template"
+        apiname = "resource template"
         rtresp, rtbody = self.orchestration_client.resource_template(rstype, region)
-        self._check_resp(rtresp, rtbody, "resource template")
+        self._test_RBAC(usertype, apiname, rtresp)
 
         #Lists the supported template resource types.
+        apiname = "template resource types"
         rtresp, rtbody = self.orchestration_client.template_resource(region)
-        self._check_resp(rtresp, rtbody, "template resource types")
+        self._test_RBAC(usertype, apiname, rtresp)
 
         #Gets the interface schema for a specified resource type.
+        apiname = "schema for resource type"
         rtresp, rtbody = self.orchestration_client.resource_schema(rstype, region)
-        self._check_resp(rtresp, rtbody, "schema for resource type")
-
-
-        # #suspend stack, wait 1 min
-        # print "suspend stack"
-        # ssresp, ssbody = self.orchestration_client.suspend_stack(stack_name, region)
-        # self._check_resp(ssresp, ssbody, "suspend stack")
-        #
-        # time.sleep(60)
-        #
-        # #resume stack
-        # print "resume stack"
-        # rsresp, rsbody = self.client.resume_stack(stack_id, region)
-        # self._check_resp(rsresp, rsbody, "resume stack")
-
+        self._test_RBAC(usertype, apiname, rtresp)
 
     def _send_deploy_time_graphite(self, env, region, template, deploy_time, buildfail):
         cmd = 'echo "heat.' + env + '.build-tests.' + region + '.' + template \
@@ -469,3 +457,39 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def _get_event_id(self, body):
         for stackname in body:
             return stackname['id']
+
+    def _test_RBAC(self, user, apiname, resp):
+        # print user
+        # print apiname
+        # print resp
+        print "Checking %s. The response is: %s" % (apiname, resp['status'])
+        if user == 'heat.admin':
+            if apiname == 'stack list' or apiname == 'create stack' or apiname == 'update stack' or apiname == 'show stack' or apiname == 'delete stack' \
+                or apiname == 'abandon stack' or apiname == 'adopt stack' or apiname == 'list event' or apiname == 'show event' or apiname == 'template show'\
+                or apiname == 'template validate' or apiname == 'list resources' or apiname == 'resource metadata' or apiname == 'get resources' \
+                or apiname == 'resource template' or apiname == 'template resource types' or apiname == 'schema for resource type':
+                self.assertTrue(re.search('20*', resp['status']))
+            else:
+                print "This is calling an api that does not exist in the test."
+        elif user == 'heat.creator':
+            if apiname == 'stack list' or apiname == 'stack create' or apiname == 'update stack' or apiname == 'show stack' \
+                or apiname == 'adopt stack' or apiname == 'list event' or apiname == 'show event' or apiname == 'template show'\
+                or apiname == 'template validate' or apiname == 'list resources' or apiname == 'resource metadata' or apiname == 'get resources' \
+                or apiname == 'resource template' or apiname == 'template resource types' or apiname == 'schema for resource type':
+                self.assertTrue(re.search('20*', resp['status']))
+            elif apiname == 'delete stack' or apiname == 'abandon stack':
+                self.assertTrue(re.search('40*', resp['status']))
+                #self.assertEquals('405', resp['status'], "heat.creator does not have access")
+        elif user == 'heat.observer':
+            if apiname == 'stack list'  or apiname == 'show stack' \
+                or apiname == 'list event' or apiname == 'show event' or apiname == 'template show'\
+                or apiname == 'list resources' or apiname == 'resource metadata' or apiname == 'get resources' \
+                or apiname == 'resource template' or apiname == 'template resource types' or apiname == 'schema for resource type':
+                self.assertTrue(re.search('20*', resp['status']))
+            elif apiname == 'stack create' or apiname == 'delete stack' or apiname == 'abandon stack' or apiname == 'update stack' or apiname == 'adopt stack'\
+                or apiname == 'template validate' :
+                self.assertTrue(re.search('40*', resp['status']))
+                #self.assertEquals('405', resp['status'], "heat.observer does not have access")
+        else:
+            print "%s does not exist." % user
+
