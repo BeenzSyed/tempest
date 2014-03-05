@@ -176,45 +176,71 @@ class RestClient(object):
 
     def keystone_auth_urls(self, user, password, auth_url, service, tenant_name,
                       region):
-        #print "region in keystone_auth is: %s" % region
-        # Normalize URI to ensure /tokens is in it.
-        if 'tokens' not in auth_url:
-            auth_url = auth_url.rstrip('/') + '/tokens'
-
-        creds = {
-            'auth': {
-                'passwordCredentials': {
-                    'username': user,
-                    'password': password,
-                },
-                'tenantName': tenant_name,
+        #urls that need to go to the catalog to get endpoints
+        if re.search('http://auth.staging.rs-heat.com*', auth_url) or re.search('https://identity.api.rackspacecloud.com*', auth_url):
+            if 'tokens' not in auth_url:
+                auth_url = auth_url.rstrip('/') + '/tokens'
+            creds = {
+                'auth': {
+                    'passwordCredentials': {
+                        'username': user,
+                        'password': password,
+                    },
+                    'tenantName': tenant_name,
+                }
             }
-        }
+            headers = {'Content-Type': 'application/json'}
+            body = json.dumps(creds)
+            #self._log_request('POST', auth_url, headers, body)
+            resp, resp_body = self.http_obj.request(auth_url, 'POST',
+                                                    headers=headers, body=body)
+            #self._log_response(resp, resp_body)
+            if resp.status == 200:
+                try:
+                    auth_data = json.loads(resp_body)['access']
+                except Exception as e:
+                    print("Failed to obtain token for user: %s" % e)
+                    raise
 
-        headers = {'Content-Type': 'application/json'}
-        body = json.dumps(creds)
-        #self._log_request('POST', auth_url, headers, body)
-        resp, resp_body = self.http_obj.request(auth_url, 'POST',
-                                                headers=headers, body=body)
-        #self._log_response(resp, resp_body)
-        if resp.status == 200:
-            try:
-                auth_data = json.loads(resp_body)['access']
-            except Exception as e:
-                print("Failed to obtain token for user: %s" % e)
-                raise
-
-            mgmt_url = None
-            for ep in auth_data['serviceCatalog']:
-                if ep["type"] == service:
-                    mgmt_url = ep['endpoints']
-            if mgmt_url is None:
-                raise exceptions.EndpointNotFound(service)
+                mgmt_url = None
+                for ep in auth_data['serviceCatalog']:
+                    if ep["type"] == service:
+                        mgmt_url = ep['endpoints']
+                if mgmt_url is None:
+                    raise exceptions.EndpointNotFound(service)
+                return mgmt_url
+            elif resp.status == 401:
+                raise exceptions.AuthenticationFailure(user=user,
+                                                       password=password,tenant=tenant_name)
+        #inactive node endpoints
+        elif re.search('https://inactive*', auth_url):
+            mgmt_url = []
+            url = auth_url.split(",")
+            num_elements = len(url)
+            for num in range(0, num_elements):
+                #get region from the url
+                reg = url[num].split(".")
+                mgmt_url.append({'region': reg[1], 'publicURL': url[num] + "/" + tenant_name})
             return mgmt_url
-        elif resp.status == 401:
-            raise exceptions.AuthenticationFailure(user=user,
-                                                   password=password,
-                                                   tenant=tenant_name)
+
+        #prod endpoints to run without hitting the catalog
+        elif re.search('https://[a-z]{3}.orchestration.api.rackspacecloud.com*', auth_url):
+            mgmt_url = []
+            url = auth_url.split(",")
+            num_elements = len(url)
+            for num in range(0, num_elements):
+                #get region from the url
+                reg = url[num].split(".")
+                mgmt_url.append({'region': reg[0][-3:], 'publicURL': url[num] + "/" + tenant_name})
+            return mgmt_url
+
+        #local endpoints
+        else:
+            url = auth_url.split(",")
+            num_elements = len(url)
+            for num in range(0, num_elements):
+                mgmt_url = [{'region': region, 'publicURL': url[num]}]
+            return mgmt_url
 
     def clear_auth(self):
         """
@@ -355,7 +381,6 @@ class RestClient(object):
                     for ep in endpoints:
                         if ep['region'] != region:
                             continue
-
                         mgmt_url = ep['url']
                         # FIXME(blk-u): this isn't handling endpoint type
                         # (public, internal, admin).
@@ -398,13 +423,16 @@ class RestClient(object):
                 raise exceptions.InvalidHttpSuccessCode(details)
 
     def post(self, url, region, body, headers):
-        # print url
-        # print region
-        # print body
-        # print headers
+        # print "url is %s" % url
+        # print "region is %s" % region
+        # print "body is %s " % body
+        # print "headers are %s" % headers
         return self.request('POST', url, region, headers, body)
 
     def get(self, url, region, headers=None):
+        # print url
+        # print region
+        # print headers
         return self.request('GET', url, region, headers)
 
     def delete(self, url, region, headers=None):
@@ -502,41 +530,19 @@ class RestClient(object):
     def _request(self, method, url, region,
                  headers=None, body=None):
         """A simple HTTP request interface."""
-        # regions = self.config.orchestration.region.split(",")
-        # #regions = ['DFW', 'IAD', 'ORD']
-        # for reg in regions:
-        #     print reg
         if region is not None:
             for ep in self.all_urls:
-                #pdb.set_trace()
-                #print "region passed in: %s" % region
-                #print "region in base url: %s" % ep['region']
-                ############
-               if ep.get('region') and region == ep['region']:
-                     self.base_url = ep['publicURL']
-                     # mgmt_url = _ep[self.endpoint_url]
-                      #print mgmt_url
-               else :
-                    self.base_url = ep[self.endpoint_url]
-                ##############
-                # if region == ep['region']:
-                #     self.base_url = ep['publicURL']
-                    #print "base url is: %s" % self.base_url
+                if region.lower() == ep['region'].lower():
+                    self.base_url = ep['publicURL']
+                #else:
+                #    self.base_url = ep[self.endpoint_url]
             if self.base_url is None:
                     raise exceptions.EndpointNotFound()
-            # for key in ep.keys():
-            #     print "key: %s , value: %s" % (key, ep[key])
-        #req_url = "%s/%s" % (self.base_url, url)
-        #print "request url is: %s" % req_url
-        #uncomment below to see requests
-        #self._log_request(method, req_url, headers, body)
         req_url = urlparse(url)
         if req_url.scheme in ['http', 'https']:
             req_url = url
         else:
             req_url = "%s/%s" % (self.base_url, url)
-
-        #print req_url
         resp, resp_body = self.http_obj.request(req_url, method,
                                                 headers=headers, body=body)
         #uncomment below to see responses
@@ -547,23 +553,11 @@ class RestClient(object):
     def request(self, method, url, region,
                 headers=None, body=None):
         retry = 0
-        #print self.token
         if (self.token is None) or (self.base_url is None):
             self._set_auth(region)
-        #print "base url is: %s" % self.base_url
-        #print "url is: %s" % url
-        #print "token is %s" % self.token
-        #pdb.set_trace()
         if headers is None:
             headers = {}
         headers['X-Auth-Token'] = self.token
-        # headers['X-Auth-Token'] = 'f28d70ec6f0c41fa866d58c45b40f61c'
-        # headers['X-Auth-User'] = '836933'
-        # headers['X-Auth-Key'] = 'f28d70ec6f0c41fa866d58c45b40f61c'
-        # print method
-        # print url
-        # print headers
-        # print body
         resp, resp_body = self._request(method, url, region,
                                         headers=headers, body=body)
 

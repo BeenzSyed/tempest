@@ -99,8 +99,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print os.environ.get('TEMPEST_CONFIG')
 
         env = self.config.orchestration['env']
-        #env = "dev"
-        #pdb.set_trace()
+
         #templates on github
         template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
         response_templates = requests.get(template_giturl, timeout=3)
@@ -110,12 +109,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         else:
             yaml_template = yaml.safe_load(response_templates.content)
 
-
-        #0 if no failures occur, turns to 1 if a build fails
-        pf = 0
-
         regionsConfig = self.config.orchestration['regions']
-        #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
         regions = regionsConfig.split(",")
         for region in regions:
             stack_name = rand_name("qe_"+template+region)
@@ -148,113 +142,23 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             print "\nDeploying %s in %s" % (template, region)
             #pdb.set_trace()
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
+            print csresp
+            print csbody
+            print stack_identifier
 
             if stack_identifier == 0:
                 print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
                 self.fail("Stack build failed.")
             else:
                 stack_id = stack_identifier.split('/')[1]
-                count = 0
-                resp, body = self.get_stack(stack_id, region)
-                if resp['status'] != '200':
-                        print "The response is: %s" % resp
-                        self.fail(resp)
-                print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
 
-                while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
-                    resp, body = self.get_stack(stack_id, region)
-                    if resp['status'] != '200':
-                        print "The response is: %s" % resp
-                        self.fail(resp)
-                    print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
-                    time.sleep(60)
-                    count += 1
-                    if body['stack_status'] == 'CREATE_FAILED':
-                        print "Stack create failed. Here's why: %s" % body['stack_status_reason']
-                        self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                        if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
-                            print "Deleting the stack now"
-                            dresp, dbody = self.delete_stack(stack_name, stack_id, region)
-                            if dresp['status'] != '204':
-                                print "Delete did not work"
-                        pf += 1
-                    elif count == 90:
-                        print "Stack create has taken over 90 minutes. Force failing now."
-                        self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                        if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
-                            print "Stack create took too long. Deleting stack now."
-                            dresp, dbody = self.delete_stack(stack_name, stack_id, region)
-                            if dresp['status'] != '204':
-                                print "Delete did not work"
-                        pf += 1
-
-                if body['stack_status'] == 'CREATE_COMPLETE':
-                    print "The deployment took %s minutes" % count
-                    self._send_deploy_time_graphite(env, region, template, count, "buildtime")
-
-                    #check DNS resource
-                    if 'dns' in yaml_template['resources']:
-                        domain_url = "domains"
-                        self._verify_dns_entries(stack_name , stack_id,region,
-                                                 email_address,
-                            domain_record_type,domain_name)
-
-                        result = self._verify_name_from_dns_api(domain_url,region,
-                                  domain_name)
-                        if result == True :
-                            print "Domanin name  %s exist ",domain_name
-                        else :
-                             print "Domanin name  %s does not exist ",\
-                                 domain_name
-
-                    #delete stack
-                    print "Deleting stack now"
-                    resp, body = self.delete_stack(stack_name, stack_id, region)
-                    if resp['status'] != '204':
-                        print "Delete did not work"
-
+                #delete stack
+                print "Deleting stack now"
+                resp, body = self.delete_stack(stack_name, stack_id, region)
+                print resp
+                print body
+                if resp['status'] != '204':
+                    print "Delete did not work"
+                    self.fail("Delete did not work: %s %s" %(resp, body))
                 else:
-                    print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
-                    self.fail("Stack build failed.")
-
-                if pf > 0:
-                    self.fail("Stack build failed.")
-
-    def _send_deploy_time_graphite(self, env, region, template, deploy_time, buildfail):
-        cmd = 'echo "heat.' + env + '.build-tests.' + region + '.' + template \
-              + '.' + buildfail + '  ' + str(deploy_time) \
-              + ' `date +%s`" | ' \
-                'nc graphite.staging.rs-heat.com ' \
-                '2003 -q 2'
-        os.system(cmd)
-        print "Deploy time sent to graphite"
-
-    def _verify_dns_entries(self,stack_name ,stack_id,region,email_address ,
-                            domain_record_type,domain_name):
-
-        print "Testing the DNS parameters "
-        resp, body = self.orchestration_client.show_stack(stack_name,
-                        stack_id ,region)
-        if resp['status'] == 200:
-
-            self.assertEquals(email_address, body['stack'][
-                    'parameters']['email_address'])
-            self.assertEquals(domain_record_type, body['stack']['parameters'][
-                   'domain_record_type'])
-            self.assertEquals(domain_name, body['stack'][
-                   'parameters']['domain_name'])
-            self.assertEquals("sabeen", body['stack']['parameters'][
-                'key_name'])
-        else:
-
-         print "DNS verification fail for incorrect show-stack response"
-
-    def _verify_name_from_dns_api(self,domain_url,region,
-                                  domain_name):
-        result = False
-        dns_resp , dns_body = self.dns_client.list_domain_id(domain_url ,region )
-        for domain in dns_body['domains']:
-            if domain['name'] == domain_name:
-                result = True
-
-        return result
+                    print "Deleted!"
