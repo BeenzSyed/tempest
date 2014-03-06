@@ -94,6 +94,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_centos(self):
         self._test_stack("hello-world", "centos")
 
+    def test_chef_solo(self):
+        self._test_stack("chef_multi_node_wordpress")
+
     @attr(type='smoke')
     def _test_stack(self, template, image=None):
         print os.environ.get('TEMPEST_CONFIG')
@@ -102,7 +105,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #env = "dev"
         #pdb.set_trace()
         #templates on github
-        template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
+        template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
         response_templates = requests.get(template_giturl, timeout=3)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
@@ -124,13 +127,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             domain_record_type = "A"
 
             parameters = {}
-            if 'key_name' in yaml_template['parameters']:
-                parameters = {
-                    'key_name': 'sabeen'
-                }
+            # if 'key_name' in yaml_template['parameters']:
+            #     parameters = {
+            #         'key_name': 'iloveheat'
+            #     }
             #     parameters = {}
             if 'key_name' in yaml_template['parameters']:
-                  parameters['key_name'] = 'sabeen'
+                  parameters['key_name'] = 'iloveheat'
             if 'email_address' in yaml_template['parameters']:
                     parameters['email_address'] = email_address
             if 'domain_record_type' in yaml_template['parameters']:
