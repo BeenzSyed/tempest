@@ -97,6 +97,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_chef_solo(self):
         self._test_stack("chef_multi_node_wordpress")
 
+    def test_kitchen_sink(self):
+        self._test_stack("kitchen_sink")
+
     @attr(type='smoke')
     def _test_stack(self, template, image=None):
         print os.environ.get('TEMPEST_CONFIG')
@@ -122,6 +125,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         regions = regionsConfig.split(",")
         for region in regions:
             stack_name = rand_name("qe_"+template+region)
+            keypair_name = rand_name("iloveheat")
             domain_name = "example%s.com" %datetime.now().microsecond
             email_address = "heattest@rs.com"
             domain_record_type = "A"
@@ -133,7 +137,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #     }
             #     parameters = {}
             if 'key_name' in yaml_template['parameters']:
-                  parameters['key_name'] = 'iloveheat'
+                  parameters['key_name'] = keypair_name
             if 'email_address' in yaml_template['parameters']:
                     parameters['email_address'] = email_address
             if 'domain_record_type' in yaml_template['parameters']:
@@ -195,6 +199,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "The deployment took %s minutes" % count
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
 
+                    self._verify_resources(stack_id, stack_name, region)
+
                     #check DNS resource
                     if 'dns' in yaml_template['resources']:
                         domain_url = "domains"
@@ -205,9 +211,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         result = self._verify_name_from_dns_api(domain_url,region,
                                   domain_name)
                         if result == True :
-                            print "Domanin name  %s exist ",domain_name
+                            print "Domain name  %s exist ",domain_name
                         else :
-                             print "Domanin name  %s does not exist ",\
+                             print "Domain name  %s does not exist ",\
                                  domain_name
 
                     #delete stack
@@ -262,14 +268,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         return result
 
-    def _verify_resources(self):
+    def _verify_resources(self, stack_id, stack_name, region):
         validation = False
         resp_status = "200"
-        region = "SYD"
+        #region = "SYD"
 
-        stack_id = "28a1adbc-48de-4c9e-bcd5-7071b0b479ff"
-
-        stack_name = "qe_wordpress-multiDFW-tempest-359156428"
+        #stack_id = "28a1adbc-48de-4c9e-bcd5-7071b0b479ff"
+        #stack_name = "qe_wordpress-multiDFW-tempest-359156428"
         resource_server = "Rackspace::Cloud::Server"
         resource_db = "OS::Trove::Instance"
         resource_lb = "Rackspace::Cloud::LoadBalancer"
@@ -277,7 +282,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_keypair = "OS::Nova::KeyPair"
         resource_network = "Rackspace::Cloud::Network"
 
-        resp , body = self.client.list_resources(stack_name,stack_id, region)
+        resp, body = self.client.list_resources(stack_name,stack_id, region)
         for resource in body['resources']:
             if resource['resource_type'] ==resource_server:
                 server_id = resource['physical_resource_id']
