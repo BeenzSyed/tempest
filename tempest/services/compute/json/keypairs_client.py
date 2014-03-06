@@ -37,10 +37,11 @@ class KeyPairsClientJSON(RestClient):
         # is yet to be found
         return resp, body['keypairs']
 
-    def get_keypair(self, key_name):
-        resp, body = self.get("os-keypairs/%s" % str(key_name))
+    def get_keypair(self, key_name ,region):
+        resp, body = self.get("os-keypairs/%s" % str(key_name),region)
         body = json.loads(body)
-        return resp, body['keypair']
+        #return resp, body['keypair']
+        return resp ,body
 
     def create_keypair(self, name, pub_key=None):
         post_body = {'keypair': {'name': name}}

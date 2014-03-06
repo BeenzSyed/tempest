@@ -246,3 +246,42 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 result = True
 
         return result
+
+    def _verify_resources(self):
+        validation = False
+        resp_status = "200"
+        region = "SYD"
+
+        stack_id = "28a1adbc-48de-4c9e-bcd5-7071b0b479ff"
+
+        stack_name = "qe_wordpress-multiDFW-tempest-359156428"
+        resource_server = "Rackspace::Cloud::Server"
+        resource_db = "OS::Trove::Instance"
+        resource_lb = "Rackspace::Cloud::LoadBalancer"
+        resource_cinder = "OS::Cinder::Volume"
+        resource_keypair = "OS::Nova::KeyPair"
+        resource_network = "Rackspace::Cloud::Network"
+
+        resp , body = self.client.list_resources(stack_name,stack_id, region)
+        for resource in body['resources']:
+            if resource['resource_type'] ==resource_server:
+                server_id = resource['physical_resource_id']
+                resp,body =  self.servers_client.get_server(server_id,region)
+                if resp['status']==resp_status:
+                    validation = True
+            if resource['resource_type'] ==resource_keypair:
+                key_name = resource['physical_resource_id']
+                resp,body = self.keypairs_client.get_keypair(key_name,region)
+                if resp['status']==resp_status:
+                    validation = True
+            if resource['resource_type'] ==resource_network:
+                key_name = resource['physical_resource_id']
+                resp,body = self.network_client.get_network(key_name,region)
+                if resp['status']==resp_status:
+                    validation = True
+            if resource['resource_type']  ==resource_db:
+                 db_id = resource['physical_resource_id']
+                 resp,body =  self.database_client.get_instance(db_id , region)
+                 if resp['status']==resp_status:
+                    validation = True
+                 print "test"

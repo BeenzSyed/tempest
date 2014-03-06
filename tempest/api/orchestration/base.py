@@ -31,7 +31,6 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
 
         dns = clients.DnsManager()
         cls.dns = dns
-        cls.dns_client = dns.dns_client
 
         os = clients.OrchestrationManager()
         cls.orchestration_cfg = os.config.orchestration
@@ -46,6 +45,8 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         cls.servers_client = os.servers_client
         cls.keypairs_client = os.keypairs_client
         cls.network_client = os.network_client
+        cls.database_client = os.database_client
+        cls.dns_client = dns.dns_client
         cls.stacks = []
         cls.keypairs = []
 

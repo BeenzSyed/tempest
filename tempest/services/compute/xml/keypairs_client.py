@@ -37,8 +37,9 @@ class KeyPairsClientXML(RestClientXML):
         body = [{'keypair': xml_to_json(x)} for x in node.getchildren()]
         return resp, body
 
-    def get_keypair(self, key_name):
-        resp, body = self.get("os-keypairs/%s" % str(key_name), self.headers)
+    def get_keypair(self, key_name ,region):
+        resp, body = self.get("os-keypairs/%s" % str(key_name),
+                              region, self.headers)
         body = xml_to_json(etree.fromstring(body))
         return resp, body
 
