@@ -522,3 +522,9 @@ class NetworkClientJSON(network_client_base.NetworkClientBase):
         resp, body = self.put(uri, body)
         body = json.loads(body)
         return resp, body
+
+    def get_network(self, network_id,region):
+
+        uri = '%s/network_id/%s' % (self.uri_prefix, network_id)
+        resp, body = self.get(uri , region)
+        return resp ,body

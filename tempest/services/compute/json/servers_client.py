@@ -122,9 +122,9 @@ class ServersClientJSON(RestClient):
         body = json.loads(body)
         return resp, body['server']
 
-    def get_server(self, server_id):
+    def get_server(self, server_id , region):
         """Returns the details of an existing server."""
-        resp, body = self.get("servers/%s" % str(server_id))
+        resp, body = self.get("servers/%s" % str(server_id),region)
         body = json.loads(body)
         return resp, body['server']
 

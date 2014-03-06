@@ -23,12 +23,12 @@ class DatabaseClient(RestClient):
                  config,
                  username,
                  password,
-                 auth_url,
+                 auth_url,token_url,
                  tenant_name=None):
         super(DatabaseClient, self).__init__(config,
                                              username,
                                              password,
-                                             auth_url,
+                                             auth_url,token_url,
                                              tenant_name)
         self.service = self.config.database.catalog_type
 
@@ -36,3 +36,9 @@ class DatabaseClient(RestClient):
         resp, body = self.get("flavors")
         body = json.loads(body)
         return resp, body['flavors']
+
+    def get_instance(self, instanceId, region):
+        url = "instances/%s" %instanceId
+        resp, body = self.get(url,region)
+        body = json.loads(body)
+        return resp, body

@@ -674,7 +674,7 @@ database_group = cfg.OptGroup(name='database', title='Database Test Options')
 
 DatabaseGroup = [
     cfg.StrOpt('catalog_type',
-               default=None,
+               default='rax:database',
                help='Catalog type of the Database service'),
     cfg.IntOpt('flavor_ref',
                default=1,
@@ -822,6 +822,7 @@ class TempestConfigPrivate(object):
         register_opt_group(cfg.CONF, dns_group, DnsGroup)
         register_opt_group(cfg.CONF, baremetal_group, BaremetalGroup)
         register_opt_group(cfg.CONF, input_scenario_group, InputScenarioGroup)
+        register_opt_group(cfg.CONF, database_group, DatabaseGroup)
 
         self.compute = cfg.CONF.compute
         self.compute_feature_enabled = cfg.CONF['compute-feature-enabled']
@@ -844,7 +845,7 @@ class TempestConfigPrivate(object):
         self.compute_admin = cfg.CONF['compute-admin']
         self.stress = cfg.CONF.stress
 
-        #self.database = cfg.CONF.database
+        self.database = cfg.CONF.database
 
         self.scenario = cfg.CONF.scenario
         self.service_available = cfg.CONF.service_available
