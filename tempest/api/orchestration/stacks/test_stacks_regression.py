@@ -202,7 +202,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "The deployment took %s minutes" % count
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
 
-                    self._verify_resources(stack_id, stack_name, region)
+                    #self._verify_resources(stack_id, stack_name, region)
 
                     #check DNS resource
                     if 'dns' in yaml_template['resources']:
@@ -286,7 +286,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_network = "Rackspace::Cloud::Network"
 
         resp, body = self.client.list_resources(stack_name, stack_id, region)
-        pdb.set_trace()
+        #pdb.set_trace()
         for resource in body['resources']:
             if resource['resource_type'] == resource_server:
                 server_id = resource['physical_resource_id']

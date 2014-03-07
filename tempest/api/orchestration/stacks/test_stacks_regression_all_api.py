@@ -309,7 +309,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print os.environ.get('TEMPEST_CONFIG')
 
         env = self.config.orchestration['env']
-        env = "dev"
+        #env = "dev"
         template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
         #print template_giturl
         response_templates = requests.get(template_giturl, timeout=3)
