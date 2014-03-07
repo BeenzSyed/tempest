@@ -117,7 +117,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         else:
             yaml_template = yaml.safe_load(response_templates.content)
 
-
         #0 if no failures occur, turns to 1 if a build fails
         pf = 0
 
@@ -125,7 +124,18 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
         regions = regionsConfig.split(",")
         for region in regions:
+
+            slresp, stacklist = self.orchestration_client.list_stacks(region)
+
+            parameters = {
+                    'key_name': 'sabeen',
+                    'flavor': '1GB Standard Instance'
+            }
+            updateStackName, updateStackId = self._get_stacks("DONOTDELETE_", stacklist)
+            ssresp, ssbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
+
             stack_name = rand_name("qe_"+template+region)
+            keypair_name = rand_name("iloveheat")
             domain_name = "example%s.com" %datetime.now().microsecond
             email_address = "heattest@rs.com"
             domain_record_type = "A"
@@ -137,10 +147,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #     }
             #     parameters = {}
             if 'key_name' in yaml_template['parameters']:
-                    parameters['key_name'] = 'sabeen'
-            if 'key_name' in yaml_template['parameters'] and re.match('chef*', template):
-                    keypair_name = rand_name("heat")
-                    parameters['key_name'] = keypair_name
+                  parameters['key_name'] = keypair_name
             if 'email_address' in yaml_template['parameters']:
                     parameters['email_address'] = email_address
             if 'domain_record_type' in yaml_template['parameters']:
@@ -286,27 +293,33 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_network = "Rackspace::Cloud::Network"
 
         resp, body = self.client.list_resources(stack_name, stack_id, region)
-        pdb.set_trace()
         for resource in body['resources']:
-            if resource['resource_type'] == resource_server:
+            if resource['resource_type'] ==resource_server:
                 server_id = resource['physical_resource_id']
                 resp,body =  self.servers_client.get_server(server_id, region)
                 if resp['status']==resp_status:
                     validation = True
-            if resource['resource_type'] == resource_keypair:
+            if resource['resource_type'] ==resource_keypair:
                 key_name = resource['physical_resource_id']
                 resp,body = self.keypairs_client.get_keypair(key_name, region)
                 if resp['status']==resp_status:
                     validation = True
-            if resource['resource_type'] == resource_network:
+            if resource['resource_type'] ==resource_network:
                 key_name = resource['physical_resource_id']
                 resp,body = self.network_client.get_network(key_name, region)
                 if resp['status']==resp_status:
                     validation = True
-            if resource['resource_type']  == resource_db:
+            if resource['resource_type']  ==resource_db:
                  db_id = resource['physical_resource_id']
                  resp,body =  self.database_client.get_instance(db_id, region)
                  if resp['status']==resp_status:
                     validation = True
                  print "test"
+
+    def _get_stacks(self, typestack, body):
+        for stackname in body:
+            match = re.search(typestack + '_*', stackname['stack_name'])
+            if match:
+                return stackname['stack_name'], stackname['id']
+        print "did not find match"
 
