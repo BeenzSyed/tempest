@@ -700,6 +700,16 @@ DnsGroup = [
                     "one is used.")
 ]
 
+loadbalancer_group = cfg.OptGroup(name='loadbalancer', title='loadbalancer '
+                                                             'test option ')
+
+Loadbalancer = [
+    cfg.StrOpt('catalog_type',
+               default='rax:load-balancer',
+               help='Catalog type of the load-balancer service'),
+]
+
+
 def register_database_opts(conf):
     conf.register_group(database_group)
     for opt in DatabaseGroup:
@@ -735,7 +745,6 @@ BaremetalGroup = [
                default='baremetal',
                help="Catalog type of the baremetal provisioning service."),
 ]
-
 
 # this should never be called outside of this class
 class TempestConfigPrivate(object):
@@ -823,6 +832,8 @@ class TempestConfigPrivate(object):
         register_opt_group(cfg.CONF, baremetal_group, BaremetalGroup)
         register_opt_group(cfg.CONF, input_scenario_group, InputScenarioGroup)
         register_opt_group(cfg.CONF, database_group, DatabaseGroup)
+        register_opt_group(cfg.CONF, loadbalancer_group, Loadbalancer)
+
 
         self.compute = cfg.CONF.compute
         self.compute_feature_enabled = cfg.CONF['compute-feature-enabled']
@@ -846,7 +857,7 @@ class TempestConfigPrivate(object):
         self.stress = cfg.CONF.stress
 
         self.database = cfg.CONF.database
-
+        self.loadbalancer = cfg.CONF.loadbalancer
         self.scenario = cfg.CONF.scenario
         self.service_available = cfg.CONF.service_available
         self.debug = cfg.CONF.debug

@@ -189,6 +189,8 @@ from tempest.services.volume.xml.volumes_client import VolumesClientXML
 from tempest.services.database.json.flavors_client import \
     DatabaseFlavorsClientJSON
 from tempest.services.orchestration.json.dns_client import DnsClient
+from tempest.services.loadbalancer.json.loadbalancer_client import  \
+    Loadbalancerclient
 
 CONF = config.CONF
 LOG = logging.getLogger(__name__)
@@ -346,6 +348,11 @@ CREDENTIALS_CLIENT = {
 DATABASE_CLIENT = {
       "json": DatabaseClient
 }
+
+LOAD_BALANCER_CLIENT = {
+      "json": Loadbalancerclient
+}
+
 
 class Manager(object):
 
@@ -549,6 +556,7 @@ class Manager(object):
         self.database_client = DatabaseClient(*client_args)
         self.data_processing_client = DataProcessingClient(*client_args)
         self.dns_client = DnsClient(*client_args)
+        self.loadbalancer_client = Loadbalancerclient(*client_args)
 
 
 class AltManager(Manager):
@@ -622,7 +630,10 @@ class OrchestrationManager(object):
         self.servers_client = SERVERS_CLIENTS[interface](*client_args)
         self.network_client = NETWORKS_CLIENTS[interface](*client_args)
         self.database_client = DATABASE_CLIENT[interface](*client_args)
+        self.loadbalancer_client = LOAD_BALANCER_CLIENT[interface](
+            *client_args)
         self.orchestration_client = OrchestrationClient(*client_args)
+
 
 class DnsManager(object):
     """

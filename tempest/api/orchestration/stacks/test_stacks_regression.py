@@ -274,10 +274,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def _verify_resources(self, stack_id, stack_name, region):
         validation = False
         resp_status = "200"
-        #region = "SYD"
-
-        #stack_id = "28a1adbc-48de-4c9e-bcd5-7071b0b479ff"
-        #stack_name = "qe_wordpress-multiDFW-tempest-359156428"
+        region = "IAD"
+        stack_id = "ad345544-ae31-474c-9603-4b3b014cc28a"
+        stack_name = "test011"
         resource_server = "Rackspace::Cloud::Server"
         resource_db = "OS::Trove::Instance"
         resource_lb = "Rackspace::Cloud::LoadBalancer"
@@ -285,28 +284,37 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_keypair = "OS::Nova::KeyPair"
         resource_network = "Rackspace::Cloud::Network"
 
-        resp, body = self.client.list_resources(stack_name, stack_id, region)
-        #pdb.set_trace()
-        for resource in body['resources']:
-            if resource['resource_type'] == resource_server:
-                server_id = resource['physical_resource_id']
-                resp,body =  self.servers_client.get_server(server_id, region)
-                if resp['status']==resp_status:
-                    validation = True
-            if resource['resource_type'] == resource_keypair:
-                key_name = resource['physical_resource_id']
-                resp,body = self.keypairs_client.get_keypair(key_name, region)
-                if resp['status']==resp_status:
-                    validation = True
-            if resource['resource_type'] == resource_network:
-                key_name = resource['physical_resource_id']
-                resp,body = self.network_client.get_network(key_name, region)
-                if resp['status']==resp_status:
-                    validation = True
-            if resource['resource_type']  == resource_db:
-                 db_id = resource['physical_resource_id']
-                 resp,body =  self.database_client.get_instance(db_id, region)
-                 if resp['status']==resp_status:
-                    validation = True
-                 print "test"
+        #test011/ad345544-ae31-474c-9603-4b3b014cc28a/
+        resp, body = self.client.list_resources(stack_name,stack_id, region)
+        for resource in body['resource_name']:
+                if resource['resource_type'] ==resource_server:
+                    server_id = resource['physical_resource_id']
+                    resp,body =  self.servers_client.get_server(server_id,region)
+                    if resp['status']==resp_status:
+                        validation = True
+                if resource['resource_type'] ==resource_keypair:
+                     key_name = resource['physical_resource_id']
+                     resp,body = self.keypairs_client.get_keypair(key_name,
+                                                                region)
+                     if resp['status']==resp_status:
+                             validation = True
+                if resource['resource_type'] ==resource_network:
+                     key_name = resource['physical_resource_id']
+                     resp,body = self.network_client.get_network(key_name,
+                                                                region)
+                     if resp['status']==resp_status:
+                          validation = True
+                if resource['resource_type']  ==resource_db:
+                     db_id = resource['physical_resource_id']
+                     resp,body =  self.database_client.get_instance(db_id ,
+                                                                 region)
+                     if resp['status']==resp_status:
+                          validation = True
+                          print "test"
+                if resource['resource_type']  ==resource_lb:
+                     lb_id = resource['physical_resource_id']
+                     resp,body =self.loadbalancer_client.get_load_balancer(lb_id ,region)
+                     if resp['status'] ==resp_status:
+                            validation = True
+                            print "test"
 
