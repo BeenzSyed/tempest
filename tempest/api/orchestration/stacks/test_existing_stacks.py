@@ -117,7 +117,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         else:
             yaml_template = yaml.safe_load(response_templates.content)
 
-
         #0 if no failures occur, turns to 1 if a build fails
         pf = 0
 
@@ -125,7 +124,18 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
         regions = regionsConfig.split(",")
         for region in regions:
+
+            slresp, stacklist = self.orchestration_client.list_stacks(region)
+
+            parameters = {
+                    'key_name': 'sabeen',
+                    'flavor': '1GB Standard Instance'
+            }
+            updateStackName, updateStackId = self._get_stacks("DONOTDELETE_", stacklist)
+            ssresp, ssbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
+
             stack_name = rand_name("qe_"+template+region)
+            keypair_name = rand_name("iloveheat")
             domain_name = "example%s.com" %datetime.now().microsecond
             email_address = "heattest@rs.com"
             domain_record_type = "A"
@@ -137,10 +147,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #     }
             #     parameters = {}
             if 'key_name' in yaml_template['parameters']:
-                    parameters['key_name'] = 'sabeen'
-            if 'key_name' in yaml_template['parameters'] and re.match('chef*', template):
-                   keypair_name = rand_name("heat")
-                   parameters['key_name'] = keypair_name
+                  parameters['key_name'] = keypair_name
             if 'email_address' in yaml_template['parameters']:
                     parameters['email_address'] = email_address
             if 'domain_record_type' in yaml_template['parameters']:
@@ -202,7 +209,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "The deployment took %s minutes" % count
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
 
-                    #self._verify_resources(stack_id, stack_name, region)
+                    self._verify_resources(stack_id, stack_name, region)
 
                     #check DNS resource
                     if 'dns' in yaml_template['resources']:
@@ -274,55 +281,45 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def _verify_resources(self, stack_id, stack_name, region):
         validation = False
         resp_status = "200"
-        region = "IAD"
-        stack_id = "b14e49e1-077e-464f-9724-c48e88f8469a"
-        stack_name = "kitchen_03"
+        #region = "SYD"
+
+        #stack_id = "28a1adbc-48de-4c9e-bcd5-7071b0b479ff"
+        #stack_name = "qe_wordpress-multiDFW-tempest-359156428"
         resource_server = "Rackspace::Cloud::Server"
         resource_db = "OS::Trove::Instance"
         resource_lb = "Rackspace::Cloud::LoadBalancer"
         resource_cinder = "OS::Cinder::Volume"
         resource_keypair = "OS::Nova::KeyPair"
         resource_network = "Rackspace::Cloud::Network"
-        resource_randomstr = "OS::Heat::RandomString"
-        resource_grp = 'OS::Heat::ResourceGroup'
 
-        resp, body = self.client.list_resources(stack_name,stack_id, region)
-        for resource in body['resource_name']:
-                if resource['resource_type'] ==resource_server:
-                    server_id = resource['physical_resource_id']
-                    resp,body =  self.servers_client.get_server(server_id,region)
-                    if resp['status']==resp_status:
-                        validation = True
-                if resource['resource_type'] ==resource_keypair:
-                     key_name = resource['physical_resource_id']
-                     resp,body = self.keypairs_client.get_keypair(key_name,
-                                                                region)
-                     if resp['status']==resp_status:
-                             validation = True
-                if resource['resource_type'] ==resource_network:
-                     key_name = resource['physical_resource_id']
-                     resp,body = self.network_client.get_network(key_name,
-                                                                region)
-                     if resp['status']==resp_status:
-                          validation = True
-                if resource['resource_type']  ==resource_db:
-                     db_id = resource['physical_resource_id']
-                     resp,body =  self.database_client.get_instance(db_id ,
-                                                                 region)
-                     if resp['status']==resp_status:
-                          validation = True
-                          print "test"
-                if resource['resource_type']  ==resource_lb:
-                     lb_id = resource['physical_resource_id']
-                     resp,body =self.loadbalancer_client.get_load_balancer(lb_id ,region)
-                     if resp['status'] ==resp_status:
-                            validation = True
-                            print "test"
-                if resource['resource_type'] ==resource_randomstr:
-                     random_str = resource['physical_resource_id']
-                     if random_str!=None:
-                            validation = True
-                if resource['resource_type'] ==resource_grp:
-                     if resource_status == "CREATE_COMPLETE":
-                          validation = True
+        resp, body = self.client.list_resources(stack_name, stack_id, region)
+        for resource in body['resources']:
+            if resource['resource_type'] ==resource_server:
+                server_id = resource['physical_resource_id']
+                resp,body =  self.servers_client.get_server(server_id, region)
+                if resp['status']==resp_status:
+                    validation = True
+            if resource['resource_type'] ==resource_keypair:
+                key_name = resource['physical_resource_id']
+                resp,body = self.keypairs_client.get_keypair(key_name, region)
+                if resp['status']==resp_status:
+                    validation = True
+            if resource['resource_type'] ==resource_network:
+                key_name = resource['physical_resource_id']
+                resp,body = self.network_client.get_network(key_name, region)
+                if resp['status']==resp_status:
+                    validation = True
+            if resource['resource_type']  ==resource_db:
+                 db_id = resource['physical_resource_id']
+                 resp,body =  self.database_client.get_instance(db_id, region)
+                 if resp['status']==resp_status:
+                    validation = True
+                 print "test"
+
+    def _get_stacks(self, typestack, body):
+        for stackname in body:
+            match = re.search(typestack + '_*', stackname['stack_name'])
+            if match:
+                return stackname['stack_name'], stackname['id']
+        print "did not find match"
 
