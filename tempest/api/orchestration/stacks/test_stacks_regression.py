@@ -147,8 +147,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if 'key_name' in yaml_template['parameters']:
                     parameters['key_name'] = 'sabeen'
             if 'key_name' in yaml_template['parameters'] and re.match('chef*', template):
-                    keypair_name = rand_name("heat")
-                    parameters['key_name'] = keypair_name
+                   keypair_name = rand_name("heat")
+                   parameters['key_name'] = keypair_name
             if 'email_address' in yaml_template['parameters']:
                     parameters['email_address'] = email_address
             if 'domain_record_type' in yaml_template['parameters']:
@@ -288,16 +288,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         validation = False
         resp_status = "200"
         region = "IAD"
-        stack_id = "ad345544-ae31-474c-9603-4b3b014cc28a"
-        stack_name = "test011"
+        stack_id = "b14e49e1-077e-464f-9724-c48e88f8469a"
+        stack_name = "kitchen_03"
         resource_server = "Rackspace::Cloud::Server"
         resource_db = "OS::Trove::Instance"
         resource_lb = "Rackspace::Cloud::LoadBalancer"
         resource_cinder = "OS::Cinder::Volume"
         resource_keypair = "OS::Nova::KeyPair"
         resource_network = "Rackspace::Cloud::Network"
+        resource_randomstr = "OS::Heat::RandomString"
+        resource_grp = 'OS::Heat::ResourceGroup'
 
-        #test011/ad345544-ae31-474c-9603-4b3b014cc28a/
         resp, body = self.client.list_resources(stack_name,stack_id, region)
         for resource in body['resource_name']:
                 if resource['resource_type'] ==resource_server:
@@ -330,4 +331,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                      if resp['status'] ==resp_status:
                             validation = True
                             print "test"
+                if resource['resource_type'] ==resource_randomstr:
+                     random_str = resource['physical_resource_id']
+                     if random_str!=None:
+                            validation = True
+                if resource['resource_type'] ==resource_grp:
+                     if resource_status == "CREATE_COMPLETE":
+                          validation = True
 
