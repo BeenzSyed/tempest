@@ -110,7 +110,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #pdb.set_trace()
         #templates on github
         template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
-        response_templates = requests.get(template_giturl, timeout=3)
+        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-multi/master/wordpress-multi-server.yaml"
+        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/heat-ci/master/staging/dotnetnuke.template?token=4690505__eyJzY29wZSI6IlJhd0Jsb2I6cmFja3NwYWNlLW9yY2hlc3RyYXRpb24tdGVtcGxhdGVzL2hlYXQtY2kvbWFzdGVyL3N0YWdpbmcvZG90bmV0bnVrZS50ZW1wbGF0ZSIsImV4cGlyZXMiOjEzOTUzNTE4OTR9--21eebff43d4483f04053af2eb404804914a85f6b"
+        response_templates = requests.get(template_giturl, timeout=10)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
             self.fail("The template does not exist.")
@@ -136,6 +138,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #         'key_name': 'iloveheat'
             #     }
             #     parameters = {}
+            if 'ssh_keypair_name' in yaml_template['parameters']:
+                    keypair_name = rand_name("heat")
+                    parameters['ssh_keypair_name'] = keypair_name
+            if 'ssh_sync_keypair_name' in yaml_template['parameters']:
+                    keypair_name = rand_name("heat")
+                    parameters['ssh_sync_keypair_name'] = keypair_name
             if 'key_name' in yaml_template['parameters']:
                     parameters['key_name'] = 'sabeen'
             if 'key_name' in yaml_template['parameters'] and re.match('chef*', template):
@@ -144,9 +152,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if 'email_address' in yaml_template['parameters']:
                     parameters['email_address'] = email_address
             if 'domain_record_type' in yaml_template['parameters']:
-                    parameters['domain_record_type']= domain_record_type
+                    parameters['domain_record_type'] = domain_record_type
             if 'domain_name' in yaml_template['parameters']:
                     parameters['domain_name'] = domain_name
+            if 'service_domain' in yaml_template['parameters']:
+                    parameters['service_domain'] = domain_name
+            # if 'access_key' in yaml_template['resources']:
+            #         keypair_name = rand_name("heat")
+            #         parameters['access_key'] = keypair_name
 
             if 'git_url' in yaml_template['parameters']:
                 parameters['git_url'] = "https://github.com/timductive/phphelloworld"

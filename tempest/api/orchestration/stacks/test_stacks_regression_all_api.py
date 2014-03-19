@@ -325,121 +325,128 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             parameters['git_url'] = "https://github.com/timductive/phphelloworld"
             #https://github.com/beenzsyed/phphelloworld
 
-        region = "Dev"
+        #region = "Dev"
         rstype = "Rackspace::Cloud::Server"
         rsname = "devstack_server"
 
         usertype = self.config.identity['username']
         print "User is: %s" % usertype
+        print "Environment is %s" % env
+        regionsConfig = self.config.orchestration['regions']
+        #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
+        regions = regionsConfig.split(",")
+        for region in regions:
+            print "Region is: %s" % region
+            # #-------  Stacks  --------------
+            #stack-list
+            apiname = "stack list"
+            slresp, stacklist = self.orchestration_client.list_stacks(region)
+            self._check_resp(slresp, stacklist, apiname)
 
-        # #-------  Stacks  --------------
-        #stack-list
-        apiname = "stack list"
-        slresp, stacklist = self.orchestration_client.list_stacks(region)
-        self._check_resp(slresp, stacklist, apiname)
+            #create stack
+            apiname = "create stack"
+            create_stack_name = "CREATE_%s" %datetime.datetime.now().microsecond
+            csresp, csbody, stack_identifier = self.create_stack(create_stack_name, region, yaml_template, parameters)
+            self._check_resp(csresp, csbody, apiname)
 
-        #create stack
-        apiname = "create stack"
-        create_stack_name = "CREATE_%s" %datetime.datetime.now().microsecond
-        csresp, csbody, stack_identifier = self.create_stack(create_stack_name, region, yaml_template, parameters)
-        self._check_resp(csresp, csbody, apiname)
+            #update stack
+            apiname = "update stack"
+            parameters = {
+                    'key_name': 'sabeen',
+                    'flavor': '1GB Standard Instance'
+            }
+            #pdb.set_trace()
+            updateStackName, updateStackId = self._get_stacks("UPDATE_", stacklist)
+            if updateStackName != 0:
+                ssresp, ssbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
+                self._check_resp(ssresp, ssbody, apiname)
 
-        #update stack
-        apiname = "update stack"
-        parameters = {
-                'key_name': 'sabeen',
-                'flavor': '1GB Standard Instance'
-        }
-        updateStackName, updateStackId = self._get_stacks("UPDATE_", stacklist)
-        if updateStackName != 0:
-            ssresp, ssbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
+            #stack show
+            apiname = "show stack"
+            ssresp, ssbody = self.orchestration_client.show_stack(updateStackName, updateStackId, region)
             self._check_resp(ssresp, ssbody, apiname)
 
-        #stack show
-        apiname = "show stack"
-        ssresp, ssbody = self.orchestration_client.show_stack(updateStackName, updateStackId, region)
-        self._check_resp(ssresp, ssbody, apiname)
+            #delete stack
+            apiname = "delete stack"
+            deleteStackName, deleteStackId = self._get_stacks("CREATE_", stacklist)
+            if deleteStackName != 0:
+                ssresp, ssbody = self.orchestration_client.delete_stack(deleteStackName, deleteStackId, region)
+                self._check_resp(ssresp, ssbody, apiname)
 
-        #delete stack
-        apiname = "delete stack"
-        deleteStackName, deleteStackId = self._get_stacks("CREATE_", stacklist)
-        if deleteStackName != 0:
-            ssresp, ssbody = self.orchestration_client.delete_stack(deleteStackName, deleteStackId, region)
-            self._check_resp(ssresp, ssbody, apiname)
+            #abandon stack
+            apiname = "abandon stack"
+            abandonStackName, abandonStackId = self._get_stacks("ADOPT_", stacklist)
+            if abandonStackName != 0:
+                asresp, asbody, = self.abandon_stack(abandonStackId, abandonStackName, region)
+                self._check_resp(asresp, asbody, apiname)
 
-        #abandon stack
-        apiname = "abandon stack"
-        abandonStackName, abandonStackId = self._get_stacks("ADOPT_", stacklist)
-        if abandonStackName != 0:
-            asresp, asbody, = self.abandon_stack(abandonStackId, abandonStackName, region)
+            apiname = "adopt stack"
+            adopt_stack_name = "ADOPT_%s" %datetime.datetime.now().microsecond
+            #pdb.set_trace()
+            asresp, asbody, stack_identifier = self.adopt_stack(adopt_stack_name, region, adopt_data, yaml_template, parameters)
             self._check_resp(asresp, asbody, apiname)
 
-        apiname = "adopt stack"
-        adopt_stack_name = "ADOPT_%s" %datetime.datetime.now().microsecond
-        asresp, asbody, stack_identifier = self.adopt_stack(adopt_stack_name, region, asbody, yaml_template, parameters)
-        self._check_resp(asresp, asbody, apiname)
+            #-------  Stack events  ----------
+            #event list
+            apiname = "list event"
+            if updateStackName != 0:
+                evresp, evbody = self.orchestration_client.list_events(updateStackName, updateStackId, region)
+                self._check_resp(evresp, evbody, apiname)
 
-        #-------  Stack events  ----------
-        #event list
-        apiname = "list event"
-        if updateStackName != 0:
-            evresp, evbody = self.orchestration_client.list_events(updateStackName, updateStackId, region)
-            self._check_resp(evresp, evbody, apiname)
-
-        #event show
-        apiname = "show event"
-        if updateStackName != 0:
-            event_id = self._get_event_id(evbody)
-            esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rsname, event_id, region)
-            self._check_resp(esresp, esbody, apiname)
+            #event show
+            apiname = "show event"
+            if updateStackName != 0:
+                event_id = self._get_event_id(evbody)
+                esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rsname, event_id, region)
+                self._check_resp(esresp, esbody, apiname)
 
 
-        #-------  Templates  -------------
-        #template show
-        apiname = "template show"
-        if updateStackName != 0:
-            tsresp, tsbody = self.orchestration_client.show_template(updateStackName, updateStackId, region)
-            self._check_resp(tsresp, tsbody, apiname)
+            #-------  Templates  -------------
+            #template show
+            apiname = "template show"
+            if updateStackName != 0:
+                tsresp, tsbody = self.orchestration_client.show_template(updateStackName, updateStackId, region)
+                self._check_resp(tsresp, tsbody, apiname)
 
-        #template validate
-        apiname = "template validate"
-        tvresp, tvbody = self.orchestration_client.validate_template(region, yaml_template, parameters)
-        self._check_resp(tvresp, tvbody, apiname)
+            #template validate
+            apiname = "template validate"
+            tvresp, tvbody = self.orchestration_client.validate_template(region, yaml_template, parameters)
+            self._check_resp(tvresp, tvbody, apiname)
 
 
-        #--------  Stack resources  --------
-        #Lists resources in a stack
-        apiname = "list resources"
-        if updateStackName != 0:
-            lrresp, lrbody = self.orchestration_client.list_resources(updateStackName, updateStackId, region)
-            self._check_resp(lrresp, lrbody, apiname)
+            #--------  Stack resources  --------
+            #Lists resources in a stack
+            apiname = "list resources"
+            if updateStackName != 0:
+                lrresp, lrbody = self.orchestration_client.list_resources(updateStackName, updateStackId, region)
+                self._check_resp(lrresp, lrbody, apiname)
 
-        #Gets metadata for a specified resource.
-        apiname = "resource metadata"
-        if updateStackName != 0:
-            rmresp, rmbody = self.orchestration_client.show_resource_metadata(updateStackName, updateStackId, rsname, region)
-            self._check_resp(rmresp, rmbody, apiname)
+            #Gets metadata for a specified resource.
+            apiname = "resource metadata"
+            if updateStackName != 0:
+                rmresp, rmbody = self.orchestration_client.show_resource_metadata(updateStackName, updateStackId, rsname, region)
+                self._check_resp(rmresp, rmbody, apiname)
 
-        #Gets data for a specified resource.
-        apiname = "get resources"
-        if updateStackName != 0:
-            rsresp, rsbody = self.orchestration_client.get_resource(updateStackName, updateStackId, rsname, region)
-            self._check_resp(rsresp, rsbody, apiname)
+            #Gets data for a specified resource.
+            apiname = "get resources"
+            if updateStackName != 0:
+                rsresp, rsbody = self.orchestration_client.get_resource(updateStackName, updateStackId, rsname, region)
+                self._check_resp(rsresp, rsbody, apiname)
 
-        #Gets a template representation for a specified resource type.
-        apiname = "resource template"
-        rtresp, rtbody = self.orchestration_client.resource_template(rstype, region)
-        self._check_resp(rtresp, rtbody, apiname)
+            #Gets a template representation for a specified resource type.
+            apiname = "resource template"
+            rtresp, rtbody = self.orchestration_client.resource_template(rstype, region)
+            self._check_resp(rtresp, rtbody, apiname)
 
-        #Lists the supported template resource types.
-        apiname = "template resource types"
-        rtresp, rtbody = self.orchestration_client.template_resource(region)
-        self._check_resp(rtresp, rtbody, apiname)
+            #Lists the supported template resource types.
+            apiname = "template resource types"
+            rtresp, rtbody = self.orchestration_client.template_resource(region)
+            self._check_resp(rtresp, rtbody, apiname)
 
-        #Gets the interface schema for a specified resource type.
-        apiname = "schema for resource type"
-        rtresp, rtbody = self.orchestration_client.resource_schema(rstype, region)
-        self._check_resp(rtresp, rtbody, apiname)
+            #Gets the interface schema for a specified resource type.
+            apiname = "schema for resource type"
+            rtresp, rtbody = self.orchestration_client.resource_schema(rstype, region)
+            self._check_resp(rtresp, rtbody, apiname)
 
         if updateStackName == 0:
             print "Create a stack named UPDATE_123 so that I can verify more api calls"
@@ -485,9 +492,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             match = re.search(typestack + '_*', stackname['stack_name'])
             if match:
                 return stackname['stack_name'], stackname['id']
-            else:
-                #print "did not find match"
-                return 0, 0
+        return 0, 0
 
     def _get_event_id(self, body):
         for stackname in body:
