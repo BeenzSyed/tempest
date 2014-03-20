@@ -176,6 +176,7 @@ class RestClient(object):
 
     def keystone_auth_urls(self, user, password, auth_url, service, tenant_name,
                       region):
+        #pdb.set_trace()
         #urls that need to go to the catalog to get endpoints
         if re.search('http://auth.staging.rs-heat.com*', auth_url) or re.search('https://identity.api.rackspacecloud.com*', auth_url):
             if 'tokens' not in auth_url:
@@ -239,7 +240,7 @@ class RestClient(object):
             url = auth_url.split(",")
             num_elements = len(url)
             for num in range(0, num_elements):
-                mgmt_url = [{'region': region, 'publicURL': url[num]}]
+                mgmt_url = [{'region': region, 'publicURL': url[num] + "/" + tenant_name}]
             return mgmt_url
 
     def clear_auth(self):
@@ -388,7 +389,6 @@ class RestClient(object):
 
                 if not mgmt_url:
                     # Didn't find endpoint for region, use the first.
-
                     ep = endpoints[0]
                     mgmt_url = ep['url']
                     # FIXME(blk-u): this isn't handling endpoint type

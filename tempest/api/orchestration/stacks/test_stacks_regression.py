@@ -22,6 +22,7 @@ import yaml
 import time
 import os
 import re
+import string
 import pdb
 
 
@@ -110,6 +111,18 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #pdb.set_trace()
         #templates on github
         template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
+
+        # path = 'https://github.com/rackspace-orchestration-templates/'
+        # path = os.path.normpath(path)
+        # res = []
+        # for root,dirs,files in os.walk(path, topdown=True):
+        #     depth = root[len(path) + len(os.path.sep):].count(os.path.sep)
+        #     if depth == 2:
+        #         # We're currently two directories in, so all subdirs have depth 3
+        #         res += [os.path.join(root, d) for d in dirs]
+        #         dirs[:] = [] # Don't recurse any deeper
+        # print(res)
+
         #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-multi/master/wordpress-multi-server.yaml"
         #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/heat-ci/master/staging/dotnetnuke.template?token=4690505__eyJzY29wZSI6IlJhd0Jsb2I6cmFja3NwYWNlLW9yY2hlc3RyYXRpb24tdGVtcGxhdGVzL2hlYXQtY2kvbWFzdGVyL3N0YWdpbmcvZG90bmV0bnVrZS50ZW1wbGF0ZSIsImV4cGlyZXMiOjEzOTUzNTE4OTR9--21eebff43d4483f04053af2eb404804914a85f6b"
         response_templates = requests.get(template_giturl, timeout=10)
