@@ -336,7 +336,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
         regions = regionsConfig.split(",")
         for region in regions:
-            print "Region is: %s" % region
+            print "\nRegion is: %s" % region
             # #-------  Stacks  --------------
             #stack-list
             apiname = "stack list"
@@ -363,8 +363,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             #stack show
             apiname = "show stack"
-            ssresp, ssbody = self.orchestration_client.show_stack(updateStackName, updateStackId, region)
-            self._check_resp(ssresp, ssbody, apiname)
+            if updateStackName != 0:
+                ssresp, ssbody = self.orchestration_client.show_stack(updateStackName, updateStackId, region)
+                self._check_resp(ssresp, ssbody, apiname)
 
             #delete stack
             apiname = "delete stack"
