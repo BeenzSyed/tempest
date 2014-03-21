@@ -214,7 +214,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns api version with response."""
         url = "https://%s.orchestration.api.rackspacecloud" \
               ".com/versions/"%region
-        resp, body = self.get(url)
+        resp, body = self.get(url,region)
         body = json.loads(body)
         return resp, body
 

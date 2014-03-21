@@ -26,9 +26,11 @@ class VolumesClientJSON(RestClient):
     Client class to send CRUD Volume API requests to a Cinder endpoint
     """
 
-    def __init__(self, config, username, password, auth_url, tenant_name=None):
+    def __init__(self, config, username, password, auth_url,token_url,
+                 tenant_name=None):
         super(VolumesClientJSON, self).__init__(config, username, password,
-                                                auth_url, tenant_name)
+                                                auth_url,token_url,
+                                                tenant_name)
 
         self.service = self.config.volume.catalog_type
         self.build_interval = self.config.volume.build_interval
@@ -58,12 +60,17 @@ class VolumesClientJSON(RestClient):
         body = json.loads(body)
         return resp, body['volumes']
 
-    def get_volume(self, volume_id):
+    def get_volume(self, volume_id ,region):
         """Returns the details of a single volume."""
-        url = "volumes/%s" % str(volume_id)
-        resp, body = self.get(url)
-        body = json.loads(body)
-        return resp, body['volume']
+        #url = "volumes/%s" % str(volume_id)
+        url = "https://%s.blockstorage.api.rackspacecloud" \
+              ".com/v1/%s/volumes/%s "%(region , self.tenant_name,volume_id )
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+            return resp, body['volume']
+        else:
+            return resp, body
 
     def create_volume(self, size, **kwargs):
         """

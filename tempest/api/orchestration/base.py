@@ -50,6 +50,8 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         cls.loadbalancer_client = os.loadbalancer_client
         cls.stacks = []
         cls.keypairs = []
+        cls.volume_client = os.volumes_client
+
 
     @classmethod
     def _get_default_network(cls):
