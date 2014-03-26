@@ -124,7 +124,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         # print(res)
 
         #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-multi/master/wordpress-multi-server.yaml"
-        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/heat-ci/master/staging/dotnetnuke.template?token=4690505__eyJzY29wZSI6IlJhd0Jsb2I6cmFja3NwYWNlLW9yY2hlc3RyYXRpb24tdGVtcGxhdGVzL2hlYXQtY2kvbWFzdGVyL3N0YWdpbmcvZG90bmV0bnVrZS50ZW1wbGF0ZSIsImV4cGlyZXMiOjEzOTUzNTE4OTR9--21eebff43d4483f04053af2eb404804914a85f6b"
+        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/heat-ci/master/"+env+"/"+template+".template?token=4690505__eyJzY29wZSI6IlJhd0Jsb2I6cmFja3NwYWNlLW9yY2hlc3RyYXRpb24tdGVtcGxhdGVzL2hlYXQtY2kvbWFzdGVyL3N0YWdpbmcvZG90bmV0bnVrZS50ZW1wbGF0ZSIsImV4cGlyZXMiOjEzOTUzNTE4OTR9--21eebff43d4483f04053af2eb404804914a85f6b"
+        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/heat-ci/master/"+env+"/"+template+".template?token=4690505__eyJzY29wZSI6IlJhd0Jsb2I6cmFja3NwYWNlLW9yY2hlc3RyYXRpb24tdGVtcGxhdGVzL2hlYXQtY2kvbWFzdGVyL2Rldi93b3JkcHJlc3MtbXVsdGkudGVtcGxhdGUiLCJleHBpcmVzIjoxMzk2NDY1MTkxfQ%3D%3D--07eb3652870e3998bd63bae25af3fcbfadb9c64f"
         response_templates = requests.get(template_giturl, timeout=10)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
