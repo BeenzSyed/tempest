@@ -39,8 +39,9 @@ class KeyPairsClientJSON(RestClient):
 
     def get_keypair(self, key_name ,region):
         resp, body = self.get("os-keypairs/%s" % str(key_name),region)
-        body = json.loads(body)
-        #return resp, body['keypair']
+        if resp['status']=='200':
+             body = json.loads(body)
+             return resp, body['keypair']
         return resp ,body
 
     def create_keypair(self, name, pub_key=None):

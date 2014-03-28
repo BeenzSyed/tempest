@@ -40,5 +40,6 @@ class DatabaseClient(RestClient):
     def get_instance(self, instanceId, region):
         url = "instances/%s" %instanceId
         resp, body = self.get(url,region)
-        body = json.loads(body)
-        return resp, body
+        if resp['status']=='200':
+             body = json.loads(body)
+        return resp ,body
