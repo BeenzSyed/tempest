@@ -214,7 +214,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns api version with response."""
         url = "https://%s.orchestration.api.rackspacecloud" \
               ".com/versions/"%region
-        resp, body = self.get(url)
+        resp, body = self.get(url,region)
         body = json.loads(body)
         return resp, body
 
@@ -413,6 +413,55 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the response for Autoscale url for the stack."""
         resp, body = self.post(url,region ,body=None,headers=self.headers)
         return resp , body
+
+    def get_template_catalog(self,region):
+
+        """Returns the template_catalog from fusion."""
+        url = "/templates"
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
+    def get_single_template(self,template_id,region):
+
+        """Returns the template from fusion for template_id."""
+        url = "templates/%s" % template_id
+        resp, body = self.get(url, region)
+        return resp, body
+
+    def get_list_of_stacks_fusion(self,region):
+
+        """Returns the template from fusion for template_id."""
+        url = "stacks"
+        resp, body = self.get(url, region)
+        return resp, body
+
+    def _prepare_update_create_for_fusion(self, name,template_id=None,template={}):
+        post_body = {
+            "stack_name": name,
+            "disable_rollback": True,
+            "timeout_mins": "120"
+        }
+        if template_id:
+            post_body['template_id'] = template_id
+        if template:
+            post_body['template'] = template
+        body = json.dumps(post_body, default=datehandler)
+        headers = dict(self.headers)
+        headers['X-Auth-Key'] = self.password
+        headers['X-Auth-User'] = self.user
+        return headers, body
+
+    def create_stack_fusion(self, name,region,template_id=None,template={},
+                            parameters={}):
+
+        headers, body = self._prepare_update_create_for_fusion(
+            name,
+            template_id=template_id,template=template)
+        uri = 'stacks'
+        resp, body = self.post(uri, region, headers=headers, body=body)
+        return resp, body
 
 def datehandler(obj):
     if isinstance(obj, datetime.date):

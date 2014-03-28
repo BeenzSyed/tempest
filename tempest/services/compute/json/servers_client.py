@@ -125,8 +125,9 @@ class ServersClientJSON(RestClient):
     def get_server(self, server_id , region):
         """Returns the details of an existing server."""
         resp, body = self.get("servers/%s" % str(server_id),region)
-        body = json.loads(body)
-        return resp, body['server']
+        if resp['status']=='200':
+            body = json.loads(body)
+        return resp, body
 
     def delete_server(self, server_id):
         """Deletes the given server."""
@@ -320,6 +321,12 @@ class ServersClientJSON(RestClient):
         """Detaches a volume from a server instance."""
         resp, body = self.delete('servers/%s/os-volume_attachments/%s' %
                                  (server_id, volume_id))
+        return resp, body
+
+    def get_volume_attachment(self, server_id, volume_id,region):
+        """Get attach volume details."""
+        url = "servers/%s/os-volume_attachments/%s' %(server_id, volume_id)"
+        resp, body = self.get(url,region)
         return resp, body
 
     def add_security_group(self, server_id, name):

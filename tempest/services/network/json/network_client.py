@@ -525,6 +525,10 @@ class NetworkClientJSON(network_client_base.NetworkClientBase):
 
     def get_network(self, network_id,region):
 
-        uri = '%s/network_id/%s' % (self.uri_prefix, network_id)
+        uri = "https://%s.networks.api.rackspacecloud.com/v1" \
+              ".0/862456/network_id/%s" \
+              %(region,network_id)
         resp, body = self.get(uri , region)
+        if resp['status']=='200':
+             body = json.loads(body)
         return resp ,body

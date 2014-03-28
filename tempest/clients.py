@@ -634,6 +634,9 @@ class OrchestrationManager(object):
             *client_args)
         self.orchestration_client = OrchestrationClient(*client_args)
 
+        self.volumes_client = VOLUMES_CLIENTS[interface](
+            *client_args)
+
 
 class DnsManager(object):
     """
