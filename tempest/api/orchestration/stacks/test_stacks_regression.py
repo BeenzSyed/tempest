@@ -17,13 +17,12 @@ from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
 from datetime import datetime
 from tempest.test import attr
-import requests
 import yaml
 import time
 import os
 import re
-import string
 import pdb
+import requests
 
 
 LOG = logging.getLogger(__name__)
@@ -107,32 +106,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print os.environ.get('TEMPEST_CONFIG')
 
         env = self.config.orchestration['env']
-        #env = "dev"
-        #pdb.set_trace()
-        #templates on github
-        template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
+        account = self.config.identity['username']
 
-        # path = 'https://github.com/rackspace-orchestration-templates/'
-        # path = os.path.normpath(path)
-        # res = []
-        # for root,dirs,files in os.walk(path, topdown=True):
-        #     depth = root[len(path) + len(os.path.sep):].count(os.path.sep)
-        #     if depth == 2:
-        #         # We're currently two directories in, so all subdirs have depth 3
-        #         res += [os.path.join(root, d) for d in dirs]
-        #         dirs[:] = [] # Don't recurse any deeper
-        # print(res)
-
+        #template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
         #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-multi/master/wordpress-multi-server.yaml"
-        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/heat-ci/master/"+env+"/"+template+".template?token=4690505__eyJzY29wZSI6IlJhd0Jsb2I6cmFja3NwYWNlLW9yY2hlc3RyYXRpb24tdGVtcGxhdGVzL2hlYXQtY2kvbWFzdGVyL3N0YWdpbmcvZG90bmV0bnVrZS50ZW1wbGF0ZSIsImV4cGlyZXMiOjEzOTUzNTE4OTR9--21eebff43d4483f04053af2eb404804914a85f6b"
-        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/heat-ci/master/"+env+"/"+template+".template?token=4690505__eyJzY29wZSI6IlJhd0Jsb2I6cmFja3NwYWNlLW9yY2hlc3RyYXRpb24tdGVtcGxhdGVzL2hlYXQtY2kvbWFzdGVyL2Rldi93b3JkcHJlc3MtbXVsdGkudGVtcGxhdGUiLCJleHBpcmVzIjoxMzk2NDY1MTkxfQ%3D%3D--07eb3652870e3998bd63bae25af3fcbfadb9c64f"
+        template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-single/master/wordpress-single.yaml"
         response_templates = requests.get(template_giturl, timeout=10)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
             self.fail("The template does not exist.")
         else:
             yaml_template = yaml.safe_load(response_templates.content)
-
 
         #0 if no failures occur, turns to 1 if a build fails
         pf = 0
@@ -171,10 +155,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     parameters['domain_name'] = domain_name
             if 'service_domain' in yaml_template['parameters']:
                     parameters['service_domain'] = domain_name
-            # if 'access_key' in yaml_template['resources']:
-            #         keypair_name = rand_name("heat")
-            #         parameters['access_key'] = keypair_name
-
             if 'git_url' in yaml_template['parameters']:
                 parameters['git_url'] = "https://github.com/timductive/phphelloworld"
             if 'image_id' in yaml_template['parameters'] and image=="ubuntu":
@@ -182,7 +162,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if 'image_id' in yaml_template['parameters'] and image=="centos":
                 parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
 
-            print "\nDeploying %s in %s" % (template, region)
+            print "\nDeploying %s in %s using account %s" % (template, region, account)
             #pdb.set_trace()
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
 
@@ -246,18 +226,22 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                              print "Domain name  %s does not exist ",\
                                  domain_name
 
+                    resp, body = self.get_stack(stack_id, region)
+                    print resp
+                    print body
+
                     #delete stack
-                    print "Deleting stack now"
-                    resp, body = self.delete_stack(stack_name, stack_id, region)
-                    if resp['status'] != '204':
-                        print "Delete did not work"
+                    #print "Deleting stack now"
+                    #resp, body = self.delete_stack(stack_name, stack_id, region)
+                    #if resp['status'] != '204':
+                    #    print "Delete did not work"
 
                 else:
                     print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
-                    self.fail("Stack build failed.")
 
-                if pf > 0:
-                    self.fail("Stack build failed.")
+
+        if pf > 0:
+            self.fail("Stack build failed.")
 
     def _send_deploy_time_graphite(self, env, region, template, deploy_time, buildfail):
         cmd = 'echo "heat.' + env + '.build-tests.' + region + '.' + template \
