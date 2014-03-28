@@ -63,7 +63,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     @attr(type='smoke')
     def test_stack_delete(self):
         #list stacks
-        region = "dev"
+        #region = "dev"
         resp, stacks = self.client.list_stacks(region)
         #go through one stack at a time and delete
         for stack in stacks:

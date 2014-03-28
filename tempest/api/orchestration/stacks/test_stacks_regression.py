@@ -23,6 +23,7 @@ import os
 import re
 import pdb
 import requests
+import json
 
 
 LOG = logging.getLogger(__name__)
@@ -131,11 +132,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             domain_record_type = "A"
 
             parameters = {}
-            # if 'key_name' in yaml_template['parameters']:
-            #     parameters = {
-            #         'key_name': 'iloveheat'
-            #     }
-            #     parameters = {}
             if 'ssh_keypair_name' in yaml_template['parameters']:
                     keypair_name = rand_name("heat")
                     parameters['ssh_keypair_name'] = keypair_name
@@ -163,7 +159,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
-            #pdb.set_trace()
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
 
             if stack_identifier == 0:
@@ -220,21 +215,27 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
                         result = self._verify_name_from_dns_api(domain_url,region,
                                   domain_name)
-                        if result == True :
-                            print "Domain name  %s exist ",domain_name
-                        else :
+                        if result == True:
+                            print "Domain name  %s exist ", domain_name
+                        else:
                              print "Domain name  %s does not exist ",\
                                  domain_name
 
                     resp, body = self.get_stack(stack_id, region)
-                    print resp
-                    print body
+
+                    for output in body['outputs']:
+                        if output['output_key'] == "server_ip":
+                            url = "http://%s" % output['output_value']
+                            customer_resp = requests.get(url, timeout=10)
+                            print customer_resp
+                            if customer_resp.status_code == '200':
+                                print "http call to %s worked!" % url
 
                     #delete stack
-                    #print "Deleting stack now"
-                    #resp, body = self.delete_stack(stack_name, stack_id, region)
-                    #if resp['status'] != '204':
-                    #    print "Delete did not work"
+                    print "Deleting stack now"
+                    resp, body = self.delete_stack(stack_name, stack_id, region)
+                    if resp['status'] != '204':
+                       print "Delete did not work"
 
                 else:
                     print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
