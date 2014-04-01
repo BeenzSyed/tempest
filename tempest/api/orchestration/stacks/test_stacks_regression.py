@@ -109,9 +109,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         env = self.config.orchestration['env']
         account = self.config.identity['username']
 
-        #template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
+        template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
         #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-multi/master/wordpress-multi-server.yaml"
-        template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-single/master/wordpress-single.yaml"
+        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-single/master/wordpress-single.yaml"
         response_templates = requests.get(template_giturl, timeout=10)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
