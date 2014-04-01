@@ -105,6 +105,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     @attr(type='smoke')
     def _test_stack(self, template, image=None):
         print os.environ.get('TEMPEST_CONFIG')
+        if os.environ.get('TEMPEST_CONFIG') == None:
+            print "Set the environment varible TEMPEST_CONFIG to a config file."
+            self.fail("Environment variable is not set.")
 
         env = self.config.orchestration['env']
         account = self.config.identity['username']
@@ -204,6 +207,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "The deployment took %s minutes" % count
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
 
+                    pdb.set_trace()
                     self._verify_resources(stack_id, stack_name, region)
 
                     #check DNS resource
