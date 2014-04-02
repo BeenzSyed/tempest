@@ -104,6 +104,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     @attr(type='smoke')
     def _test_stack(self, template, image=None):
+
+        # stack_id = "e0796fb4-5f1c-4bab-9fe3-0455d4a677fa"
+        # stack_name = "qe_wordpress-multiDev-tempest-1665357830"
+        # region = "Dev"
+        # self._verify_resources(stack_id, stack_name, region)
+
+
         print os.environ.get('TEMPEST_CONFIG')
         if os.environ.get('TEMPEST_CONFIG') == None:
             print "Set the environment varible TEMPEST_CONFIG to a config file."
@@ -207,7 +214,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "The deployment took %s minutes" % count
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
 
-                    pdb.set_trace()
                     self._verify_resources(stack_id, stack_name, region)
 
                     #check DNS resource
@@ -259,12 +265,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def _verify_dns_entries(self,stack_name ,stack_id,region,email_address ,
                             domain_record_type,domain_name):
-
         print "Testing the DNS parameters "
         resp, body = self.orchestration_client.show_stack(stack_name,
                         stack_id ,region)
         if resp['status'] == 200:
-
             self.assertEquals(email_address, body['stack'][
                     'parameters']['email_address'])
             self.assertEquals(domain_record_type, body['stack']['parameters'][
@@ -274,7 +278,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             self.assertEquals("sabeen", body['stack']['parameters'][
                 'key_name'])
         else:
-
          print "DNS verification fail for incorrect show-stack response"
 
     def _verify_name_from_dns_api(self,domain_url,region,
@@ -287,7 +290,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         return result
 
-    def _verify_resources(self,region,stack_id,stack_name):
+    def _verify_resources(self, stack_id, stack_name, region):
        # validation = False
        # resp_status = "200"
         #region = "SYD"
@@ -302,12 +305,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_randomstr = "OS::Heat::RandomString"
         resource_grp = 'OS::Heat::ResourceGroup'
         resource_vol_attach = "OS::Cinder::VolumeAttachment"
-
-        resp, body = self.client.list_resources(stack_name,stack_id, region)
+        #resp, body = self.client.list_resources(stack_name,stack_id, region)
+        resp, body = self.orchestration_client.list_resources(stack_name,stack_id, region)
 
         if resp['status'] == '200':
            for resource in body:
-
                 if resource['resource_type'] ==resource_server:
                     server_id = resource['physical_resource_id']
                     resp,body =  self.servers_client.get_server(server_id,region)

@@ -41,8 +41,23 @@ class OrchestrationClient(rest_client.RestClient):
         uri = 'stacks'
         if params:
             uri += '?%s' % urllib.urlencode(params)
-
         resp, body = self.get(uri, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+            return resp, body['stacks']
+        else:
+            return resp, body
+
+    def list_stacks_mgmt_api(self, region, params=None):
+        """Lists all stacks for a user."""
+
+        # uri = 'stacks'
+        # if params:
+        #     uri += '?%s?GLOBAL_TENANT=1' % urllib.urlencode(params)
+        # print uri
+
+        url = "stacks?global_tenant=1"
+        resp, body = self.get(url, region)
         if resp['status'] == '200':
             body = json.loads(body)
             return resp, body['stacks']
