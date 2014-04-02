@@ -105,12 +105,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     @attr(type='smoke')
     def _test_stack(self, template, image=None):
 
-        # stack_id = "e0796fb4-5f1c-4bab-9fe3-0455d4a677fa"
-        # stack_name = "qe_wordpress-multiDev-tempest-1665357830"
-        # region = "Dev"
-        # self._verify_resources(stack_id, stack_name, region)
-
-
         print os.environ.get('TEMPEST_CONFIG')
         if os.environ.get('TEMPEST_CONFIG') == None:
             print "Set the environment varible TEMPEST_CONFIG to a config file."
@@ -120,8 +114,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         account = self.config.identity['username']
 
         template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
-        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-multi/master/wordpress-multi-server.yaml"
-        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-single/master/wordpress-single.yaml"
         response_templates = requests.get(template_giturl, timeout=10)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
@@ -129,7 +121,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         else:
             yaml_template = yaml.safe_load(response_templates.content)
 
-        #0 if no failures occur, turns to 1 if a build fails
+        #0 if no failures occur, adds 1 every time a stack fails
         pf = 0
 
         regionsConfig = self.config.orchestration['regions']
@@ -250,8 +242,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 else:
                     print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
 
-
-        if pf > 0:
+        #If more than 2 stacks fail, fail the test
+        if pf > 2:
             self.fail("Stack build failed.")
 
     def _send_deploy_time_graphite(self, env, region, template, deploy_time, buildfail):
@@ -291,11 +283,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         return result
 
     def _verify_resources(self, stack_id, stack_name, region):
-       # validation = False
-       # resp_status = "200"
-        #region = "SYD"
-       # stack_id = "e6d816c3-eec5-40a3-8e29-0c3ff261df23"
-       # stack_name = "DontDeleteMeAgain"
         resource_server = "OS::Nova::Server"
         resource_db = "OS::Trove::Instance"
         resource_lb = "Rackspace::Cloud::LoadBalancer"
@@ -305,23 +292,22 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_randomstr = "OS::Heat::RandomString"
         resource_grp = 'OS::Heat::ResourceGroup'
         resource_vol_attach = "OS::Cinder::VolumeAttachment"
-        #resp, body = self.client.list_resources(stack_name,stack_id, region)
-        resp, body = self.orchestration_client.list_resources(stack_name,stack_id, region)
+        resp, body = self.orchestration_client.list_resources(stack_name, stack_id, region)
 
         if resp['status'] == '200':
-           for resource in body:
-                if resource['resource_type'] ==resource_server:
+            for resource in body:
+                if resource['resource_type'] == resource_server:
                     server_id = resource['physical_resource_id']
-                    resp,body =  self.servers_client.get_server(server_id,region)
+                    resp, body = self.servers_client.get_server(server_id,region)
                     resource_name = resource_server
                     self._check_status_for_resource(resp['status'],resource_name)
 
-                if resource['resource_type'] ==resource_keypair:
-                     key_name = resource['physical_resource_id']
-                     resp,body = self.keypairs_client.get_keypair(key_name,
+                if resource['resource_type'] == resource_keypair:
+                    key_name = resource['physical_resource_id']
+                    resp, body = self.keypairs_client.get_keypair(key_name,
                                                                 region)
-                     resource_name = resource_keypair
-                     self._check_status_for_resource(resp['status'],resource_name)
+                    resource_name = resource_keypair
+                    self._check_status_for_resource(resp['status'],resource_name)
 
                 # if resource['resource_type'] ==resource_network:
                 #      key_name = resource['physical_resource_id']
@@ -330,58 +316,57 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 #      resource_name = resource_network
                 #      self._check_status_for_resource(resp['status'],resource_name)
 
-                if resource['resource_type']  == resource_db:
-                     db_id = resource['physical_resource_id']
-                     resp,body =  self.database_client.get_instance(db_id ,
+                if resource['resource_type'] == resource_db:
+                    db_id = resource['physical_resource_id']
+                    resp, body = self.database_client.get_instance(db_id,
                                                                  region)
-                     resource_name = resource_db
-                     self._check_status_for_resource(resp['status'],
+                    resource_name = resource_db
+                    self._check_status_for_resource(resp['status'],
                                                      resource_name)
 
-                if resource['resource_type']  ==resource_lb:
-                     lb_id = resource['physical_resource_id']
-                     resp,body =self.loadbalancer_client.get_load_balancer(lb_id ,region)
-                     resource_name = resource_lb
-                     self._check_status_for_resource(resp['status'],
+                if resource['resource_type'] == resource_lb:
+                    lb_id = resource['physical_resource_id']
+                    resp,body =self.loadbalancer_client.get_load_balancer(lb_id,region)
+                    resource_name = resource_lb
+                    self._check_status_for_resource(resp['status'],
                                                      resource_name)
 
-                if resource['resource_type'] ==resource_randomstr:
-                     random_str = resource['physical_resource_id']
-                     if random_str!=None:
-                         print "%s status is checked successfully" %resource_randomstr
-                         validation = True
-                     else:
-                          print "%s resource was not created completly" \
+                if resource['resource_type'] == resource_randomstr:
+                    random_str = resource['physical_resource_id']
+                    if random_str!=None:
+                        print "%s is up." %resource_randomstr
+                    else:
+                        print "%s is down" \
                              %resource_randomstr
 
-                if resource['resource_type'] ==resource_grp:
-                     if resource['resource_status'] == "CREATE_COMPLETE":
-                          print"%s resource was created completly" \
+                if resource['resource_type'] == resource_grp:
+                    if resource['resource_status'] == "CREATE_COMPLETE":
+                        print"%s is up." \
                                %resource_grp
-                     else :
-                         print"%s resource was not created completly" \
+                    else :
+                        print"%s is down." \
                               %resource_grp
 
-                if resource['resource_type']  ==resource_cinder:
-                     vol_id = resource['physical_resource_id']
-                     resp,body =self.volume_client.get_volume(vol_id ,region)
-                     resource_name = resource_cinder
-                     self._check_status_for_resource(resp['status'],
+                if resource['resource_type'] == resource_cinder:
+                    vol_id = resource['physical_resource_id']
+                    resp,body =self.volume_client.get_volume(vol_id ,region)
+                    resource_name = resource_cinder
+                    self._check_status_for_resource(resp['status'],
                                                      resource_name)
 
-                if resource['resource_type']  ==resource_vol_attach:
-                     vol_id = resource['physical_resource_id']
-                     server_id = "10b8bd7f-a948-4e56-b2b4-96a805041d1f"
-                     resp,body =self.servers_client.get_volume_attachment(
+                if resource['resource_type'] == resource_vol_attach:
+                    vol_id = resource['physical_resource_id']
+                    server_id = "10b8bd7f-a948-4e56-b2b4-96a805041d1f"
+                    resp,body =self.servers_client.get_volume_attachment(
                          server_id,vol_id,region)
-                     resource_name = resource_vol_attach
-                     self._check_status_for_resource(resp['status'],
+                    resource_name = resource_vol_attach
+                    self._check_status_for_resource(resp['status'],
                                                      resource_name)
         else :
             print "Resources does not exist in Stack "
 
-    def _check_status_for_resource(self,status_code,resource):
+    def _check_status_for_resource(self, status_code, resource):
         if status_code =='200':
-            print "%s status is checked for CREATE SUCCESSFULL" %resource
+            print "%s is up." %resource
         if status_code =='404':
-            print "%s resource was not created completly" %resource
+            print "%s is down." %resource

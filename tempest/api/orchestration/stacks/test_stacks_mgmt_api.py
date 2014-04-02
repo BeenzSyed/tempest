@@ -307,50 +307,63 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     @attr(type='smoke')
     def _test_stack(self, template):
         print os.environ.get('TEMPEST_CONFIG')
-
         env = self.config.orchestration['env']
-        #env = "dev"
-        template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
-        response_templates = requests.get(template_giturl, timeout=3)
-        yaml_template = yaml.safe_load(response_templates.content)
-        #print yaml_template
-
-        parameters = {}
-        if 'key_name' in yaml_template['parameters']:
-            parameters = {
-                'key_name': 'sabeen'
-            }
-        if 'git_url' in yaml_template['parameters']:
-            parameters['git_url'] = "https://github.com/timductive/phphelloworld"
-            #https://github.com/beenzsyed/phphelloworld
-
         usertype = self.config.identity['username']
         print "User is: %s" % usertype
         print "Environment is %s" % env
-        regionsConfig = self.config.orchestration['regions']
-        #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
-        regions = regionsConfig.split(",")
-        for region in regions:
-            print "\nRegion is: %s" % region
-            # #-------  Stacks  --------------
-            #stack-list
-            apiname = "stack list"
-            slresp, stacklist = self.orchestration_client.list_stacks(region)
-            numstacks = 0
-            for stack in stacklist:
-                numstacks = numstacks+1
 
-            apiname = "stack list mgmt api"
-            slresp, stacklist = self.orchestration_client.list_stacks_mgmt_api(region)
-            numstacksmgmt = 0
-            for stack in stacklist:
-                numstacksmgmt = numstacksmgmt+1
-
-        if (numstacksmgmt > numstacks):
-            print "Management api is working! Stack list gives back %s stacks and the Management api gives back %s stacks." %(numstacks, numstacksmgmt)
+        policy_file = "https://github.rackspace.com/Heat/cookbook-heat/raw/master/files/default/policy.json"
+        policy = requests.get(policy_file, timeout=10)
+        if policy.status_code != requests.codes.ok:
+            print "This file does not exist: %s" % policy_file
+            self.fail("The policy file does not exist.")
         else:
-            print "Management api is not working. Stack list gives back %s stacks and the Management api gives back %s stacks." %(numstacks, numstacksmgmt)
-            self.fail("Management api is not working.")
+            policy_details = yaml.safe_load(policy.content)
+        super_user = policy_details['allow_management_api_user'].split(":")[2]
+        if usertype == super_user:
+            print "%s is a super user." % (usertype)
+        else:
+            print "%s is a normal user." % (usertype)
+
+        regionsConfig = self.config.orchestration['regions']
+        regions = regionsConfig.split(",")[0]
+        #for region in regions:
+        print "\nRegion is: %s" % regions
+
+        #stack-list
+        apiname = "stack list"
+        slresp, stacklist = self.orchestration_client.list_stacks(regions)
+        numstacks = 0
+        for stack in stacklist:
+            numstacks = numstacks+1
+
+        apiname = "stack list mgmt api"
+        slrespm, stacklistm = self.orchestration_client.list_stacks_mgmt_api(regions)
+        numstacksmgmt = 0
+        for stack in stacklist:
+            numstacksmgmt = numstacksmgmt+1
+
+        if usertype == super_user:
+            if slrespm['status'] == '200':
+                if (numstacksmgmt >= numstacks):
+                    print "Management api is working! Stack list gives back %s stacks and the management api gives back %s stacks." %(numstacks, numstacksmgmt)
+                else:
+                    print "Management api is not working. Stack list gives back %s stacks and the management api gives back %s stacks." %(numstacks, numstacksmgmt)
+                    self.fail("Management api is not working.")
+            elif slrespm['status'] == '403':
+                print "%s does not have access. Error: %s" % (usertype, stacklistm)
+        else:
+            if slrespm['status'] == '403':
+                print "%s is not a superuser and does not have access." % (usertype)
+            else:
+                print "%s is not a superuser and has access." % (usertype)
+                self.fail("Something is wrong! A normal user has superuser access.")
+
+            # if (numstacksmgmt == numstacks):
+            #     print "The user %s is not a super user. Stack list gives back %s stacks and the management api gives back %s stacks." %(usertype, numstacks, numstacksmgmt)
+            # else:
+            #     print "Something is wrong. The user %s is not a super user. Stack list gives back %s stacks and the management api gives back %s stacks." %(usertype, numstacks, numstacksmgmt)
+            #     self.fail("Management api is not working.")
 
     def _get_stacks(self, typestack, body):
         for stackname in body:
