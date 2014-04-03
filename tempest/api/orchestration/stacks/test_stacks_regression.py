@@ -177,13 +177,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
                 while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
                     resp, body = self.get_stack(stack_id, region)
-                    if resp['status'] != '200':
+                    if resp['status'] == '200':
+                        print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
+                        time.sleep(60)
+                        count += 1
+                    elif resp['status'] != '200':
                         print "The response is: %s" % resp
-                        self.fail(resp)
-                    print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
-                    time.sleep(60)
-                    count += 1
-                    if body['stack_status'] == 'CREATE_FAILED':
+                        pf += 1
+                    elif body['stack_status'] == 'CREATE_FAILED':
                         print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                         self._send_deploy_time_graphite(env, region, template, count, "failtime")
                         if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
@@ -202,8 +203,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                 print "Delete did not work"
                         pf += 1
                     else:
-                        print "Something went wrong. Here's why: %s, %s" % (resp, body['stack_status_reason'])
-                        self._send_deploy_time_graphite(env, region, template, count, "failtime")
+                        print "Something went wrong. Here's what: %s, %s" % (resp, body)
                         pf += 1
 
                 if body['stack_status'] == 'CREATE_COMPLETE':
