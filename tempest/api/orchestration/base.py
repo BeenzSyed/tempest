@@ -162,7 +162,6 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         else:
             return resp, body
 
-
     @classmethod
     def delete_stack(cls,stackname, stackid, region):
         resp, body = cls.orchestration_client.delete_stack(stackname, stackid, region)

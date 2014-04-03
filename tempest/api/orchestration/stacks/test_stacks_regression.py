@@ -201,6 +201,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             if dresp['status'] != '204':
                                 print "Delete did not work"
                         pf += 1
+                    else:
+                        print "Something went wrong. Here's why: %s, %s" % (resp, body['stack_status_reason'])
+                        self._send_deploy_time_graphite(env, region, template, count, "failtime")
+                        pf += 1
 
                 if body['stack_status'] == 'CREATE_COMPLETE':
                     print "The deployment took %s minutes" % count
@@ -237,13 +241,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "Deleting stack now"
                     resp, body = self.delete_stack(stack_name, stack_id, region)
                     if resp['status'] != '204':
-                       print "Delete did not work"
+                        print "Delete did not work"
 
                 else:
                     print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
 
-        #If more than 2 stacks fail, fail the test
-        if pf > 2:
+        #if more than 0 stacks fail, fail the test
+        if pf > 0:
             self.fail("Stack build failed.")
 
     def _send_deploy_time_graphite(self, env, region, template, deploy_time, buildfail):
