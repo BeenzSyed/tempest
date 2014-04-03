@@ -340,15 +340,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         apiname = "stack list mgmt api"
         slrespm, stacklistm = self.orchestration_client.list_stacks_mgmt_api(regions)
         numstacksmgmt = 0
-        for stack in stacklist:
+        for stack in stacklistm:
             numstacksmgmt = numstacksmgmt+1
 
         if usertype == super_user:
             if slrespm['status'] == '200':
                 if (numstacksmgmt >= numstacks):
-                    print "Management api is working! Stack list gives back %s stacks and the management api gives back %s stacks." %(numstacks, numstacksmgmt)
+                    print "Management api is working! Stack list gives back %s stacks and the management api gives back %s stacks." % (numstacks, numstacksmgmt)
                 else:
-                    print "Management api is not working. Stack list gives back %s stacks and the management api gives back %s stacks." %(numstacks, numstacksmgmt)
+                    print "Management api is not working. Stack list gives back %s stacks and the management api gives back %s stacks." % (numstacks, numstacksmgmt)
                     self.fail("Management api is not working.")
             elif slrespm['status'] == '403':
                 print "%s does not have access. Error: %s" % (usertype, stacklistm)
