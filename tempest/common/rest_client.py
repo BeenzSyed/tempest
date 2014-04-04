@@ -425,7 +425,7 @@ class RestClient(object):
     def post(self, url, region, body, headers):
         # print "url is %s" % url
         # print "region is %s" % region
-        print "body is %s " % body
+        # print "body is %s " % body
         # print "headers are %s" % headers
         return self.request('POST', url, region, headers, body)
 

@@ -24,6 +24,7 @@ import re
 import pdb
 import requests
 import json
+from testconfig import config
 
 
 LOG = logging.getLogger(__name__)
@@ -102,8 +103,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_kitchen_sink(self):
         self._test_stack("kitchen_sink")
 
+    def test_all(self):
+        self._test_stack()
+
     @attr(type='smoke')
-    def _test_stack(self, template, image=None):
+    def _test_stack(self, template=None, image=None):
 
         print os.environ.get('TEMPEST_CONFIG')
         if os.environ.get('TEMPEST_CONFIG') == None:
@@ -113,8 +117,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         env = self.config.orchestration['env']
         account = self.config.identity['username']
 
-        #template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
-        template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/php-app-single/master/php_app_single.yaml"
+        if os.environ.get('template_url') != None:
+            template_giturl = config['template_url']
+            template = template_giturl.split("/")[-1].split(".")[0]
+            print "template is %s" % template
+        else:
+            #template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
+            template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/php-app-single/master/php_app_single.yaml"
+
         response_templates = requests.get(template_giturl, timeout=10)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
