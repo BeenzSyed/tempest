@@ -113,8 +113,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         env = self.config.orchestration['env']
         account = self.config.identity['username']
 
-        template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
-        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-multi/master/wordpress-multi-server.yaml"
+        #template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
+        template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/php-app-single/master/php_app_single.yaml"
         response_templates = requests.get(template_giturl, timeout=10)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
@@ -160,6 +160,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 parameters['image_id'] = "80fbcb55-b206-41f9-9bc2-2dd7aac6c061"
             if 'image_id' in yaml_template['parameters'] and image=="centos":
                 parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
+            if 'flavor' in yaml_template['parameters']:
+                parameters['flavor'] = "2GB Standard Instance"
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
