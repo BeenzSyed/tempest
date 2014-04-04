@@ -39,20 +39,35 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         super(StacksTestJSON, cls).setUpClass()
         cls.client = cls.orchestration_client
 
-    # def test_supported_template(self):
-    #     self._create_stack("wp-resource")
-
     def test_get_template_catalog(self):
         region = "IAD"
         resp , body = self.orchestration_client.get_template_catalog(region)
+        print resp, body
         self.assertEqual(resp['status'], '200')
 
     def test_get_single_template(self):
         region = "IAD"
-        template_id="15901104"
+        template_id="wordpress-single-winserver"
         resp , body = self.orchestration_client.get_single_template(
             template_id,region)
+        print resp, body
         self.assertEqual(resp['status'], '200')
+
+    def test_get_template_catalog_with_metadata(self):
+        region = "IAD"
+        resp , body = self.orchestration_client.get_template_catalog_with_metadata(region)
+        print resp, body
+        self.assertEqual(resp['status'], '200')
+
+    def test_get_single_template__with_metadata(self):
+        region = "IAD"
+        template_id="wordpress-single-winserver"
+        resp , body = self.orchestration_client.get_single_template_with_metadata(
+            template_id,region)
+        if body['template']['metadata']:
+            print"Template with metadata"
+        else:
+           print"Test fail for getting metadata"
 
     def test_get_list_of_stacks(self):
         region = "IAD"
@@ -62,44 +77,30 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
 
     def test_create_stack_with_supported_template_id(self):
-        template_id = "SHWETA"
+        template_id = "wp-resource"
         region = "IAD"
-        stack_name = rand_name("qe_"+template_id+region)
+        parameters={"key_name":'sabeen'}
+        stack_name = rand_name("fusion_"+template_id+region)
         resp,body = self.orchestration_client.create_stack_fusion(
-            stack_name,region,template_id)
+            stack_name,region,template_id,parameters=parameters)
         print resp, body
 
         self.assertEqual(resp['status'], '200')
 
 
     def test_create_stack_with_supported_template(self):
-        template_giturl = "https://raw.github" \
-                          ".com/heat-ci/heat-templates/master/qa/rcbops_allinone_inone" \
-                          ".template"
-        region = "IAD"
-        # resp , body = self.orchestration_client.get_template_catalog(region)
-        # for template in body['templates']:
-        #     if template['id'] == "rcbops_allinone_inone":
-        #         template = json.loads(template)
-        #        # yaml_template = yaml.safe_load(template.content)
-        #         print "done"
-        #
-        #
-        # self.assertEqual(resp['status'], '200')
 
-        response_templates = requests.get(template_giturl, timeout=10)
-        if response_templates.status_code != requests.codes.ok:
-            print "This template does not exist: %s" % template_giturl
-            self.fail("The template does not exist.")
-        else:
-            yaml_template = yaml.safe_load(response_templates.content)
-
-        #template_id = "15901104"
         region = "IAD"
-        parameters = {}
+        resp , body = self.orchestration_client.get_template_catalog(region)
+        for template in body['templates']:
+             if template['id'] == "wp-resource":
+                 yaml_template = template
+                 parameters={"key_name":'sabeen'}
+                 break
+
+        region = "IAD"
+        #parameters = {}
         stack_name = rand_name("qe_")
-       # resp,body = self.orchestration_client.create_stack_fusion(
-         #   stack_name,region,template_id)
         resp,body =self.orchestration_client.create_stack_fusion(stack_name, region,
                                               template_id=None,
                                                 template=yaml_template,
