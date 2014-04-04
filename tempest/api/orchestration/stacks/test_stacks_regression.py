@@ -117,13 +117,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         env = self.config.orchestration['env']
         account = self.config.identity['username']
 
-        if os.environ.get('template_url') != None:
+        if template == None:
             template_giturl = config['template_url']
             template = template_giturl.split("/")[-1].split(".")[0]
             print "template is %s" % template
         else:
-            #template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
-            template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/php-app-single/master/php_app_single.yaml"
+            template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
 
         response_templates = requests.get(template_giturl, timeout=10)
         if response_templates.status_code != requests.codes.ok:
