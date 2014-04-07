@@ -54,7 +54,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_get_template_catalog_with_metadata(self):
         region = "IAD"
         resp , body = self.orchestration_client.get_template_catalog_with_metadata(region)
-        print resp, body
+       # print resp, body
         for template in body['templates']:
             if template['metadata']=={}:
                 print""
