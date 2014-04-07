@@ -15,16 +15,7 @@
 from tempest.api.orchestration import base
 from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
-from datetime import datetime
-from tempest.test import attr
-import requests
-import yaml
-import time
-import os
-import re
-import string
-import pdb
-import json
+
 
 
 
@@ -42,22 +33,34 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_get_template_catalog(self):
         region = "IAD"
         resp , body = self.orchestration_client.get_template_catalog(region)
-        print resp, body
-        self.assertEqual(resp['status'], '200')
+        if self.assertEqual(resp['status'], '200'):
+            print "Test get template catalog pass"
+        else :
+            print "Test get template catalog fail"
+
 
     def test_get_single_template(self):
         region = "IAD"
         template_id="wordpress-single-winserver"
         resp , body = self.orchestration_client.get_single_template(
             template_id,region)
-        print resp, body
-        self.assertEqual(resp['status'], '200')
+
+        if self.assertEqual(resp['status'], '200'):
+            print "Test get single template  pass"
+        else :
+            print "Test get single template fail"
+
 
     def test_get_template_catalog_with_metadata(self):
         region = "IAD"
         resp , body = self.orchestration_client.get_template_catalog_with_metadata(region)
         print resp, body
-        self.assertEqual(resp['status'], '200')
+        for template in body['templates']:
+            if template['metadata']=={}:
+                print""
+            else :
+                print "Templates does not have metadata"
+
 
     def test_get_single_template__with_metadata(self):
         region = "IAD"
@@ -65,15 +68,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp , body = self.orchestration_client.get_single_template_with_metadata(
             template_id,region)
         if body['template']['metadata']:
-            print"Template with metadata"
+            print"Template %s call responded with metadata" %template_id
         else:
-           print"Test fail for getting metadata"
+           print"Test fail to get metadata of %s" %template_id
 
     def test_get_list_of_stacks(self):
         region = "IAD"
         resp , body = self.orchestration_client.get_list_of_stacks_fusion(region)
-        print resp , body
-        self.assertEqual(resp['status'], '200')
+        if self.assertEqual(resp['status'], '200'):
+            print "SUCCESS for get list call for Fusion"
+        else :
+            print "Test fail to get list call from fusion"
 
 
     def test_create_stack_with_supported_template_id(self):
@@ -83,9 +88,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         stack_name = rand_name("fusion_"+template_id+region)
         resp,body = self.orchestration_client.create_stack_fusion(
             stack_name,region,template_id,parameters=parameters)
-        print resp, body
-
-        self.assertEqual(resp['status'], '200')
+        if self.assertEqual(resp['status'], '200'):
+            print "Test create stack with supported template id : PASS "
+        else:
+            print "Test create stack with supported template id : FAIL "
 
 
     def test_create_stack_with_supported_template(self):
@@ -99,12 +105,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                  break
 
         region = "IAD"
-        #parameters = {}
         stack_name = rand_name("qe_")
         resp,body =self.orchestration_client.create_stack_fusion(stack_name, region,
                                               template_id=None,
                                                 template=yaml_template,
                                                 parameters=parameters)
-        print resp, body
-        self.assertEqual(resp['status'], '200')
+
+
+        if self.assertEqual(resp['status'], '200'):
+            print "Test create stack with supported template: PASS "
+        else:
+            print "Test create stack with supported template: FAIL "
 
