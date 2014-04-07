@@ -432,7 +432,18 @@ class OrchestrationClient(rest_client.RestClient):
     def get_template_catalog(self,region):
 
         """Returns the template_catalog from fusion."""
-        url = "/templates"
+        url = "templates"
+
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
+    def get_template_catalog_with_metadata(self,region):
+
+        """Returns the template_catalog from fusion."""
+        url = "templates?with_metadata=True"
+
         resp, body = self.get(url, region)
         if resp['status'] == '200':
             body = json.loads(body)
@@ -443,6 +454,17 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the template from fusion for template_id."""
         url = "templates/%s" % template_id
         resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
+    def get_single_template_with_metadata(self,template_id,region):
+
+        """Returns the template from fusion for template_id."""
+        url = "templates/%s?with_metadata=True" % template_id
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
         return resp, body
 
     def get_list_of_stacks_fusion(self,region):
@@ -452,9 +474,12 @@ class OrchestrationClient(rest_client.RestClient):
         resp, body = self.get(url, region)
         return resp, body
 
-    def _prepare_update_create_for_fusion(self, name,template_id=None,template={}):
+    def _prepare_update_create_for_fusion(self, name,
+                                          parameters={},template_id=None,\
+                                                                  template={}):
         post_body = {
             "stack_name": name,
+            "parameters" : parameters,
             "disable_rollback": True,
             "timeout_mins": "120"
         }
@@ -472,7 +497,7 @@ class OrchestrationClient(rest_client.RestClient):
                             parameters={}):
 
         headers, body = self._prepare_update_create_for_fusion(
-            name,
+            name, parameters=parameters,
             template_id=template_id,template=template)
         uri = 'stacks'
         resp, body = self.post(uri, region, headers=headers, body=body)
