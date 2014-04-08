@@ -25,7 +25,8 @@ import pdb
 import requests
 import json
 from testconfig import config
-
+import urllib2
+from bs4 import BeautifulSoup
 
 LOG = logging.getLogger(__name__)
 
@@ -106,6 +107,19 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_all(self):
         self._test_stack()
 
+    def test_soup(self):
+        webpage = urllib2.urlopen('https://github.com/rackspace-orchestration-templates').read()
+        soup = BeautifulSoup(webpage)
+        for link in soup.find_all('a'):
+            if len((link.get('href').split('/'))) == 3 and link.get('href').split('/')[1] == "rackspace-orchestration-templates":
+                webpage_child = urllib2.urlopen('https://github.com'+link.get('href')).read()
+                soup_child = BeautifulSoup(webpage_child)
+                for child_links in soup_child.find_all('a'):
+                    searchObj = re.search(r'yaml', child_links.get('href'), re.M|re.I)
+                    if searchObj:
+                        final_link = "https://raw.githubusercontent.com"+child_links.get('href')
+                        print final_link.replace("blob/", "")
+
     @attr(type='smoke')
     def _test_stack(self, template=None, image=None):
 
@@ -170,7 +184,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if 'image_id' in yaml_template['parameters'] and image=="centos":
                 parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
             if 'flavor' in yaml_template['parameters']:
-                parameters['flavor'] = "2GB Standard Instance"
+                parameters['flavor'] = "4GB Standard Instance"
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
