@@ -26,7 +26,7 @@ import requests
 import json
 from testconfig import config
 import urllib2
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 
 LOG = logging.getLogger(__name__)
 
@@ -107,18 +107,18 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_all(self):
         self._test_stack()
 
-    def test_soup(self):
-        webpage = urllib2.urlopen('https://github.com/rackspace-orchestration-templates').read()
-        soup = BeautifulSoup(webpage)
-        for link in soup.find_all('a'):
-            if len((link.get('href').split('/'))) == 3 and link.get('href').split('/')[1] == "rackspace-orchestration-templates":
-                webpage_child = urllib2.urlopen('https://github.com'+link.get('href')).read()
-                soup_child = BeautifulSoup(webpage_child)
-                for child_links in soup_child.find_all('a'):
-                    searchObj = re.search(r'yaml', child_links.get('href'), re.M|re.I)
-                    if searchObj:
-                        final_link = "https://raw.githubusercontent.com"+child_links.get('href')
-                        print final_link.replace("blob/", "")
+    # def test_soup(self):
+    #     webpage = urllib2.urlopen('https://github.com/rackspace-orchestration-templates').read()
+    #     soup = BeautifulSoup(webpage)
+    #     for link in soup.find_all('a'):
+    #         if len((link.get('href').split('/'))) == 3 and link.get('href').split('/')[1] == "rackspace-orchestration-templates":
+    #             webpage_child = urllib2.urlopen('https://github.com'+link.get('href')).read()
+    #             soup_child = BeautifulSoup(webpage_child)
+    #             for child_links in soup_child.find_all('a'):
+    #                 searchObj = re.search(r'yaml', child_links.get('href'), re.M|re.I)
+    #                 if searchObj:
+    #                     final_link = "https://raw.githubusercontent.com"+child_links.get('href')
+    #                     print final_link.replace("blob/", "")
 
     @attr(type='smoke')
     def _test_stack(self, template=None, image=None):
