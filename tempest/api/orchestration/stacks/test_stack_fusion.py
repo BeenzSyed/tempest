@@ -111,5 +111,30 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
 
-        
+        if resp['status']== '201':
+            stack_id = body['stack']['id']
+            url = "stacks/%s?with_support_info"%stack_id
+            resp,body = self.orchestration_client.get_stack_info_for_fusion(
+                url,region)
+            print "test"
 
+    def test_stack_show_call(self):
+        region = "IAD"
+        url = "stacks?with_support_info"
+        resp,body = self.orchestration_client.get_stack_info_for_fusion(
+                url,region)
+
+        self.assertEqual(resp['status'], '200', "expected response was 200 "
+                                            "but actual was %s"%resp['status'])
+        # Need to add assertion
+
+    def test_stack_show_call_with_details(self):
+        region = "IAD"
+        url = "stacks/detail?with_support_info"
+        resp,body = self.orchestration_client.get_stack_info_for_fusion(
+                url,region)
+
+        self.assertEqual(resp['status'], '200', "expected response was 200 "
+                                            "but actual was %s"%resp['status'])
+
+        # Need to add assertion
