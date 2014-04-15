@@ -488,6 +488,7 @@ class OrchestrationClient(rest_client.RestClient):
         if template:
             post_body['template'] = template
         body = json.dumps(post_body, default=datehandler)
+        print "This is the Request Body: %s" % body
         headers = dict(self.headers)
         headers['X-Auth-Key'] = self.password
         headers['X-Auth-User'] = self.user
@@ -498,10 +499,23 @@ class OrchestrationClient(rest_client.RestClient):
 
         headers, body = self._prepare_update_create_for_fusion(
             name, parameters=parameters,
-            template_id=template_id,template=template)
+            template_id=template_id, template=template)
         uri = 'stacks'
         resp, body = self.post(uri, region, headers=headers, body=body)
+        if resp['status'] == '201':
+            body = json.loads(body)
         return resp, body
+
+    def get_stack_info_for_fusion(self,url , region):
+
+        """Returns the template from fusion for template_id."""
+       # url = "stacks"
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
+
 
 def datehandler(obj):
     if isinstance(obj, datetime.date):

@@ -15,7 +15,7 @@
 from tempest.api.orchestration import base
 from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
-
+import yaml
 
 
 
@@ -75,33 +75,66 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
 
     def test_create_stack_with_supported_template_id(self):
-        template_id = "wp-resource"
+
+        template_id = "wordpress-single-winserver"
         region = "IAD"
-        parameters={"key_name":'sabeen'}
+        #{"key_name":'sabeen'}
+        parameters = {}
         stack_name = rand_name("fusion_"+template_id+region)
         resp,body = self.orchestration_client.create_stack_fusion(
-            stack_name,region,template_id,parameters=parameters)
-        self.assertEqual(resp['status'], '200', "expected response was 200 "
+            stack_name, region, template_id, parameters=parameters)
+        self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
+
 
     def test_create_stack_with_supported_template(self):
 
         region = "IAD"
         resp , body = self.orchestration_client.get_template_catalog(region)
         for template in body['templates']:
-             if template['id'] == "wp-resource":
+             if template['id'] == "wordpress-single-winserver":
                  yaml_template = template
-                 parameters={"key_name":'sabeen'}
+                 yaml_template.pop("version", None)
+                 yaml_template.pop("id", None)
+                 yaml_template.pop("metadata", None)
+                 parameters ={}
                  break
 
         region = "IAD"
-        stack_name = rand_name("qe_")
-        resp,body =self.orchestration_client.create_stack_fusion(stack_name, region,
+        stack_name = rand_name("fusion_")
+        resp, body = self.orchestration_client.create_stack_fusion(stack_name,
+                                                                   region,
                                               template_id=None,
-                                                template=yaml_template,
-                                                parameters=parameters)
+                                              template=yaml.safe_dump(
+                                                  yaml_template),
+                                              parameters=parameters)
+        self.assertEqual(resp['status'], '201', "expected response was 201 "
+                                            "but actual was %s"%resp['status'])
 
+        if resp['status']== '201':
+            stack_id = body['stack']['id']
+            url = "stacks/%s?with_support_info"%stack_id
+            resp,body = self.orchestration_client.get_stack_info_for_fusion(
+                url,region)
+            print "test"
+
+    def test_stack_show_call(self):
+        region = "IAD"
+        url = "stacks?with_support_info"
+        resp,body = self.orchestration_client.get_stack_info_for_fusion(
+                url,region)
+
+        self.assertEqual(resp['status'], '200', "expected response was 200 "
+                                            "but actual was %s"%resp['status'])
+        # Need to add assertion
+
+    def test_stack_show_call_with_details(self):
+        region = "IAD"
+        url = "stacks/detail?with_support_info"
+        resp,body = self.orchestration_client.get_stack_info_for_fusion(
+                url,region)
 
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
+        # Need to add assertion
