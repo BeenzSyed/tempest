@@ -101,8 +101,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         env = self.config.orchestration['env']
 
         #templates on github
-        #template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
-        template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/heat-ci/master/" + env + "/" + template + ".template"
+        template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
+        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/heat-ci/master/" + env + "/" + template + ".template"
         response_templates = requests.get(template_giturl, timeout=3)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
