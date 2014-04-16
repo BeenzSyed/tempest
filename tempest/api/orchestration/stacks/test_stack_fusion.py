@@ -35,11 +35,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp , body = self.orchestration_client.get_template_catalog(region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
-
-
     def test_get_single_template(self):
         region = "IAD"
-        template_id="wordpress-single-winserver"
+        template_id="wordpress-single"
         resp , body = self.orchestration_client.get_single_template(
             template_id,region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
@@ -51,15 +49,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #print resp, body
         for template in body['templates']:
             if 'metadata' in template:
-            #if template['metadata']=={}:
                 print"Templates  %s have metadata"%template['id']
             else :
                 print "Templates  %s does not have metadata"%template['id']
 
 
-    def test_get_single_template__with_metadata(self):
+    def test_get_single_template_with_metadata(self):
         region = "IAD"
-        template_id="wordpress-single-winserver"
+        template_id="wordpress-single"
         resp , body = self.orchestration_client.get_single_template_with_metadata(
             template_id,region)
         if body['template']['metadata']:
@@ -73,35 +70,45 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
-
     def test_create_stack_with_supported_template_id(self):
 
-        template_id = "wordpress-single-winserver"
+        template_id = "wordpress-single"
         region = "IAD"
-        #{"key_name":'sabeen'}
-        parameters = {}
+        parameters= {"ssh_keypair_name": "foo",
+                    "ssh_sync_keypair_name": "foo"}
         stack_name = rand_name("fusion_"+template_id+region)
         resp,body = self.orchestration_client.create_stack_fusion(
             stack_name, region, template_id, parameters=parameters)
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
-
+        if resp['status']== '201':
+            stack_id = body['stack']['id']
+            url = "stacks/%s/%s?with_support_info"%(stack_name,stack_id)
+            resp,body = self.orchestration_client.get_stack_info_for_fusion(
+                url,region)
+            self.assertEqual(body['stack']['rackspace_template'],True,)
+            self.assertEqual(body['stack']['application_name'],\
+                                          ('(Not Specified)'),
+                             "Expected was not specified but has "
+                             "application name")
+            self.assertIn('template_id', body['stack'])
 
     def test_create_stack_with_supported_template(self):
-
+        # Unsupported Template with flag as False
         region = "IAD"
         resp , body = self.orchestration_client.get_template_catalog(region)
         for template in body['templates']:
-             if template['id'] == "wordpress-single-winserver":
+             if template['id'] == "wordpress-single":
                  yaml_template = template
                  yaml_template.pop("version", None)
                  yaml_template.pop("id", None)
                  yaml_template.pop("metadata", None)
-                 parameters ={}
+                 parameters= {"ssh_keypair_name": "foo",
+                          "ssh_sync_keypair_name": "foo"}
                  break
 
         region = "IAD"
-        stack_name = rand_name("fusion_")
+        stack_name = rand_name("Fusion_")
         resp, body = self.orchestration_client.create_stack_fusion(stack_name,
                                                                    region,
                                               template_id=None,
@@ -113,20 +120,35 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         if resp['status']== '201':
             stack_id = body['stack']['id']
-            url = "stacks/%s?with_support_info"%stack_id
+            url = "stacks/%s/%s?with_support_info"%(stack_name,stack_id)
             resp,body = self.orchestration_client.get_stack_info_for_fusion(
                 url,region)
-            print "test"
+            self.assertEqual(body['stack']['rackspace_template'],False,)
+            self.assertEqual(body['stack']['application_name'],\
+                                          ('(Not Specified)'),
+                             "Expected was not specified but has "
+                             "application name")
+            self.assertNotIn('template_id', body['stack'])
 
     def test_stack_show_call(self):
         region = "IAD"
         url = "stacks?with_support_info"
         resp,body = self.orchestration_client.get_stack_info_for_fusion(
                 url,region)
+        for stack in body['stacks']:
+            if 'rackspace_template' in stack:
+                if stack['rackspace_template']==False:
 
-        self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s"%resp['status'])
-        # Need to add assertion
+                    self.assertEqual(stack['application_name'],('(Not Specified)'),
+                                     "Expected was not specified but has "
+                                     "application name")
+                    self.assertNotIn('template_id', stack)
+
+                if stack['rackspace_template']==True:
+                    self.assertIn('template_id', stack)
+                    self.assertEqual(stack['application_name'],('(Not Specified)'),
+                                     "Expected was not specified but has "
+                                     "application name")
 
     def test_stack_show_call_with_details(self):
         region = "IAD"
@@ -134,7 +156,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp,body = self.orchestration_client.get_stack_info_for_fusion(
                 url,region)
 
-        self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s"%resp['status'])
+        for stack in body['stacks']:
+            if 'rackspace_template' in stack:
+                if stack['rackspace_template']==False:
 
-        # Need to add assertion
+                    self.assertEqual(stack['application_name'],('(Not Specified)'),
+                                     "Expected was not specified but has "
+                                     "application name")
+                    self.assertNotIn('template_id', stack)
+
+                if stack['rackspace_template']==True:
+                    self.assertIn('template_id', stack)
+                    self.assertEqual(stack['application_name'],('(Not Specified)'),
+                                     "Expected was not specified but has "
+                                     "application name")
