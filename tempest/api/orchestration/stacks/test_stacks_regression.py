@@ -183,9 +183,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 stack_id = stack_identifier.split('/')[1]
                 count = 0
                 resp, body = self.get_stack(stack_id, region)
+
                 if resp['status'] != '200':
-                        print "The response is: %s" % resp
-                        self.fail(resp)
+                    print "The response is: %s" % resp
+                    self.fail(resp)
                 print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
 
                 while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
@@ -197,23 +198,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     elif resp['status'] != '200':
                         print "The response is: %s" % resp
                         pf += 1
-                    elif body['stack_status'] == 'CREATE_FAILED':
+                    if body['stack_status'] == 'CREATE_FAILED':
                         print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                         self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                        if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
-                            print "Deleting the stack now"
-                            dresp, dbody = self.delete_stack(stack_name, stack_id, region)
-                            if dresp['status'] != '204':
-                                print "Delete did not work"
+                        self._delete_stack(stack_name, stack_id, region)
                         pf += 1
-                    elif count == 90:
+                    if count == 90:
                         print "Stack create has taken over 90 minutes. Force failing now."
                         self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                        if os.environ.get('TEMPEST_CONFIG') == "tempest_qa.conf":
-                            print "Stack create took too long. Deleting stack now."
-                            dresp, dbody = self.delete_stack(stack_name, stack_id, region)
-                            if dresp['status'] != '204':
-                                print "Delete did not work"
+                        self._delete_stack(stack_name, stack_id, region)
                         pf += 1
                     else:
                         print "Something went wrong. Here's what: %s, %s" % (resp, body)
@@ -222,7 +215,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 if body['stack_status'] == 'CREATE_COMPLETE':
                     print "The deployment took %s minutes" % count
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
-
                     self._verify_resources(stack_id, stack_name, region)
 
                     #check DNS resource
@@ -251,10 +243,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                 print "http call to %s worked!" % url
 
                     #delete stack
-                    print "Deleting stack now"
-                    resp, body = self.delete_stack(stack_name, stack_id, region)
-                    if resp['status'] != '204':
-                        print "Delete did not work"
+                    self._delete_stack(stack_name, stack_id, region)
 
                 else:
                     print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
@@ -271,6 +260,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 '2003 -q 2'
         os.system(cmd)
         print "Deploy time sent to graphite"
+
+    def _delete_stack(self, stack_name, stack_id, region):
+        print "Deleting stack now"
+        resp, body = self.delete_stack(stack_name, stack_id, region)
+        if resp['status'] != '204':
+            print "Delete did not work"
 
     def _verify_dns_entries(self,stack_name ,stack_id,region,email_address ,
                             domain_record_type,domain_name):
