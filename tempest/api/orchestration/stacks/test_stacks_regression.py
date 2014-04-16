@@ -195,18 +195,18 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
                         time.sleep(60)
                         count += 1
+                        if body['stack_status'] == 'CREATE_FAILED':
+                            print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                            self._send_deploy_time_graphite(env, region, template, count, "failtime")
+                            self._delete_stack(stack_name, stack_id, region)
+                            pf += 1
+                        if count == 90:
+                            print "Stack create has taken over 90 minutes. Force failing now."
+                            self._send_deploy_time_graphite(env, region, template, count, "failtime")
+                            self._delete_stack(stack_name, stack_id, region)
+                            pf += 1
                     elif resp['status'] != '200':
                         print "The response is: %s" % resp
-                        pf += 1
-                    if body['stack_status'] == 'CREATE_FAILED':
-                        print "Stack create failed. Here's why: %s" % body['stack_status_reason']
-                        self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                        self._delete_stack(stack_name, stack_id, region)
-                        pf += 1
-                    if count == 90:
-                        print "Stack create has taken over 90 minutes. Force failing now."
-                        self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                        self._delete_stack(stack_name, stack_id, region)
                         pf += 1
                     else:
                         print "Something went wrong. Here's what: %s, %s" % (resp, body)
@@ -236,7 +236,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
                     for output in body['outputs']:
                         if output['output_key'] == "server_ip":
-                            url = "http://%s" % output['output_value']
+                            url = "http://%s/wordpress" % output['output_value']
                             customer_resp = requests.get(url, timeout=10)
                             print customer_resp
                             if customer_resp.status_code == '200':
