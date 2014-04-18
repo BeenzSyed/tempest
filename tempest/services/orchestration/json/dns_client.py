@@ -20,9 +20,9 @@ class DnsClient(rest_client.RestClient):
 
         url = domain_id
         resp, body = self.get(url,region)
-        body = json.loads(body)
+        if resp['status'] in('200','201'):
+            body = json.loads(body)
         return resp, body
-
 
 def datehandler(obj):
     if isinstance(obj, datetime.date):
