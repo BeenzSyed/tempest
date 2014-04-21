@@ -232,15 +232,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                              print "Domain name  %s does not exist ",\
                                  domain_name
 
-                    resp, body = self.get_stack(stack_id, region)
+                    #resp, body = self.get_stack(stack_id, region)
 
-                    for output in body['outputs']:
-                        if output['output_key'] == "server_ip":
-                            url = "http://%s/wordpress" % output['output_value']
-                            customer_resp = requests.get(url, timeout=10)
-                            print customer_resp
-                            if customer_resp.status_code == '200':
-                                print "http call to %s worked!" % url
+                    # for output in body['outputs']:
+                    #     if output['output_key'] == "server_ip":
+                    #         url = "http://%s" % output['output_value']
+                    #         customer_resp = requests.get(url, timeout=10)
+                    #         print customer_resp
+                    #         if customer_resp.status_code == '200':
+                    #             print "http call to %s worked!" % url
+                    #         else:
+                    #             print "http call to %s did not work" % url
 
                     #delete stack
                     self._delete_stack(stack_name, stack_id, region)
