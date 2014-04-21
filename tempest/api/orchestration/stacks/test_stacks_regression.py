@@ -172,6 +172,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
             if 'flavor' in yaml_template['parameters']:
                 parameters['flavor'] = "4GB Standard Instance"
+            if 'domain_name' in yaml_template['parameters']:
+                domain = rand_name("iloveheat")
+                parameters['domain_name'] = domain+".com"
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
@@ -361,17 +364,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         print"%s is down." \
                               %resource_grp
 
-                if resource['resource_type'] == resource_cinder:
-                    vol_id = resource['physical_resource_id']
-                    resp,body =self.volume_client.get_volume(vol_id ,region)
-                    resource_name = resource_cinder
-                    self._check_status_for_resource(resp['status'],
-                                                     resource_name)
+                # if resource['resource_type'] == resource_cinder:
+                #     vol_id = resource['physical_resource_id']
+                #     resp, body =self.volume_client.get_volume(vol_id,region)
+                #     resource_name = resource_cinder
+                #     self._check_status_for_resource(resp['status'],
+                #                                      resource_name)
 
                 if resource['resource_type'] == resource_vol_attach:
                     vol_id = resource['physical_resource_id']
                     server_id = "10b8bd7f-a948-4e56-b2b4-96a805041d1f"
-                    resp,body =self.servers_client.get_volume_attachment(
+                    resp, body =self.servers_client.get_volume_attachment(
                          server_id,vol_id,region)
                     resource_name = resource_vol_attach
                     self._check_status_for_resource(resp['status'],
