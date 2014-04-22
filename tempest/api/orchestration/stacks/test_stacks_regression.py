@@ -148,11 +148,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if 'ssh_keypair_name' in yaml_template['parameters']:
                     keypair_name = rand_name("heat")
                     parameters['ssh_keypair_name'] = keypair_name
+            if 'ssh_keypair_name' in yaml_template['parameters'] and re.match('ansible*', template):
+                    parameters['ssh_keypair_name'] = 'sabeen'
             if 'ssh_sync_keypair_name' in yaml_template['parameters']:
                     keypair_name = rand_name("heat")
                     parameters['ssh_sync_keypair_name'] = keypair_name
             if 'key_name' in yaml_template['parameters']:
                     parameters['key_name'] = 'sabeen'
+            if 'key-name' in yaml_template['parameters']:
+                    parameters['key-name'] = 'sabeen'
             if 'key_name' in yaml_template['parameters'] and re.match('chef*', template):
                    keypair_name = rand_name("heat")
                    parameters['key_name'] = keypair_name
@@ -221,19 +225,19 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     self._verify_resources(stack_id, stack_name, region)
 
                     #check DNS resource
-                    if 'dns' in yaml_template['resources']:
-                        domain_url = "domains"
-                        self._verify_dns_entries(stack_name , stack_id,region,
-                                                 email_address,
-                            domain_record_type,domain_name)
-
-                        result = self._verify_name_from_dns_api(domain_url,region,
-                                  domain_name)
-                        if result == True:
-                            print "Domain name  %s exist ", domain_name
-                        else:
-                             print "Domain name  %s does not exist ",\
-                                 domain_name
+                    # if 'dns' in yaml_template['resources']:
+                    #     domain_url = "domains"
+                    #     self._verify_dns_entries(stack_name , stack_id,region,
+                    #                              email_address,
+                    #         domain_record_type,domain_name)
+                    #
+                    #     result = self._verify_name_from_dns_api(domain_url,region,
+                    #               domain_name)
+                    #     if result == True:
+                    #         print "Domain name  %s exist ", domain_name
+                    #     else:
+                    #          print "Domain name  %s does not exist ",\
+                    #              domain_name
 
                     #resp, body = self.get_stack(stack_id, region)
 
