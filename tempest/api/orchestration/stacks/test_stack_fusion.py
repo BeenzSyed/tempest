@@ -19,6 +19,7 @@ import yaml
 
 
 
+
 LOG = logging.getLogger(__name__)
 
 
@@ -35,6 +36,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp , body = self.orchestration_client.get_template_catalog(region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
+
+
     def test_get_single_template(self):
         region = "IAD"
         template_id="wordpress-single"
@@ -81,6 +84,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             stack_name, region, template_id, parameters=parameters)
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
+        stack_identifier = body['stack']['id']
         if resp['status']== '201':
             stack_id = body['stack']['id']
             url = "stacks/%s/%s?with_support_info"%(stack_name,stack_id)
@@ -92,6 +96,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                              "Expected was not specified but has "
                              "application name")
             self.assertIn('template_id', body['stack'])
+        dresp, dbody = self.delete_stack(stack_name, stack_identifier,region)
+
 
     def test_create_stack_with_supported_template(self):
         # Unsupported Template with flag as False
@@ -117,7 +123,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                               parameters=parameters)
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
-
+        stack_identifier = body['stack']['id']
         if resp['status']== '201':
             stack_id = body['stack']['id']
             url = "stacks/%s/%s?with_support_info"%(stack_name,stack_id)
@@ -129,6 +135,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                              "Expected was not specified but has "
                              "application name")
             self.assertNotIn('template_id', body['stack'])
+        dresp, dbody = self.delete_stack(stack_name, stack_identifier,region)
 
     def test_stack_show_call(self):
         region = "IAD"
@@ -170,3 +177,66 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     self.assertEqual(stack['application_name'],('(Not Specified)'),
                                      "Expected was not specified but has "
                                      "application name")
+
+    def test_stack_preview(self):
+        template_id = "wordpress-single"
+        region = "IAD"
+        parameters= {"ssh_keypair_name": "foo",
+                    "ssh_sync_keypair_name": "foo"}
+        stack_name = rand_name("fusion_"+template_id+region)
+        resp_temp , body_temp = self.orchestration_client.get_single_template(
+            template_id,region)
+        resp,body = self.orchestration_client.stack_preview(
+            stack_name, region, template_id, parameters=parameters)
+        self.assertEqual(resp['status'], '200', "expected response was 201 "
+                                            "but actual was %s"%resp['status'])
+        response_resource_list = []
+        for resource in body['stack']['resources']:
+            response_resource_list.append(resource['resource_type'])
+        response_resource_list.sort()
+        template_resource_list = []
+        resources_temp = body_temp['template']['resources']
+        for key, value in resources_temp.iteritems():
+            resource = value['type']
+            template_resource_list.append(resource)
+        template_resource_list.sort()
+        self.comp_list(response_resource_list,template_resource_list)
+
+    def test_stack_update(self):
+
+        template_id = "wordpress-single"
+        region = "QA"
+        parameters= {"ssh_keypair_name": "OMG",
+                     "ssh_sync_keypair_name": "OMG"}
+        stack_name =rand_name("fusion_test_"+template_id+region)
+        resp,body = self.orchestration_client.create_stack_fusion(
+            stack_name, region, template_id, parameters=parameters)
+        self.assertEqual(resp['status'], '201', "expected response was 201 "
+                                            "but actual was %s"%resp['status'])
+
+        stack_identifier = body['stack']['id']
+        stack_id = "%s/%s" % (stack_name,stack_identifier)
+        resp_get_stack, body_get_stack = self.get_stack(stack_id, region)
+        if body_get_stack['stack']['stack_status'] =="CREATE_FAILED":
+            print "stack creation failed for reason : %s"%(body_get_stack['stack']['stack_status_reason'])
+        elif body_get_stack['stack']['stack_status'] in("CREATE_IN_PROGRESS","CREATE_COMPLETE"):
+
+            resp_update, body_update = self.orchestration_client\
+             .update_stack_fusion(stack_identifier,stack_name,region,template_id=template_id,template={},parameters=parameters)
+            self.assertEqual(resp_update['status'], '202', "expected response "
+                                                         "was"
+                                                       " 202 but actual was %s"%resp_update['status'])
+        dresp, dbody = self.delete_stack(stack_name, stack_identifier,region)
+
+    def comp_list(self ,list1, list2):
+        Result = []
+        for val in list1:
+            if val in list2:
+                Result.append(True)
+            else :
+               Result.append(False)
+        if False in Result:
+            print "Resources in template and stack_preview response are " \
+                  "differnt"
+        else :
+            print"Resources in template and stack_preview response are same"

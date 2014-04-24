@@ -396,7 +396,7 @@ class OrchestrationClient(rest_client.RestClient):
         """Returns the parameters for the stack."""
         url = 'stacks/%s/%s' % (stack_name, stack_identifier)
         resp, body = self.get(url, region)
-        if resp['status'] == '200':
+        if resp['status'] in('200','201'):
             body = json.loads(body)
         return resp, body
 
@@ -515,7 +515,26 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
+    def stack_preview(self, name,region,template_id=None,template={},
+                            parameters={}):
+        headers, body = self._prepare_update_create_for_fusion(
+            name, parameters=parameters,
+            template_id=template_id, template=template)
+        uri = 'stacks/preview'
+        resp, body = self.post(uri, region, headers=headers, body=body)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
 
+    def update_stack_fusion(self, stack_identifier,name,region,
+                            template_id=None,template={},
+                            parameters={}):
+         headers, body = self._prepare_update_create_for_fusion(
+            name, parameters=parameters,
+            template_id=template_id, template=template)
+         uri = "stacks/%s/%s" % (name, stack_identifier)
+         resp, body = self.put(uri, region, headers=headers, body=body)
+         return resp, body
 
 def datehandler(obj):
     if isinstance(obj, datetime.date):
