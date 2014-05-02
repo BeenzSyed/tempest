@@ -179,6 +179,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if 'domain_name' in yaml_template['parameters']:
                 domain = rand_name("iloveheat")
                 parameters['domain_name'] = domain+".com"
+            if region == 'HKG' or region == 'SYD':
+                parameters['devops_flavor'] = "4GB Standard Instance"
+                parameters['api_flavor_ref'] = "3"
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
@@ -205,7 +208,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         if body['stack_status'] == 'CREATE_FAILED':
                             print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                             self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                            self._delete_stack(stack_name, stack_id, region)
+                            #self._delete_stack(stack_name, stack_id, region)
                             pf += 1
                         if count == 90:
                             print "Stack create has taken over 90 minutes. Force failing now."
@@ -223,6 +226,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "The deployment took %s minutes" % count
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
                     self._verify_resources(stack_id, stack_name, region)
+                    #delete stack
+                    self._delete_stack(stack_name, stack_id, region)
 
                     #check DNS resource
                     # if 'dns' in yaml_template['resources']:
@@ -251,8 +256,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     #         else:
                     #             print "http call to %s did not work" % url
 
-                    #delete stack
-                    self._delete_stack(stack_name, stack_id, region)
+
 
                 else:
                     print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
@@ -364,7 +368,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     if resource['resource_status'] == "CREATE_COMPLETE":
                         print"%s is up." \
                                %resource_grp
-                    else :
+                    else:
                         print"%s is down." \
                               %resource_grp
 
@@ -383,7 +387,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     resource_name = resource_vol_attach
                     self._check_status_for_resource(resp['status'],
                                                      resource_name)
-        else :
+        else:
             print "Resources does not exist in Stack "
 
     def _check_status_for_resource(self, status_code, resource):
