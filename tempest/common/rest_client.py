@@ -423,10 +423,10 @@ class RestClient(object):
                 raise exceptions.InvalidHttpSuccessCode(details)
 
     def post(self, url, region, body, headers):
-        print "url is %s" % url
-        print "region is %s" % region
-        print "body is %s " % body
-        print "headers are %s" % headers
+        # print "url is %s" % url
+        # print "region is %s" % region
+        # print "body is %s " % body
+        # print "headers are %s" % headers
         return self.request('POST', url, region, headers, body)
 
     def get(self, url, region, headers=None):
@@ -531,7 +531,6 @@ class RestClient(object):
                  headers=None, body=None):
         """A simple HTTP request interface."""
         if region is not None:
-            print self.all_urls
             for ep in self.all_urls:
                 if region.lower() == ep['region'].lower():
                     self.base_url = ep['publicURL']

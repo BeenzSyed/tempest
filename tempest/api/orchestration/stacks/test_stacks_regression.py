@@ -182,14 +182,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if (region == 'HKG' or region == 'SYD') and 'api_flavor_ref' in yaml_template['parameters']:
                 parameters['api_flavor_ref'] = "3"
             if 'db_pass' in yaml_template['parameters']:
-                dbpass = rand_name("heat")
-                parameters['db_pass'] = dbpass
+                parameters['db_pass'] = "iloveheat411!"
             if 'database_server_flavor' in yaml_template['parameters']:
                 parameters['database_server_flavor'] = "4GB Standard Instance"
             if 'wp_master_server_flavor' in yaml_template['parameters']:
                 parameters['wp_master_server_flavor'] = "4GB Standard Instance"
             if 'wp_web_server_flavor' in yaml_template['parameters']:
                 parameters['wp_web_server_flavor'] = "4GB Standard Instance"
+            if 'server_flavor' in yaml_template['parameters']:
+                parameters['server_flavor'] = "4GB Standard Instance"
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
