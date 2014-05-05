@@ -182,7 +182,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if (region == 'HKG' or region == 'SYD') and 'api_flavor_ref' in yaml_template['parameters']:
                 parameters['api_flavor_ref'] = "3"
             if 'db_pass' in yaml_template['parameters']:
-                parameters['db_pass'] = "iloveheat411!"
+                parameters['db_pass'] = "secrete"
             if 'database_server_flavor' in yaml_template['parameters']:
                 parameters['database_server_flavor'] = "4GB Standard Instance"
             if 'wp_master_server_flavor' in yaml_template['parameters']:
