@@ -179,8 +179,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if 'domain_name' in yaml_template['parameters']:
                 domain = rand_name("iloveheat")
                 parameters['domain_name'] = domain+".com"
-            if region == 'HKG' or region == 'SYD':
+            if (region == 'HKG' or region == 'SYD') and 'devops_flavor' in yaml_template['parameters']:
                 parameters['devops_flavor'] = "4GB Standard Instance"
+            if (region == 'HKG' or region == 'SYD') and 'api_flavor_ref' in yaml_template['parameters']:
                 parameters['api_flavor_ref'] = "3"
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
@@ -255,11 +256,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     #             print "http call to %s worked!" % url
                     #         else:
                     #             print "http call to %s did not work" % url
-
-
-
                 else:
-                    print "Something went wrong! This could be the reason: %s" % body['stack_status_reason']
+                    print "Something went wrong! This could be the reason: %s" %body['stack_status_reason']
 
         #if more than 0 stacks fail, fail the test
         if pf > 0:
