@@ -234,36 +234,47 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 if body['stack_status'] == 'CREATE_COMPLETE':
                     print "The deployment took %s minutes" % count
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
-                    self._verify_resources(stack_id, stack_name, region)
+
+                    #self._verify_resources(stack_id, stack_name, region)
                     #delete stack
-                    self._delete_stack(stack_name, stack_id, region)
+                    #self._delete_stack(stack_name, stack_id, region)
+
+                    resource_dict= self._get_resource_id(stack_id, stack_name,
+                                                   region)
+                    self._verify_resources(resource_dict)
 
                     #check DNS resource
-                    # if 'dns' in yaml_template['resources']:
-                    #     domain_url = "domains"
-                    #     self._verify_dns_entries(stack_name , stack_id,region,
-                    #                              email_address,
-                    #         domain_record_type,domain_name)
-                    #
-                    #     result = self._verify_name_from_dns_api(domain_url,region,
-                    #               domain_name)
-                    #     if result == True:
-                    #         print "Domain name  %s exist ", domain_name
-                    #     else:
-                    #          print "Domain name  %s does not exist ",\
-                    #              domain_name
+                    if 'dns' in yaml_template['resources']:
+                        domain_url = "domains"
+                        self._verify_dns_entries(stack_name , stack_id,region,
+                                                 email_address,
+                            domain_record_type,domain_name)
 
-                    #resp, body = self.get_stack(stack_id, region)
+                        result = self._verify_name_from_dns_api(domain_url,region,
+                                  domain_name)
+                        if result == True:
+                            print "Domain name  %s exist ", domain_name
+                        else:
+                             print "Domain name  %s does not exist ",\
+                                 domain_name
 
-                    # for output in body['outputs']:
-                    #     if output['output_key'] == "server_ip":
-                    #         url = "http://%s" % output['output_value']
-                    #         customer_resp = requests.get(url, timeout=10)
-                    #         print customer_resp
-                    #         if customer_resp.status_code == '200':
-                    #             print "http call to %s worked!" % url
-                    #         else:
-                    #             print "http call to %s did not work" % url
+                    resp, body = self.get_stack(stack_id, region)
+
+                    for output in body['outputs']:
+                        if output['output_key'] == "server_ip":
+                            url = "http://%s" % output['output_value']
+                            customer_resp = requests.get(url, timeout=10)
+                            print customer_resp
+                            if customer_resp.status_code == '200':
+                                print "http call to %s worked!" % url
+
+                    #delete stack
+                    print "Deleting stack now"
+                    resp, body = self.delete_stack(stack_name, stack_id, region)
+                    if resp['status'] != '204':
+                        print "Delete did not work"
+                    self._verify_resources(resource_dict)
+
                 else:
                     print "Something went wrong! This could be the reason: %s" %body['stack_status_reason']
 
@@ -313,7 +324,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         return result
 
-    def _verify_resources(self, stack_id, stack_name, region):
+    def _verify_resources(self,resource_dict,region):
+
         resource_server = "OS::Nova::Server"
         resource_db = "OS::Trove::Instance"
         resource_lb = "Rackspace::Cloud::LoadBalancer"
@@ -323,81 +335,109 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_randomstr = "OS::Heat::RandomString"
         resource_grp = 'OS::Heat::ResourceGroup'
         resource_vol_attach = "OS::Cinder::VolumeAttachment"
-        resp, body = self.orchestration_client.list_resources(stack_name, stack_id, region)
 
-        if resp['status'] == '200':
-            for resource in body:
-                if resource['resource_type'] == resource_server:
-                    server_id = resource['physical_resource_id']
-                    resp, body = self.servers_client.get_server(server_id,region)
-                    resource_name = resource_server
-                    self._check_status_for_resource(resp['status'],resource_name)
+        for key, value in resource_dict.iteritems():
+            resource = key
+            if resource == resource_server:
+                server_id = value
+                resp, body = self.servers_client.get_server(server_id,region)
+                self._check_status_for_resource(resp['status'],resource_server)
 
-                if resource['resource_type'] == resource_keypair:
-                    key_name = resource['physical_resource_id']
-                    resp, body = self.keypairs_client.get_keypair(key_name,
-                                                                region)
-                    resource_name = resource_keypair
-                    self._check_status_for_resource(resp['status'],resource_name)
-
-                # if resource['resource_type'] ==resource_network:
-                #      key_name = resource['physical_resource_id']
-                #      resp,body = self.network_client.get_network(key_name,
-                #                                                 region)
-                #      resource_name = resource_network
-                #      self._check_status_for_resource(resp['status'],resource_name)
-
-                if resource['resource_type'] == resource_db:
-                    db_id = resource['physical_resource_id']
-                    resp, body = self.database_client.get_instance(db_id,
+            if resource == resource_lb:
+                lb_id = value
+                resp,body =self.loadbalancer_client.get_load_balancer(lb_id,
+                                                                       region)
+                self._check_status_for_resource(resp['status'],
+                                                     resource_lb)
+            if resource== resource_db:
+                db_id = value
+                resp, body = self.database_client.get_instance(db_id,
                                                                  region)
-                    resource_name = resource_db
+                self._check_status_for_resource(resp['status'],resource_db)
+
+#                 if resource['resource_type'] == resource_randomstr:
+#                     random_str = resource['physical_resource_id']
+#                     if random_str!=None:
+#                         print "%s is up." %resource_randomstr
+#                     else:
+#                         print "%s is down" \
+#                              %resource_randomstr
+#
+#                 if resource['resource_type'] == resource_grp:
+#                     if resource['resource_status'] == "CREATE_COMPLETE":
+#                         print"%s is up." \
+#                                %resource_grp
+#                     else:
+#                         print"%s is down." \
+#                               %resource_grp
+#
+#                 # if resource['resource_type'] == resource_cinder:
+#                 #     vol_id = resource['physical_resource_id']
+#                 #     resp, body =self.volume_client.get_volume(vol_id,region)
+#                 #     resource_name = resource_cinder
+#                 #     self._check_status_for_resource(resp['status'],
+#                 #                                      resource_name)
+#
+#                 if resource['resource_type'] == resource_vol_attach:
+#                     vol_id = resource['physical_resource_id']
+#                     server_id = "10b8bd7f-a948-4e56-b2b4-96a805041d1f"
+#                     resp, body =self.servers_client.get_volume_attachment(
+# =======
+            if resource == resource_keypair:
+                key_name = value
+                resp, body = self.keypairs_client.get_keypair(key_name,
+                                                                region)
+                self._check_status_for_resource(resp['status'],resource_keypair)
+
+            if resource == resource_cinder:
+                    vol_id = value
+                    resp,body =self.volume_client.get_volume(vol_id ,region)
                     self._check_status_for_resource(resp['status'],
-                                                     resource_name)
+                                                     resource_cinder)
 
-                if resource['resource_type'] == resource_lb:
-                    lb_id = resource['physical_resource_id']
-                    resp,body =self.loadbalancer_client.get_load_balancer(lb_id,region)
-                    resource_name = resource_lb
-                    self._check_status_for_resource(resp['status'],
-                                                     resource_name)
-
-                if resource['resource_type'] == resource_randomstr:
-                    random_str = resource['physical_resource_id']
-                    if random_str!=None:
-                        print "%s is up." %resource_randomstr
-                    else:
-                        print "%s is down" \
-                             %resource_randomstr
-
-                if resource['resource_type'] == resource_grp:
-                    if resource['resource_status'] == "CREATE_COMPLETE":
-                        print"%s is up." \
-                               %resource_grp
-                    else:
-                        print"%s is down." \
-                              %resource_grp
-
-                # if resource['resource_type'] == resource_cinder:
-                #     vol_id = resource['physical_resource_id']
-                #     resp, body =self.volume_client.get_volume(vol_id,region)
-                #     resource_name = resource_cinder
-                #     self._check_status_for_resource(resp['status'],
-                #                                      resource_name)
-
-                if resource['resource_type'] == resource_vol_attach:
-                    vol_id = resource['physical_resource_id']
-                    server_id = "10b8bd7f-a948-4e56-b2b4-96a805041d1f"
-                    resp, body =self.servers_client.get_volume_attachment(
+            if resource == resource_vol_attach:
+                    vol_id = value
+                    resp,body =self.servers_client.get_volume_attachment(
                          server_id,vol_id,region)
-                    resource_name = resource_vol_attach
                     self._check_status_for_resource(resp['status'],
-                                                     resource_name)
-        else:
-            print "Resources does not exist in Stack "
+                                                     resource_vol_attach)
+            else:
+                print "Resources does not exist in Stack "
+
 
     def _check_status_for_resource(self, status_code, resource):
         if status_code =='200':
             print "%s is up." %resource
         if status_code =='404':
             print "%s is down." %resource
+
+    def _get_resource_id(self,stack_name,stack_id,region):
+        resource_ids={}
+
+        resource_server = "OS::Nova::Server"
+        resource_db = "OS::Trove::Instance"
+        resource_lb = "Rackspace::Cloud::LoadBalancer"
+        resource_cinder = "OS::Cinder::Volume"
+        resource_keypair = "OS::Nova::KeyPair"
+        resource_network = "Rackspace::Cloud::Network"
+        resource_randomstr = "OS::Heat::RandomString"
+        resource_grp = 'OS::Heat::ResourceGroup'
+        resource_vol_attach = "OS::Cinder::VolumeAttachment"
+        resp, body = self.orchestration_client.list_resources(stack_name,stack_id, region)
+        if resp['status'] == '200':
+            for resource in body:
+                if resource['resource_type'] == resource_server:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] == resource_db:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] == resource_lb:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] ==resource_network:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] == resource_keypair:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] == resource_cinder:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] == resource_vol_attach:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+        return resource_ids
