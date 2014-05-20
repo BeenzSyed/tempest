@@ -239,9 +239,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     #delete stack
                     #self._delete_stack(stack_name, stack_id, region)
 
-                    resource_dict= self._get_resource_id(stack_id, stack_name,
+                    resource_dict = self._get_resource_id(stack_id, stack_name,
                                                    region)
-                    self._verify_resources(resource_dict)
+                    self._verify_resources(resource_dict, region)
 
                     #check DNS resource
                     if 'dns' in yaml_template['resources']:
@@ -273,7 +273,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     resp, body = self.delete_stack(stack_name, stack_id, region)
                     if resp['status'] != '204':
                         print "Delete did not work"
-                    self._verify_resources(resource_dict)
+                    self._verify_resources(resource_dict, region)
 
                 else:
                     print "Something went wrong! This could be the reason: %s" %body['stack_status_reason']
@@ -324,7 +324,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         return result
 
-    def _verify_resources(self,resource_dict,region):
+    def _verify_resources(self, resource_dict, region):
 
         resource_server = "OS::Nova::Server"
         resource_db = "OS::Trove::Instance"
