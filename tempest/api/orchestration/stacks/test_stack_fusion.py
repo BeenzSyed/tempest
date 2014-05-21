@@ -181,14 +181,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_stack_preview(self):
         template_id = "wordpress-single"
         region = "IAD"
-        parameters= {"ssh_keypair_name": "foo",
-                    "ssh_sync_keypair_name": "foo"}
+        parameters={}
+        # parameters= {"ssh_keypair_name": "foo",
+        #             "ssh_sync_keypair_name": "foo"}
         stack_name = rand_name("fusion_"+template_id+region)
         resp_temp , body_temp = self.orchestration_client.get_single_template(
             template_id,region)
         resp,body = self.orchestration_client.stack_preview(
             stack_name, region, template_id, parameters=parameters)
-        self.assertEqual(resp['status'], '200', "expected response was 201 "
+        self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
         response_resource_list = []
         for resource in body['stack']['resources']:
@@ -206,8 +207,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         template_id = "wordpress-single"
         region = "QA"
-        parameters= {"ssh_keypair_name": "OMG",
-                     "ssh_sync_keypair_name": "OMG"}
+        parameters={}
+        # parameters= {"ssh_keypair_name": "OMG",
+        #              "ssh_sync_keypair_name": "OMG"}
         stack_name =rand_name("fusion_test_"+template_id+region)
         resp,body = self.orchestration_client.create_stack_fusion(
             stack_name, region, template_id, parameters=parameters)
@@ -217,9 +219,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         stack_identifier = body['stack']['id']
         stack_id = "%s/%s" % (stack_name,stack_identifier)
         resp_get_stack, body_get_stack = self.get_stack(stack_id, region)
-        if body_get_stack['stack']['stack_status'] =="CREATE_FAILED":
-            print "stack creation failed for reason : %s"%(body_get_stack['stack']['stack_status_reason'])
-        elif body_get_stack['stack']['stack_status'] in("CREATE_IN_PROGRESS","CREATE_COMPLETE"):
+        if body_get_stack['stack_status'] =="CREATE_FAILED":
+            print "stack creation failed for reason : %s"%(body_get_stack['stack_status_reason'])
+        elif body_get_stack['stack_status'] in("CREATE_IN_PROGRESS","CREATE_COMPLETE"):
 
             resp_update, body_update = self.orchestration_client\
              .update_stack_fusion(stack_identifier,stack_name,region,template_id=template_id,template={},parameters=parameters)

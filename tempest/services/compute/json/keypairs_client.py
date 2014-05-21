@@ -38,10 +38,11 @@ class KeyPairsClientJSON(RestClient):
         return resp, body['keypairs']
 
     def get_keypair(self, key_name ,region):
-        resp, body = self.get("os-keypairs/%s" % str(key_name),region)
+        url = "https://%s.servers.api.rackspacecloud" \
+              ".com/v2/%s/os-keypairs/%s"%(region , self.tenant_name,key_name)
+        resp, body = self.get(url ,region)
         if resp['status']=='200':
              body = json.loads(body)
-             return resp, body['keypair']
         return resp ,body
 
     def create_keypair(self, name, pub_key=None):

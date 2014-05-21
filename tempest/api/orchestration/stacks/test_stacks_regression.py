@@ -113,7 +113,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print os.environ.get('TEMPEST_CONFIG')
         if os.environ.get('TEMPEST_CONFIG') == None:
             print "Set the environment varible TEMPEST_CONFIG to a config file."
-            self.fail("Environment variable is not set.")
+           # self.fail("Environment variable is not set.")
 
         env = self.config.orchestration['env']
         account = self.config.identity['username']
@@ -239,15 +239,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "The deployment took %s minutes" % count
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
 
-                    #self._verify_resources(stack_id, stack_name, region)
-                    #delete stack
-                    #self._delete_stack(stack_name, stack_id, region)
-                    #pdb.set_trace()
-                    # resource_dict = self._get_resource_id(stack_name, stack_id,
+                    # resource_dict= self._get_resource_id(stack_id, stack_name,
                     #                                region)
-                    # self._verify_resources(resource_dict, region)
-                    #
-                    # #check DNS resource
+                    # self._verify_resources(resource_dict)
+                    resource_dict = self._get_resource_id(stack_name,stack_id,region)
+                    self._verify_resources(resource_dict,region,domain_name)
+
+                    #check DNS resource
                     # if 'dns' in yaml_template['resources']:
                     #     domain_url = "domains"
                     #     self._verify_dns_entries(stack_name , stack_id,region,
@@ -261,16 +259,16 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     #     else:
                     #          print "Domain name  %s does not exist ",\
                     #              domain_name
-                    #
-                    # resp, body = self.get_stack(stack_id, region)
-                    #
-                    # for output in body['outputs']:
-                    #     if output['output_key'] == "server_ip":
-                    #         url = "http://%s" % output['output_value']
-                    #         customer_resp = requests.get(url, timeout=10)
-                    #         print customer_resp
-                    #         if customer_resp.status_code == '200':
-                    #             print "http call to %s worked!" % url
+
+                    resp, body = self.get_stack(stack_id, region)
+
+                    for output in body['outputs']:
+                        if output['output_key'] == "server_ip":
+                            url = "http://%s" % output['output_value']
+                            customer_resp = requests.get(url, timeout=10)
+                            print customer_resp
+                            if customer_resp.status_code == '200':
+                                print "http call to %s worked!" % url
 
                     #delete stack
                     print "Deleting stack now"
@@ -328,7 +326,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         return result
 
-    def _verify_resources(self, resource_dict, region):
+    def _verify_resources(self, resource_dict, region, domain_name):
 
         resource_server = "OS::Nova::Server"
         resource_db = "OS::Trove::Instance"
@@ -339,7 +337,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_randomstr = "OS::Heat::RandomString"
         resource_grp = 'OS::Heat::ResourceGroup'
         resource_vol_attach = "OS::Cinder::VolumeAttachment"
+        resource_dns = "Rackspace::Cloud::DNS"
+        resource_randomstr = "OS::Heat::RandomString"
+        resource_grp = 'OS::Heat::ResourceGroup'
 
+        if region in ("QA", "DEV"):
+            region = "DFW"
+        print resource_dict
         for key, value in resource_dict.iteritems():
             resource = key
             if resource == resource_server:
@@ -386,12 +390,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 #                     vol_id = resource['physical_resource_id']
 #                     server_id = "10b8bd7f-a948-4e56-b2b4-96a805041d1f"
 #                     resp, body =self.servers_client.get_volume_attachment(
-# =======
+
             if resource == resource_keypair:
                 key_name = value
                 resp, body = self.keypairs_client.get_keypair(key_name,
                                                                 region)
                 self._check_status_for_resource(resp['status'],resource_keypair)
+
+            # if resource == resource_network:
+            #     network_id = value
+            #     resp, body = self.network_client.get_network(network_id,region)
+            #     self._check_status_for_resource(resp['status'],resource_network)
 
             if resource == resource_cinder:
                     vol_id = value
@@ -405,8 +414,33 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                          server_id,vol_id,region)
                     self._check_status_for_resource(resp['status'],
                                                      resource_vol_attach)
+
             else:
                 print "Resources does not exist in Stack "
+
+            if resource == resource_dns:
+                dns_val = value
+                resp , body = self.dns_client.list_domain_id(dns_val ,region )
+                if body['name'] == domain_name:
+                        print " service domain for stack is been created"
+                else :
+                        print "There is no service domain or service domain " \
+                              "is not been created"
+
+            if resource == resource_randomstr:
+                    random_str = value
+                    if random_str!=None:
+                        print "%s is up." %resource_randomstr
+                    else:
+                        print "%s is down" %resource_randomstr
+
+            if resource == resource_grp:
+                    res_grp = value
+                    if res_grp!=None:
+                       print"%s is up."%resource_grp
+                    else :
+                        print"%s is down." %resource_grp
+
 
 
     def _check_status_for_resource(self, status_code, resource):
@@ -416,8 +450,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             print "%s is down." %resource
 
     def _get_resource_id(self, stack_name, stack_id, region):
-        resource_ids = {}
 
+        resource_ids={}
         resource_server = "OS::Nova::Server"
         resource_db = "OS::Trove::Instance"
         resource_lb = "Rackspace::Cloud::LoadBalancer"
@@ -427,7 +461,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_randomstr = "OS::Heat::RandomString"
         resource_grp = 'OS::Heat::ResourceGroup'
         resource_vol_attach = "OS::Cinder::VolumeAttachment"
-        resp, body = self.orchestration_client.list_resources(stack_name, stack_id, region)
+        resource_dns = "Rackspace::Cloud::DNS"
+        resp, body = self.orchestration_client.list_resources(stack_name,stack_id, region)
         if resp['status'] == '200':
             for resource in body:
                 if resource['resource_type'] == resource_server:
@@ -443,5 +478,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 if resource['resource_type'] == resource_cinder:
                     resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
                 if resource['resource_type'] == resource_vol_attach:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] == resource_dns:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] == resource_randomstr:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] == resource_grp:
                     resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
         return resource_ids

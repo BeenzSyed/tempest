@@ -38,7 +38,9 @@ class DatabaseClient(RestClient):
         return resp, body['flavors']
 
     def get_instance(self, instanceId, region):
-        url = "instances/%s" %instanceId
+        url = "https://%s.databases.api.rackspacecloud" \
+              ".com/v1.0/%s/instances/%s "%(region , self.tenant_name,
+                                          instanceId )
         resp, body = self.get(url,region)
         if resp['status']=='200':
              body = json.loads(body)

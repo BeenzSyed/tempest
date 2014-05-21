@@ -124,7 +124,8 @@ class ServersClientJSON(RestClient):
 
     def get_server(self, server_id , region):
         """Returns the details of an existing server."""
-        resp, body = self.get("servers/%s" % str(server_id),region)
+        url = "https://%s.servers.api.rackspacecloud.com/v2/%s/servers/%s"%(region , self.tenant_name,server_id )
+        resp, body = self.get(url,region)
         if resp['status']=='200':
             body = json.loads(body)
         return resp, body
@@ -325,7 +326,9 @@ class ServersClientJSON(RestClient):
 
     def get_volume_attachment(self, server_id, volume_id,region):
         """Get attach volume details."""
-        url = "servers/%s/os-volume_attachments/%s' %(server_id, volume_id)"
+        url = "https://%s.servers.api.rackspacecloud" \
+              ".com/v2/%s/servers/%s/os-volume_attachments/%s"%(region , self.tenant_name,server_id ,volume_id)
+      #  url = "servers/%s/os-volume_attachments/%s' %(server_id, )"
         resp, body = self.get(url,region)
         return resp, body
 

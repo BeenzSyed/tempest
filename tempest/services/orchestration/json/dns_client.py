@@ -18,9 +18,10 @@ class DnsClient(rest_client.RestClient):
 
     def list_domain_id(self, domain_id ,region):
 
-        url = domain_id
+        url = "https://dns.api.rackspacecloud.com/v1" \
+              ".0/862456/domains/%s"%domain_id
         resp, body = self.get(url,region)
-        if resp['status'] in('200','201'):
+        if resp['status'] == ('200'):
             body = json.loads(body)
         return resp, body
 
