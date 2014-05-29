@@ -243,41 +243,41 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     #delete stack
                     #self._delete_stack(stack_name, stack_id, region)
                     #pdb.set_trace()
-                    resource_dict = self._get_resource_id(stack_name, stack_id,
-                                                   region)
-                    self._verify_resources(resource_dict, region)
-
-                    #check DNS resource
-                    if 'dns' in yaml_template['resources']:
-                        domain_url = "domains"
-                        self._verify_dns_entries(stack_name , stack_id,region,
-                                                 email_address,
-                            domain_record_type,domain_name)
-
-                        result = self._verify_name_from_dns_api(domain_url,region,
-                                  domain_name)
-                        if result == True:
-                            print "Domain name  %s exist ", domain_name
-                        else:
-                             print "Domain name  %s does not exist ",\
-                                 domain_name
-
-                    resp, body = self.get_stack(stack_id, region)
-
-                    for output in body['outputs']:
-                        if output['output_key'] == "server_ip":
-                            url = "http://%s" % output['output_value']
-                            customer_resp = requests.get(url, timeout=10)
-                            print customer_resp
-                            if customer_resp.status_code == '200':
-                                print "http call to %s worked!" % url
+                    # resource_dict = self._get_resource_id(stack_name, stack_id,
+                    #                                region)
+                    # self._verify_resources(resource_dict, region)
+                    #
+                    # #check DNS resource
+                    # if 'dns' in yaml_template['resources']:
+                    #     domain_url = "domains"
+                    #     self._verify_dns_entries(stack_name , stack_id,region,
+                    #                              email_address,
+                    #         domain_record_type,domain_name)
+                    #
+                    #     result = self._verify_name_from_dns_api(domain_url,region,
+                    #               domain_name)
+                    #     if result == True:
+                    #         print "Domain name  %s exist ", domain_name
+                    #     else:
+                    #          print "Domain name  %s does not exist ",\
+                    #              domain_name
+                    #
+                    # resp, body = self.get_stack(stack_id, region)
+                    #
+                    # for output in body['outputs']:
+                    #     if output['output_key'] == "server_ip":
+                    #         url = "http://%s" % output['output_value']
+                    #         customer_resp = requests.get(url, timeout=10)
+                    #         print customer_resp
+                    #         if customer_resp.status_code == '200':
+                    #             print "http call to %s worked!" % url
 
                     #delete stack
                     print "Deleting stack now"
                     resp, body = self.delete_stack(stack_name, stack_id, region)
                     if resp['status'] != '204':
                         print "Delete did not work"
-                    self._verify_resources(resource_dict, region)
+                    #self._verify_resources(resource_dict, region)
 
                 else:
                     print "Something went wrong! This could be the reason: %s" %body['stack_status_reason']
