@@ -139,6 +139,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
         regions = regionsConfig.split(",")
         for region in regions:
+
+            respbi, bodybi = self.orchestration_client.get_build_info(region)
+            print "The build info is: %s" % bodybi
+
             stack_name = rand_name("qe_"+template+region)
             domain_name = "example%s.com" %datetime.now().microsecond
             email_address = "heattest@rs.com"
@@ -238,8 +242,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     #self._verify_resources(stack_id, stack_name, region)
                     #delete stack
                     #self._delete_stack(stack_name, stack_id, region)
-
-                    resource_dict = self._get_resource_id(stack_id, stack_name,
+                    #pdb.set_trace()
+                    resource_dict = self._get_resource_id(stack_name, stack_id,
                                                    region)
                     self._verify_resources(resource_dict, region)
 
@@ -411,8 +415,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         if status_code =='404':
             print "%s is down." %resource
 
-    def _get_resource_id(self,stack_name,stack_id,region):
-        resource_ids={}
+    def _get_resource_id(self, stack_name, stack_id, region):
+        resource_ids = {}
 
         resource_server = "OS::Nova::Server"
         resource_db = "OS::Trove::Instance"
@@ -423,7 +427,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_randomstr = "OS::Heat::RandomString"
         resource_grp = 'OS::Heat::ResourceGroup'
         resource_vol_attach = "OS::Cinder::VolumeAttachment"
-        resp, body = self.orchestration_client.list_resources(stack_name,stack_id, region)
+        resp, body = self.orchestration_client.list_resources(stack_name, stack_id, region)
         if resp['status'] == '200':
             for resource in body:
                 if resource['resource_type'] == resource_server:

@@ -233,6 +233,12 @@ class OrchestrationClient(rest_client.RestClient):
         body = json.loads(body)
         return resp, body
 
+    def get_build_info(self, region):
+        url = "/build_info"
+        resp, body = self.get(url, region)
+        body = json.loads(body)
+        return resp, body
+
     def list_resources(self, stack_name, stack_identifier, region):
         """Returns the details of a single resource."""
         url = "stacks/%s/%s/resources" % (stack_name, stack_identifier)
