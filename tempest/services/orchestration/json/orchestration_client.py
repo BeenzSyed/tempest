@@ -234,7 +234,7 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def get_build_info(self, region):
-        url = "/build_info"
+        url = "build_info"
         resp, body = self.get(url, region)
         body = json.loads(body)
         return resp, body
