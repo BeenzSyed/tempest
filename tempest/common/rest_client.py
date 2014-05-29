@@ -423,16 +423,16 @@ class RestClient(object):
                 raise exceptions.InvalidHttpSuccessCode(details)
 
     def post(self, url, region, body, headers):
-        # print "url is %s" % url
-        # print "region is %s" % region
-        # print "body is %s " % body
-        # print "headers are %s" % headers
+        print "url is %s" % url
+        print "region is %s" % region
+        print "body is %s " % body
+        print "headers are %s" % headers
         return self.request('POST', url, region, headers, body)
 
     def get(self, url, region, headers=None):
-        # print url
-        # print region
-        # print headers
+        print url
+        print region
+        print headers
         return self.request('GET', url, region, headers)
 
     def delete(self, url, region, headers=None):
@@ -543,7 +543,7 @@ class RestClient(object):
             req_url = url
         else:
             req_url = "%s/%s" % (self.base_url, url)
-            #print req_url
+            print "Request url: %s" % req_url
         resp, resp_body = self.http_obj.request(req_url, method,
                                                 headers=headers, body=body)
         #uncomment below to see responses
