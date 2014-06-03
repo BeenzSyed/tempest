@@ -18,6 +18,7 @@ from tempest.test import attr
 import requests
 import yaml
 import os
+import urllib2
 import datetime
 import re
 import pdb
@@ -312,13 +313,24 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print "User is: %s" % usertype
         print "Environment is %s" % env
 
-        policy_file = "https://github.rackspace.com/Heat/cookbook-heat/raw/master/files/default/policy.json"
-        policy = requests.get(policy_file, timeout=10)
-        if policy.status_code != requests.codes.ok:
-            print "This file does not exist: %s" % policy_file
-            self.fail("The policy file does not exist.")
-        else:
-            policy_details = yaml.safe_load(policy.content)
+        req = urllib2.urlopen("https://github.rackspace.com/Heat/cookbook-heat/raw/master/files/default/policy.json")
+        policy_details = yaml.load(req)
+        print policy_details
+
+        #print "request is: %s" % req
+        #html = req.read()
+        #print "html is %s" % html
+        #print type(html)
+        #policy_details = yaml.load(html.content)
+
+        # policy_file = "https://github.rackspace.com/Heat/cookbook-heat/raw/master/files/default/policy.json"
+        # policy = requests.get(policy_file, timeout=10)
+        # if policy.status_code != requests.codes.ok:
+        #     print "This file does not exist: %s" % policy_file
+        #     self.fail("The policy file does not exist.")
+        # else:
+        #     policy_details = yaml.safe_load(policy.content)
+
         super_user = policy_details['allow_management_api_user'].split(":")[2]
         if usertype == super_user:
             print "%s is a super user." % (usertype)

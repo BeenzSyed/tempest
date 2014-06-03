@@ -64,7 +64,7 @@ class VolumesClientJSON(RestClient):
         """Returns the details of a single volume."""
         #url = "volumes/%s" % str(volume_id)
         url = "https://%s.blockstorage.api.rackspacecloud" \
-              ".com/v1/%s/volumes/%s "%(region , self.tenant_name,volume_id )
+              ".com/v1/%s/volumes/%s "%(region, self.tenant_name, volume_id)
         resp, body = self.get(url, region)
         if resp['status'] == '200':
             body = json.loads(body)

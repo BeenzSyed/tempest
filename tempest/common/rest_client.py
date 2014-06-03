@@ -176,7 +176,6 @@ class RestClient(object):
 
     def keystone_auth_urls(self, user, password, auth_url, service, tenant_name,
                       region):
-        #pdb.set_trace()
         #urls that need to go to the catalog to get endpoints
         if re.search('http://auth.staging.rs-heat.com*', auth_url) or re.search('https://identity.api.rackspacecloud.com*', auth_url):
             if 'tokens' not in auth_url:
@@ -204,6 +203,7 @@ class RestClient(object):
                     raise
 
                 mgmt_url = None
+                #print "Service catalog: %s" % auth_data['serviceCatalog']
                 for ep in auth_data['serviceCatalog']:
                     if ep["type"] == service:
                         mgmt_url = ep['endpoints']
@@ -430,9 +430,9 @@ class RestClient(object):
         return self.request('POST', url, region, headers, body)
 
     def get(self, url, region, headers=None):
-        print url
-        print region
-        print headers
+        print "url is %s" % url
+        # print "region is %s" % region
+        # print "headers are %s" % headers
         return self.request('GET', url, region, headers)
 
     def delete(self, url, region, headers=None):
