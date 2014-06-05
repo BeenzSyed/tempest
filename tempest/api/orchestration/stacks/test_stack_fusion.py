@@ -11,6 +11,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import time
 
 from tempest.api.orchestration import base
 from tempest.common.utils.data_utils import rand_name
@@ -208,7 +209,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_stack_update(self):
 
         template_id = "wordpress-single"
-        region = "DFW"
+        region = "QA"
         parameters={}
         # parameters= {"ssh_keypair_name": "OMG",
         #              "ssh_sync_keypair_name": "OMG"}
@@ -220,17 +221,34 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         stack_identifier = body['stack']['id']
         stack_id = "%s/%s" % (stack_name,stack_identifier)
-        resp_get_stack, body_get_stack = self.get_stack(stack_id, region)
-        if body_get_stack['stack_status'] =="CREATE_FAILED":
-            print "stack creation failed for reason : %s"%(body_get_stack['stack_status_reason'])
-        elif body_get_stack['stack_status'] in("CREATE_IN_PROGRESS","CREATE_COMPLETE"):
-
-            resp_update, body_update = self.orchestration_client\
-             .update_stack_fusion(stack_identifier,stack_name,region,template_id=template_id,template={},parameters=parameters)
-            self.assertEqual(resp_update['status'], '202', "expected response "
-                                                         "was"
-                                                       " 202 but actual was %s"%resp_update['status'])
-        dresp, dbody = self.delete_stack(stack_name, stack_identifier,region)
+        resp, body = self.get_stack(stack_id, region)
+        count = 0
+        while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 20:
+           resp, body = self.get_stack(stack_id, region)
+           if resp['status'] == '200':
+               print "Deployment in %s status. Checking again in 1 minute" % \
+                   body['stack_status']
+               time.sleep(60)
+               count += 1
+               if body['stack_status'] == 'CREATE_FAILED':
+                            print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+               if count == 20:
+                   print "Stack create has taken over 20 minutes. Force " \
+                        "failing now."
+                   self._delete_stack(stack_name, stack_id, region)
+           elif resp['status'] != '200':
+               print "The response is: %s" % resp
+           else:
+               print "Something went wrong. Here's what: %s, %s" % (resp, body)
+        if body['stack_status'] == 'CREATE_COMPLETE':
+             resp_update, body_update = self.orchestration_client\
+                       .update_stack_fusion(stack_identifier,stack_name,region,
+                                   template_id=template_id,template={},parameters=parameters)
+             self.assertEqual(resp_update['status'], '202',
+                              "expected response was"
+                        " 202 but actual was %s"%resp_update['status'])
+             dresp, dbody = self.delete_stack(stack_name, stack_identifier,
+                                            region)
 
     def comp_list(self ,list1, list2):
         Result = []

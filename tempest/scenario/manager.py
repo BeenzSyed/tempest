@@ -39,7 +39,7 @@ from tempest import exceptions
 import tempest.manager
 from tempest.openstack.common import log
 import tempest.test
-
+import fusionclient.client
 
 LOG = log.getLogger(__name__)
 
@@ -60,6 +60,7 @@ class OfficialClientManager(tempest.manager.Manager):
     NOVACLIENT_VERSION = '2'
     CINDERCLIENT_VERSION = '1'
     HEATCLIENT_VERSION = '1'
+    FUSIONCLIENT_VERSION = '1'
 
     def __init__(self, username, password, tenant_name):
         super(OfficialClientManager, self).__init__()
@@ -69,16 +70,21 @@ class OfficialClientManager(tempest.manager.Manager):
         self.identity_client = self._get_identity_client(username,
                                                          password,
                                                          tenant_name)
-        self.image_client = self._get_image_client()
+        # self.image_client = self._get_image_client()
         self.network_client = self._get_network_client()
         self.volume_client = self._get_volume_client(username,
                                                      password,
                                                      tenant_name)
-        self.object_storage_client = self._get_object_storage_client(
+        # self.object_storage_client = self._get_object_storage_client(
+        #     username,
+        #     password,
+        #     tenant_name)
+        self.orchestration_client = self._get_orchestration_client(
             username,
             password,
             tenant_name)
-        self.orchestration_client = self._get_orchestration_client(
+
+        self.fusion_client = self._get_fusion_client(
             username,
             password,
             tenant_name)
@@ -179,6 +185,35 @@ class OfficialClientManager(tempest.manager.Manager):
                                             username=username,
                                             password=password)
 
+    def _get_fusion_client(self, username=None, password=None,
+                                  tenant_name=None):
+        if not username:
+            username = self.config.identity.admin_username
+        if not password:
+            password = self.config.identity.admin_password
+        if not tenant_name:
+            tenant_name = self.config.identity.tenant_name
+
+        self._validate_credentials(username, password, tenant_name)
+
+        keystone = self._get_identity_client(username, password, tenant_name)
+        region = self.config.identity.region
+        token = keystone.auth_token
+        try:
+            endpoint = keystone.service_catalog.url_for(
+                attr='region',
+                filter_value=region,
+                service_type='orchestration',
+                endpoint_type='publicURL')
+        except keystoneclient.exceptions.EndpointNotFound:
+            return None
+        else:
+            return fusionclient.client.Client(self.FUSIONCLIENT_VERSION,
+                                            endpoint,
+                                            token=token,
+                                            username=username,
+                                            password=password)
+
     def _get_identity_client(self, username, password, tenant_name):
         # This identity client is not intended to check the security
         # of the identity service, so use admin credentials by default.
@@ -240,12 +275,13 @@ class OfficialClientTest(tempest.test.BaseTestCase):
 
         cls.manager = OfficialClientManager(username, password, tenant_name)
         cls.compute_client = cls.manager.compute_client
-        cls.image_client = cls.manager.image_client
+        # cls.image_client = cls.manager.image_client
         cls.identity_client = cls.manager.identity_client
-        cls.network_client = cls.manager.network_client
-        cls.volume_client = cls.manager.volume_client
-        cls.object_storage_client = cls.manager.object_storage_client
+        # cls.network_client = cls.manager.network_client
+        # cls.volume_client = cls.manager.volume_client
+        # cls.object_storage_client = cls.manager.object_storage_client
         cls.orchestration_client = cls.manager.orchestration_client
+        cls.fusion_client = cls.manager.fusion_client
         cls.resource_keys = {}
         cls.os_resources = []
 
@@ -1008,4 +1044,41 @@ class OrchestrationScenarioTest(OfficialClientTest):
         networks = cls.network_client.list_networks()
         for net in networks['networks']:
             if net['name'] == cls.config.compute.fixed_network_name:
+
                 return net
+
+class FusionScenarioTest(OfficialClientTest):
+    """
+    Base class for orchestration scenario tests
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super(FusionScenarioTest, cls).setUpClass()
+        if not cls.config.service_available.heat:
+            raise cls.skipException("Heat support is required")
+
+    @classmethod
+    def credentials(cls):
+        username = cls.config.identity.admin_username
+        password = cls.config.identity.admin_password
+        tenant_name = cls.config.identity.tenant_name
+        return username, password, tenant_name
+
+    def _load_template(self, base_file, file_name):
+        filepath = os.path.join(os.path.dirname(os.path.realpath(base_file)),
+                                file_name)
+        with open(filepath) as f:
+            return f.read()
+
+    @classmethod
+    def _stack_rand_name(cls):
+        return data_utils.rand_name(cls.__name__ + '-')
+
+    # @classmethod
+    # def _get_default_network(cls):
+    #     networks = cls.network_client.list_networks()
+    #     for net in networks['networks']:
+    #         if net['name'] == cls.config.compute.fixed_network_name:
+    #             return net
+    #
