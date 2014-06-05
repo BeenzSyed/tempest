@@ -20,6 +20,7 @@ import yaml
 import os
 import datetime
 import re
+from testconfig import config
 import pdb
 
 
@@ -302,17 +303,29 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_rackconnect_realDeployment(self):
         self._test_stack("php-app")
 
+    def test_all(self):
+        self._test_stack()
+
     @attr(type='smoke')
-    def _test_stack(self, template):
+    def _test_stack(self, template=None, image=None):
+
         print os.environ.get('TEMPEST_CONFIG')
+        if os.environ.get('TEMPEST_CONFIG') == None:
+            print "Set the environment varible TEMPEST_CONFIG to a config file."
+            self.fail("Environment variable is not set.")
 
         env = self.config.orchestration['env']
-        env = "dev"
-        template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
-        #print template_giturl
+        account = self.config.identity['username']
+
+        if template == None:
+            template_giturl = config['template_url']
+            template = template_giturl.split("/")[-1].split(".")[0]
+            print "template is %s" % template
+        else:
+            template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
+
         response_templates = requests.get(template_giturl, timeout=3)
         yaml_template = yaml.safe_load(response_templates.content)
-        #print yaml_template
 
         parameters = {}
         if 'key_name' in yaml_template['parameters']:
@@ -323,7 +336,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             parameters['git_url'] = "https://github.com/timductive/phphelloworld"
             #https://github.com/beenzsyed/phphelloworld
 
-        region = "Dev"
+        region = "Staging"
         rstype = "Rackspace::Cloud::Server"
         rsname = "devstack_server"
 

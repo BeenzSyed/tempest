@@ -15,7 +15,7 @@
 from tempest.api.orchestration import base_multipleusers
 from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
-from tempest.test import attr
+from datetime import datetime
 import requests
 import yaml
 import time
@@ -35,7 +35,7 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
         super(StacksTestJSON, cls).setUpClass()
 
     def test_rackconnect_realDeployment(self):
-        self._test_stack_for_RackConnect("wordpress-winserver-clouddb")
+        self._test_stack_for_RackConnect("kitchen_sink")
 
     def _send_deploy_time_graphite(self, region, template, deploy_time, buildfail):
         cmd = 'echo "heat.qa.build-tests.' + region + '.' + template \
@@ -49,32 +49,31 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
 
     def _test_stack_for_RackConnect(self, template):
         user_rackconnect = self.managers[2]
-        env = "staging"
-        region = "DFW"
-        template_giturl = "https://raw.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
+        region = self.config.orchestration['regions']
+        template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/prod/kitchen_sink.template"
         response_templates = requests.get(template_giturl, timeout=3)
         yaml_template = yaml.safe_load(response_templates.content)
         stack_name = rand_name("sabeen"+template)
         parameters = {}
         if 'key_name' in yaml_template['parameters']:
-            parameters = {
-                    'key_name': 'sabeen'
-                }
+                parameters['key_name'] = 'sabeen'
+        if 'domain_name' in yaml_template['parameters']:
+                parameters['domain_name'] = "example%s.com" %datetime.now().microsecond
         if 'git_url' in yaml_template['parameters']:
                 parameters['git_url'] = "https://github.com/timductive/phphelloworld"
 
-        print "\nDeploying %s in %s" % (template,region)
-        stack_identifier = self.create_stack(user_rackconnect,stack_name, region,
+        print "\nDeploying %s in %s" % (template, region)
+        stack_identifier = self.create_stack(user_rackconnect, stack_name, region,
                                              yaml_template, parameters)
             #stack_identifier = self.create_stack(stack_name, region,
             # yaml_template, parameters)
         stack_id = stack_identifier.split('/')[1]
         count = 0
-        resp, body = self.get_stack(user_rackconnect,stack_id)
+        resp, body = self.get_stack(user_rackconnect, stack_id, region)
         print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
 
         while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
-                resp, body = self.get_stack(user_rackconnect,stack_id)
+                resp, body = self.get_stack(user_rackconnect,stack_id, region)
                 if resp['status'] != '200':
                     print "The response is: %s" % resp
                     self.fail(resp)
@@ -85,7 +84,7 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
                     print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                     print "Deleting the stack now"
                     resp, body = self.delete_stack(user_rackconnect,
-                                                   stack_name, stack_id)
+                                                   stack_name, stack_id, region)
                     if resp['status'] != '204':
                         print "Delete did not work"
                     self._send_deploy_time_graphite(region, template, count, "failtime")
@@ -93,7 +92,7 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
                 if count == 90:
                     print "Stack create has taken over 90 minutes. Force failing now."
                     self._send_deploy_time_graphite(region, template, count, "failtime")
-                    resp, body = self.delete_stack(stack_name, stack_id)
+                    resp, body = self.delete_stack(stack_name, stack_id, region)
                     if resp['status'] != '204':
                         print "Delete did not work"
                     self.fail("Stack create took too long")
@@ -105,8 +104,8 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
 
                 #delete stack
                 print "Deleting stack now"
-                resp, body = self.delete_stack(user_rackconnect,stack_name,
-                                               stack_id)
+                resp, body = self.delete_stack(user_rackconnect, stack_name,
+                                               stack_id, region)
                 if resp['status'] != '204':
                     print "Delete did not work"
 

@@ -57,12 +57,13 @@ class BaseMultipleOrchestrationTest(tempest.test.BaseTestCase):
     @classmethod
     def create_stack(cls, manager, stack_name, region, template_data,
                      parameters={}):
-
         resp, body = manager.orchestration_client.create_stack(
             stack_name,
             region,
             template=template_data,
             parameters=parameters)
+        print "response is %s" % resp
+        print "body is %s" % body
         stack_id = resp['location'].split('/')[-1]
         stack_identifier = '%s/%s' % (stack_name, stack_id)
         cls.stacks.append({
@@ -72,10 +73,14 @@ class BaseMultipleOrchestrationTest(tempest.test.BaseTestCase):
         return stack_identifier
 
     @classmethod
-    def get_stack(cls, manager, stack_id):
+    def get_stack(cls, manager, stack_id, region):
         """Returns the details of a single stack."""
-        resp, body = manager.orchestration_client.get_stack(stack_id)
-        return resp, body['stack']
+        resp, body = manager.orchestration_client.get_stack(stack_id, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+            return resp, body['stack']
+        else:
+            return resp, body
 
     @classmethod
     def get_api_version(cls, manager, region):
@@ -84,9 +89,9 @@ class BaseMultipleOrchestrationTest(tempest.test.BaseTestCase):
 
 
     @classmethod
-    def delete_stack(cls, manager, stack_name, stack_id):
+    def delete_stack(cls, manager, stack_name, stack_id, region):
         resp, body = manager.orchestration_client.delete_stack(stack_name,
-                                                               stack_id)
+                                                               stack_id, region)
         return resp, body
 
     @classmethod

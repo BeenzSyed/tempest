@@ -313,9 +313,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print "User is: %s" % usertype
         print "Environment is %s" % env
 
-        req = urllib2.urlopen("https://github.rackspace.com/Heat/cookbook-heat/raw/master/files/default/policy.json")
-        policy_details = yaml.load(req)
-        print policy_details
+        #using urllib2
+        # req = urllib2.urlopen("https://github.rackspace.com/Heat/cookbook-heat/raw/master/files/default/policy.json")
+        # policy_details = yaml.load(req)
+        # print policy_details
 
         #print "request is: %s" % req
         #html = req.read()
@@ -323,6 +324,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #print type(html)
         #policy_details = yaml.load(html.content)
 
+        #using requests
         # policy_file = "https://github.rackspace.com/Heat/cookbook-heat/raw/master/files/default/policy.json"
         # policy = requests.get(policy_file, timeout=10)
         # if policy.status_code != requests.codes.ok:
@@ -331,11 +333,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         # else:
         #     policy_details = yaml.safe_load(policy.content)
 
-        super_user = policy_details['allow_management_api_user'].split(":")[2]
+        #when I have access to github.rackspace.com
+        #super_user = policy_details['allow_management_api_user'].split(":")[2]
+
+        super_user = "heatdev"
         if usertype == super_user:
             print "%s is a super user." % (usertype)
         else:
             print "%s is a normal user." % (usertype)
+
 
         regionsConfig = self.config.orchestration['regions']
         regions = regionsConfig.split(",")[0]
