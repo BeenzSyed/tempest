@@ -349,6 +349,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             csresp, csbody, stack_identifier = self.create_stack(create_stack_name, region, yaml_template, parameters)
             self._check_resp(csresp, csbody, apiname)
 
+            #stack-list - doing this again because it has known to fail if called after a stack create
+            apiname = "stack list"
+            slresp, stacklist = self.orchestration_client.list_stacks(region)
+            self._check_resp(slresp, stacklist, apiname)
+
             #update stack
             apiname = "update stack"
             parameters = {

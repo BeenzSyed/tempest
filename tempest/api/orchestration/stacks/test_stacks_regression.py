@@ -110,14 +110,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     @attr(type='smoke')
     def _test_stack(self, template=None, image=None):
 
-        # #fix verify resources
-        # stack_name = "qe_kitchen_sinkDev-tempest-1320568701"
-        # stack_id = "e573ce26-b021-4116-8cea-d1879dc57686"
-        # region = "DFW"
-        # domain_name = "iloveheat-tempest-836409087.com"
-        # resource_dict = self._get_resource_id(stack_name, stack_id, region)
-        # self._verify_resources(resource_dict, region, domain_name)
-
         print os.environ.get('TEMPEST_CONFIG')
         if os.environ.get('TEMPEST_CONFIG') == None:
             print "Set the environment varible TEMPEST_CONFIG to a config file."
@@ -174,8 +166,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 parameters['email_address'] = email_address
             if 'domain_record_type' in yaml_template['parameters']:
                 parameters['domain_record_type'] = domain_record_type
-            if 'domain_name' in yaml_template['parameters']:
-                parameters['domain_name'] = domain_name
             if 'service_domain' in yaml_template['parameters']:
                 parameters['service_domain'] = domain_name
             if 'git_url' in yaml_template['parameters']:
@@ -248,7 +238,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
 
                     resource_dict = self._get_resource_id(stack_name,stack_id,region)
-                    self._verify_resources(resource_dict,region,domain_name)
+                    self._verify_resources(resource_dict,region,domain)
 
                     #for wordpress an http call is made to ensure it is up
                     resp, body = self.get_stack(stack_id, region)
@@ -261,31 +251,32 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                 print "http call to %s worked!" % url
 
                     #delete stack
+                    #pdb.set_trace()
                     print "Deleting stack now"
                     resp, body = self.delete_stack(stack_name, stack_id, region)
-                    count_minutes = 0
-                    count_deletes = 0
-                    while body['stack_status'] == 'DELETE_IN_PROGRESS' and count_minutes < 20 and count_deletes < 4:
-                        pdb.set_trace()
-                        resp, body = self.delete_stack(stack_name, stack_id, region)
-                        if resp['status'] != '204':
-                            print "Delete did not work"
-                        resp, body = self.get_stack(stack_id, region)
-                        if resp['status'] == '200':
-                            print "Delete in %s status. Checking again in 1 minute" % body['stack_status']
-                            time.sleep(60)
-                            count_minutes += 1
-                            if body['stack_status'] == 'DELETE_FAILED':
-                                print "Stack delete failed. Here's why: %s" % body['stack_status_reason']
-                                count_deletes += 1
-                            if count == 20:
-                                print "Stack delete has taken over 20 minutes."
-                                pf += 1
-                        elif resp['status'] != '200':
-                            print "The response is: %s" % resp
-
-                    if body['stack_status'] == 'DELETE_COMPLETE':
-                        print "Stack has been deleted!"
+                    #count_minutes = 0
+                    #count_deletes = 0
+                    # while body['stack_status'] == 'DELETE_IN_PROGRESS' and count_minutes < 20 and count_deletes < 4:
+                    #     pdb.set_trace()
+                    #     resp, body = self.delete_stack(stack_name, stack_id, region)
+                    #     if resp['status'] != '204':
+                    #         print "Delete did not work"
+                    #     resp, body = self.get_stack(stack_id, region)
+                    #     if resp['status'] == '200':
+                    #         print "Delete in %s status. Checking again in 1 minute" % body['stack_status']
+                    #         time.sleep(60)
+                    #         count_minutes += 1
+                    #         if body['stack_status'] == 'DELETE_FAILED':
+                    #             print "Stack delete failed. Here's why: %s" % body['stack_status_reason']
+                    #             count_deletes += 1
+                    #         if count == 20:
+                    #             print "Stack delete has taken over 20 minutes."
+                    #             pf += 1
+                    #     elif resp['status'] != '200':
+                    #         print "The response is: %s" % resp
+                    #
+                    # if body['stack_status'] == 'DELETE_COMPLETE':
+                    #     print "Stack has been deleted!"
 
                 else:
                     print "Something went wrong! This could be the reason: %s" %body['stack_status_reason']
@@ -337,7 +328,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         return result
 
-    def _verify_resources(self, resource_dict, region, domain_name):
+    def _verify_resources(self, resource_dict, region, domain):
 
         resource_server = "OS::Nova::Server"
         resource_db = "OS::Trove::Instance"
@@ -352,12 +343,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_randomstr = "OS::Heat::RandomString"
         resource_grp = 'OS::Heat::ResourceGroup'
 
-        print region
+        #print region
 
-        if region in ("qa", "Dev", "staging"):
-            region = "dfw"
+        # if region in ("QA", "Dev", "Staging"):
+        #     region = "dfw"
 
-        print resource_dict
+        if region == 'QA' or region == 'Dev' or region == 'Staging':
+            region = 'dfw'
+
+        #print resource_dict
 
         for key, value in resource_dict.iteritems():
             resource = key
@@ -405,7 +399,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             elif resource == resource_dns:
                 dns_val = value
                 resp, body = self.dns_client.list_domain_id(dns_val, region)
-                if body['name'] == domain_name:
+                #print "body name %s" % body['name']
+                #print "domain name %s" % domain
+                if body['name'].split('.')[0] == domain:
                         print "%s is up." % resource_dns
                 else:
                         print "%s is down." % resource_dns
@@ -426,8 +422,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             else:
                 print "This resource: %s does not exist in the stack" % resource
-
-
 
     def _check_status_for_resource(self, status_code, resource):
         if status_code =='200':

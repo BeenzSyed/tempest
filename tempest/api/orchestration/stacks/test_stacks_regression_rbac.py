@@ -18,9 +18,9 @@ from tempest.test import attr
 import requests
 import yaml
 import os
-import datetime
 import re
 from testconfig import config
+from datetime import datetime
 import pdb
 
 
@@ -322,23 +322,22 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             template = template_giturl.split("/")[-1].split(".")[0]
             print "template is %s" % template
         else:
-            template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
+            template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/prod/kitchen_sink.template"
 
         response_templates = requests.get(template_giturl, timeout=3)
         yaml_template = yaml.safe_load(response_templates.content)
 
         parameters = {}
         if 'key_name' in yaml_template['parameters']:
-            parameters = {
-                'key_name': 'sabeen'
-            }
+                parameters['key_name'] = 'sabeen'
+        if 'domain_name' in yaml_template['parameters']:
+                parameters['domain_name'] = "example%s.com" % datetime.now().microsecond
         if 'git_url' in yaml_template['parameters']:
-            parameters['git_url'] = "https://github.com/timductive/phphelloworld"
-            #https://github.com/beenzsyed/phphelloworld
+                parameters['git_url'] = "https://github.com/timductive/phphelloworld"
 
         region = "Staging"
         rstype = "Rackspace::Cloud::Server"
-        rsname = "devstack_server"
+        rsname = "priv_network"
 
         usertype = self.config.identity['username']
         print "User is: %s" % usertype
@@ -352,16 +351,19 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         #create stack
         apiname = "create stack"
-        create_stack_name = "CREATE_%s" %datetime.datetime.now().microsecond
+        create_stack_name = "CREATE_%s" %datetime.now().microsecond
         csresp, csbody, stack_identifier = self.create_stack(create_stack_name, region, yaml_template, parameters)
         self._test_RBAC(usertype, apiname, csresp)
 
         #update stack
         apiname = "update stack"
-        parameters = {
-                'key_name': 'sabeen',
-                'flavor': '1GB Standard Instance'
-        }
+        parameters = {}
+        if 'key_name' in yaml_template['parameters']:
+                parameters['key_name'] = 'sabeen'
+        if 'domain_name' in yaml_template['parameters']:
+                parameters['domain_name'] = "example%s.com" % datetime.now().microsecond
+        if 'flavor' in yaml_template['parameters']:
+                parameters['flavor'] = '1GB Standard Instance'
         updateStackName, updateStackId = self._get_stacks("UPDATE_", stacklist)
         usresp, usbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
         self._test_RBAC(usertype, apiname, usresp)
@@ -381,9 +383,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         apiname = "abandon stack"
         abandonStackName, abandonStackId = self._get_stacks("ADOPT_", stacklist)
         asresp, asbody, = self.abandon_stack(abandonStackId, abandonStackName, region)
+        print asresp
+        print asbody
         self._test_RBAC(usertype, apiname, asresp)
 
-        adopt_stack_name = "ADOPT_%s" %datetime.datetime.now().microsecond
+        adopt_stack_name = "ADOPT_%s" %datetime.now().microsecond
         apiname = "adopt stack"
         asresp, asbody, stack_identifier = self.adopt_stack(adopt_stack_name, region, asbody, yaml_template, parameters)
         self._test_RBAC(usertype, apiname, asresp)
@@ -397,8 +401,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #event show
         apiname = "show event"
         event_id = self._get_event_id(evbody)
-        esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rsname, event_id, region)
-        self._test_RBAC(usertype, apiname, esresp)
+        #esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rsname, event_id, region)
+        #self._test_RBAC(usertype, apiname, esresp)
 
         #-------  Templates  -------------
         #template show
@@ -415,6 +419,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #Lists resources in a stack.
         apiname = "list resources"
         lrresp, lrbody = self.orchestration_client.list_resources(updateStackName, updateStackId, region)
+        print lrbody
         self._test_RBAC(usertype, apiname, lrresp)
 
         #Gets metadata for a specified resource.
