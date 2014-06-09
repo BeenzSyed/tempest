@@ -480,7 +480,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 or apiname == 'resource template' \
                 or apiname == 'template resource types' \
                 or apiname == 'schema for resource type':
-                if re.search('20*', resp['status']):
+                if re.search('20*', resp['status'])\
+                    or re.search('404', resp['status']) \
+                    or re.search('400', resp['status']):
                     print "User %s for %s got %s" %(user, apiname, resp['status'])
                 else:
                     print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
@@ -502,7 +504,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 or apiname == 'resource template' \
                 or apiname == 'template resource types' \
                 or apiname == 'schema for resource type':
-                if re.search('20*', resp['status']):
+                if re.search('20*', resp['status']) \
+                    or re.search('404', resp['status']) \
+                    or re.search('400', resp['status']):
                     print "User %s for %s got %s" %(user, apiname, resp['status'])
                 else:
                     print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
