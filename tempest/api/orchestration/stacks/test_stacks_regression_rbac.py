@@ -248,60 +248,14 @@ adopt_data = """
 class StacksTestJSON(base.BaseOrchestrationTest):
     _interface = 'json'
 
+    fail_flag = 0
+
     empty_template = "HeatTemplateFormatVersion: '2013-05-23'\n"
 
     @classmethod
     def setUpClass(cls):
         super(StacksTestJSON, cls).setUpClass()
         cls.client = cls.orchestration_client
-
-    def test_devstack_realDeployment(self):
-        self._test_stack("devstack")
-
-    def test_dotnetnuke_realDeployment(self):
-        self._test_stack("dotnetnuke")
-
-    def test_mongodb_realDeployment(self):
-        self._test_stack("mongodb")
-
-    def test_mysql_realDeployment(self):
-        self._test_stack("mysql")
-
-    def test_php_app_realDeployment(self):
-        self._test_stack("php-app")
-
-    def test_rcbops_realDeployment(self):
-        self._test_stack("rcbops_allinone_inone")
-
-    def test_redis_realDeployment(self):
-        self._test_stack("redis")
-
-    def test_repose_realDeployment(self):
-        self._test_stack("repose")
-
-    def test_ruby_on_rails_realDeployment(self):
-        self._test_stack("ruby-on-rails")
-
-    def test_wordpress_multi_realDeployment(self):
-        self._test_stack("wordpress-multi")
-
-    def test_wordpress_multi_windows_realDeployment(self):
-        self._test_stack("wordpress-multinode-windows")
-
-    def test_wordpress_single_winserver_realDeployment(self):
-        self._test_stack("wordpress-single-winserver")
-
-    def test_wordpress_winserver_clouddb_realDeployment(self):
-        self._test_stack("wordpress-winserver-clouddb")
-
-    def test_wp_resource_realDeployment(self):
-        self._test_stack("wp-resource")
-
-    def test_wp_single_linux_realDeployment(self):
-        self._test_stack("wp-single-linux-cdb")
-
-    def test_rackconnect_realDeployment(self):
-        self._test_stack("php-app")
 
     def test_all(self):
         self._test_stack()
@@ -337,7 +291,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         region = "Staging"
         rstype = "Rackspace::Cloud::Server"
-        rsname = "priv_network"
+        rsname = "db"
 
         usertype = self.config.identity['username']
         print "User is: %s" % usertype
@@ -345,9 +299,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         # #-------  Stacks  --------------
         #stack-list
         apiname = "stack list"
-        #pdb.set_trace()
         slresp, stacklist = self.orchestration_client.list_stacks(region)
         self._test_RBAC(usertype, apiname, slresp)
+        #print stacklist
 
         #create stack
         apiname = "create stack"
@@ -365,13 +319,18 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         if 'flavor' in yaml_template['parameters']:
                 parameters['flavor'] = '1GB Standard Instance'
         updateStackName, updateStackId = self._get_stacks("UPDATE_", stacklist)
-        usresp, usbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
-        self._test_RBAC(usertype, apiname, usresp)
+        if updateStackName == 0:
+            updateStackName = "BlankStack"
+            updateStackId = "360"
+        if updateStackName != 0:
+            usresp, usbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
+            self._test_RBAC(usertype, apiname, usresp)
 
         #stack show
         apiname = "show stack"
-        ssresp, ssbody = self.orchestration_client.show_stack(updateStackName, updateStackId, region)
-        self._test_RBAC(usertype, apiname, ssresp)
+        if updateStackName != 0:
+            ssresp, ssbody = self.orchestration_client.show_stack(updateStackName, updateStackId, region)
+            self._test_RBAC(usertype, apiname, ssresp)
 
         #delete stack
         apiname = "delete stack"
@@ -383,9 +342,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         apiname = "abandon stack"
         abandonStackName, abandonStackId = self._get_stacks("ADOPT_", stacklist)
         asresp, asbody, = self.abandon_stack(abandonStackId, abandonStackName, region)
-        print asresp
-        print asbody
         self._test_RBAC(usertype, apiname, asresp)
+        #print "Data for adopt stack data %s" %asbody
 
         adopt_stack_name = "ADOPT_%s" %datetime.now().microsecond
         apiname = "adopt stack"
@@ -395,20 +353,24 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #-------  Stack events  ----------
         #event list
         apiname = "list event"
-        evresp, evbody = self.orchestration_client.list_events(updateStackName, updateStackId, region)
-        self._test_RBAC(usertype, apiname, evresp)
+        if updateStackName != 0:
+            evresp, evbody = self.orchestration_client.list_events(updateStackName, updateStackId, region)
+            self._test_RBAC(usertype, apiname, evresp)
 
         #event show
         apiname = "show event"
-        event_id = self._get_event_id(evbody)
-        #esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rsname, event_id, region)
-        #self._test_RBAC(usertype, apiname, esresp)
+        if updateStackName != 0:
+            event_id = self._get_event_id(evbody)
+            #event_id = "180"
+            esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rsname, event_id, region)
+            self._test_RBAC(usertype, apiname, esresp)
 
         #-------  Templates  -------------
         #template show
         apiname = "template show"
-        tsresp, tsbody = self.orchestration_client.show_template(updateStackName, updateStackId, region)
-        self._test_RBAC(usertype, apiname, tsresp)
+        if updateStackName != 0:
+            tsresp, tsbody = self.orchestration_client.show_template(updateStackName, updateStackId, region)
+            self._test_RBAC(usertype, apiname, tsresp)
 
         #template validate
         apiname = "template validate"
@@ -419,7 +381,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #Lists resources in a stack.
         apiname = "list resources"
         lrresp, lrbody = self.orchestration_client.list_resources(updateStackName, updateStackId, region)
-        print lrbody
+        #print lrbody
         self._test_RBAC(usertype, apiname, lrresp)
 
         #Gets metadata for a specified resource.
@@ -447,6 +409,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         rtresp, rtbody = self.orchestration_client.resource_schema(rstype, region)
         self._test_RBAC(usertype, apiname, rtresp)
 
+        if self.fail_flag == 0:
+            print "All api's are up!"
+        elif self.fail_flag > 0:
+            print "One or more api's failed. Look above."
+            self.fail("One or more api's failed.")
+
     def _send_deploy_time_graphite(self, env, region, template, deploy_time, buildfail):
         cmd = 'echo "heat.' + env + '.build-tests.' + region + '.' + template \
               + '.' + buildfail + '  ' + str(deploy_time) \
@@ -460,54 +428,94 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def _check_resp(self, resp, body, apiname):
         if resp['status'] == '200' or resp['status'] == '202' or resp['status'] == '204':
             print "%s worked! The response is: %s" % (apiname, resp['status'])
-            #print "%s worked! The response is: %s The info you need is: %s" % (apiname, resp, body)
         else:
             print "%s did not work. The response is: %s %s" % (apiname, resp['status'], body)
-            #print "%s did not work. The response is: %s" % (apiname, resp)
 
     def _get_stacks(self, typestack, body):
         for stackname in body:
             match = re.search(typestack + '_*', stackname['stack_name'])
             if match:
                 return stackname['stack_name'], stackname['id']
-        print "did not find match"
+        print "Could not find a stack named %s" %typestack
+        return 0, 0
 
     def _get_event_id(self, body):
         for stackname in body:
             return stackname['id']
 
     def _test_RBAC(self, user, apiname, resp):
-        # print user
-        # print apiname
-        # print resp
-        print "Checking %s. The response is: %s" % (apiname, resp['status'])
         if user == 'heat.admin':
-            if apiname == 'stack list' or apiname == 'create stack' or apiname == 'update stack' or apiname == 'show stack' or apiname == 'delete stack' \
-                or apiname == 'abandon stack' or apiname == 'adopt stack' or apiname == 'list event' or apiname == 'show event' or apiname == 'template show'\
-                or apiname == 'template validate' or apiname == 'list resources' or apiname == 'resource metadata' or apiname == 'get resources' \
-                or apiname == 'resource template' or apiname == 'template resource types' or apiname == 'schema for resource type':
-                self.assertTrue(re.search('20*', resp['status']))
+            if apiname == 'stack list' or apiname == 'create stack' \
+                or apiname == 'update stack' \
+                or apiname == 'show stack' or apiname == 'delete stack' \
+                or apiname == 'abandon stack' or apiname == 'adopt stack' \
+                or apiname == 'list event' or apiname == 'show event' \
+                or apiname == 'template show'\
+                or apiname == 'template validate' \
+                or apiname == 'list resources' \
+                or apiname == 'resource metadata' \
+                or apiname == 'get resources' \
+                or apiname == 'resource template' \
+                or apiname == 'template resource types' \
+                or apiname == 'schema for resource type':
+                if re.search('20*', resp['status']):
+                    print "User %s for %s got %s " %(user, apiname, resp['status'])
+                elif re.search('405', resp['status']):
+                    print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
+                    self.fail_flag += 1
+                else:
+                    print "User %s for %s got %s " %(user, apiname, resp['status'])
             else:
                 print "This is calling an api that does not exist in the test."
+
         elif user == 'heat.creator':
-            if apiname == 'stack list' or apiname == 'stack create' or apiname == 'update stack' or apiname == 'show stack' \
-                or apiname == 'adopt stack' or apiname == 'list event' or apiname == 'show event' or apiname == 'template show'\
-                or apiname == 'template validate' or apiname == 'list resources' or apiname == 'resource metadata' or apiname == 'get resources' \
-                or apiname == 'resource template' or apiname == 'template resource types' or apiname == 'schema for resource type':
-                self.assertTrue(re.search('20*', resp['status']))
+            if apiname == 'stack list' or apiname == 'stack create' \
+                or apiname == 'update stack' or apiname == 'show stack' \
+                or apiname == 'adopt stack' or apiname == 'list event' \
+                or apiname == 'show event' or apiname == 'template show'\
+                or apiname == 'template validate' \
+                or apiname == 'list resources' \
+                or apiname == 'resource metadata' \
+                or apiname == 'get resources' \
+                or apiname == 'resource template' \
+                or apiname == 'template resource types' \
+                or apiname == 'schema for resource type':
+                if re.search('20*', resp['status']):
+                    print "User %s for %s got %s" %(user, apiname, resp['status'])
+                else:
+                    print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
+                    self.fail_flag += 1
             elif apiname == 'delete stack' or apiname == 'abandon stack':
-                self.assertTrue(re.search('40*', resp['status']))
-                #self.assertEquals('405', resp['status'], "heat.creator does not have access")
+                if re.search('405', resp['status']):
+                    print "User %s for %s got %s" %(user, apiname, resp['status'])
+                else:
+                    print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
+                    self.fail_flag += 1
+
         elif user == 'heat.observer':
             if apiname == 'stack list'  or apiname == 'show stack' \
-                or apiname == 'list event' or apiname == 'show event' or apiname == 'template show'\
-                or apiname == 'list resources' or apiname == 'resource metadata' or apiname == 'get resources' \
-                or apiname == 'resource template' or apiname == 'template resource types' or apiname == 'schema for resource type':
-                self.assertTrue(re.search('20*', resp['status']))
+                or apiname == 'list event' or apiname == 'show event' \
+                or apiname == 'template show'\
+                or apiname == 'list resources' \
+                or apiname == 'resource metadata' \
+                or apiname == 'get resources' \
+                or apiname == 'resource template' \
+                or apiname == 'template resource types' \
+                or apiname == 'schema for resource type':
+                if re.search('20*', resp['status']):
+                    print "User %s for %s got %s" %(user, apiname, resp['status'])
+                else:
+                    print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
+                    self.fail_flag += 1
+                #self.assertTrue(re.search('20*', resp['status']))
             elif apiname == 'stack create' or apiname == 'delete stack' or apiname == 'abandon stack' or apiname == 'update stack' or apiname == 'adopt stack'\
                 or apiname == 'template validate' :
-                self.assertTrue(re.search('40*', resp['status']))
-                #self.assertEquals('405', resp['status'], "heat.observer does not have access")
+                if re.search('405', resp['status']):
+                    print "User %s for %s got %s" %(user, apiname, resp['status'])
+                else:
+                    print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
+                    self.fail_flag += 1
+
         else:
             print "%s does not exist." % user
 

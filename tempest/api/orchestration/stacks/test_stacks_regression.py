@@ -145,6 +145,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             stack_name = rand_name("qe_"+template+region)
             domain_name = "example%s.com" %datetime.now().microsecond
+            domain = domain = rand_name("iloveheat")
             email_address = "heattest@rs.com"
             domain_record_type = "A"
 
@@ -177,7 +178,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if 'flavor' in yaml_template['parameters']:
                 parameters['flavor'] = "4GB Standard Instance"
             if 'domain_name' in yaml_template['parameters']:
-                domain = rand_name("iloveheat")
                 parameters['domain_name'] = domain+".com"
             if (region == 'HKG' or region == 'SYD') and 'devops_flavor' in yaml_template['parameters']:
                 parameters['devops_flavor'] = "4GB Standard Instance"

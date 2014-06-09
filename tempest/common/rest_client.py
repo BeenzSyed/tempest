@@ -423,14 +423,14 @@ class RestClient(object):
                 raise exceptions.InvalidHttpSuccessCode(details)
 
     def post(self, url, region, body, headers):
-        print "url is %s" % url
+        #print "url is %s" % url
         #print "region is %s" % region
         #print "body is %s " % body
         #print "headers are %s" % headers
         return self.request('POST', url, region, headers, body)
 
     def get(self, url, region, headers=None):
-        print "url is %s" % url
+        #print "url is %s" % url
         # print "region is %s" % region
         # print "headers are %s" % headers
         return self.request('GET', url, region, headers)
