@@ -325,15 +325,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #policy_details = yaml.load(html.content)
 
         #using requests
-        policy_file = "https://github.rackspace.com/Heat/cookbook-heat/raw/master/files/default/policy.json"
-        headers = {'Authorization': '64b66eca6f1b3f6871196d2c335dd174ce7da99d'}
-        policy = requests.post(policy_file, headers=headers, timeout=10)
-        if policy.status_code != requests.codes.ok:
-            print "This file does not exist: %s" % policy_file
-            self.fail("The policy file does not exist.")
-        else:
-            policy_details = yaml.safe_load(policy.content)
-            print policy_details
+        # policy_file = "https://github.rackspace.com/Heat/cookbook-heat/raw/master/files/default/policy.json"
+        # headers = {'Authorization': '64b66eca6f1b3f6871196d2c335dd174ce7da99d'}
+        # policy = requests.post(policy_file, headers=headers, timeout=10)
+        # if policy.status_code != requests.codes.ok:
+        #     print "This file does not exist: %s" % policy_file
+        #     self.fail("The policy file does not exist.")
+        # else:
+        #     policy_details = yaml.safe_load(policy.content)
+        #     print policy_details
 
         #when I have access to github.rackspace.com
         #super_user = policy_details['allow_management_api_user'].split(":")[2]
