@@ -22,25 +22,6 @@ class FusionClientTest(manager.FusionScenarioTest):
         super(FusionClientTest, self).setUp()
         self.client = self.fusion_client
 
-
-    def launch_stack(self):
-
-        template_id="wordpress-single",
-        stack_name=rand_name("fusion_client_")
-        parameters={}
-
-        body = self.client.stacks.create(
-            template_id="wordpress-single",
-            stack_name=stack_name,
-            parameters=parameters)
-        stack_id = body['stack']['id']
-        self.stack = self.client.stacks.get(stack_id)
-       # self.stack_identifier = '%s/%s' % (self.stack_name, self.stack.id)
-
-    def test_launch_stack_by_template_id(self):
-
-        self.launch_stack()
-
     def test_get_single_template(self):
         template_id="wordpress-single"
         resp = self.client.templates.get(template_id)
@@ -100,8 +81,34 @@ class FusionClientTest(manager.FusionScenarioTest):
 
         self.comp_list(response_resource_list,template_resource_list)
 
+    def test_stack_preview_with_template_content(self):
+        parameters={}
+        template_id="wordpress-single"
+        resp = self.client.templates.get(template_id)
+        resp = resp.to_dict()
+        region = "DFW"
+        stack_name = rand_name("fusion_"+template_id+region)
+        body = self.client.stacks.preview(
+            template_id="wordpress-single",
+            stack_name=stack_name,
+            parameters=parameters)
+        body= body.to_dict()
 
-# Need to fix this test
+        response_resource_list = []
+        for resource in body['resources']:
+            response_resource_list.append(resource['resource_type'])
+        response_resource_list.sort()
+
+        template_resource_list = []
+        resources_temp = resp['resources']
+        for key, value in resources_temp.iteritems():
+            resource = value['type']
+            template_resource_list.append(resource)
+        template_resource_list.sort()
+
+        self.comp_list(response_resource_list,template_resource_list)
+
+
     def test_create_stack_with_supported_template_id(self):
         template_id = "wordpress-single"
         region = "QA"
@@ -111,25 +118,37 @@ class FusionClientTest(manager.FusionScenarioTest):
             template_id="wordpress-single",
             stack_name=stack_name,
             parameters=parameters)
-        stack_id = body['stack']['id']
+        stack_id = "%s/%s"%(stack_name,body['stack']['id'])
         body = self.client.stacks.get(stack_id,with_support_info=True)
-        print "test"
-        #self.assertIn('rackspace_template', body)
-        #     self.assertEqual(body['stack']['rackspace_template'],True,)
-        #     self.assertEqual(body['stack']['application_name'],\
-        #                                   ('WordPress'),
-        #                      "Expected wasWordpress but has "
-        #                      "no application name")
-        #     self.assertIn('template_id', body['stack'])
-        # dresp, dbody = self.delete_stack(stack_name, stack_identifier,region)
+        body=body.to_dict()
+        self.assertIn('template1_id', body,)
+        self.assertIn('application_name', body)
+        self.assertIn('rackspace_template', body)
+        self.client.stacks.delete(stack_id)
 
-    # Need to fix this test
-    def test_get_supported_template(self):
+    def test_create_stack_with_supported_template_id_with_false_support_info(
+            self):
+        template_id = "wordpress-single"
+        region = "QA"
+        parameters={}
+        stack_name = rand_name("fusion_"+template_id+region)
+        body = self.client.stacks.create(
+            template_id="wordpress-single",
+            stack_name=stack_name,
+            parameters=parameters)
+        stack_id = "%s/%s"%(stack_name,body['stack']['id'])
+        body = self.client.stacks.get(stack_id)
+        body=body.to_dict()
+        self.assertNotIn('template_id', body,)
+        self.assertNotIn('application_name', body)
+        self.assertNotIn('rackspace_template', body)
+        self.client.stacks.delete(stack_id)
+
+    def test_create_stack_with_supported_template(self):
          # Unsupported Template with flag as False
-        region = "DFW"
         parameters={}
         template_id="wordpress-single"
-        resp = self.client.templates.get(template_id,with_metadata=True)
+        resp = self.client.templates.get(template_id)
         resp = resp.to_dict()
         stack_name = rand_name("Fusion_")
         body = self.client.stacks.create(
@@ -137,20 +156,12 @@ class FusionClientTest(manager.FusionScenarioTest):
             stack_name=stack_name,
             parameters=parameters)
         stack_id = body['stack']['id']
-        print "test"
-
-        if resp['status']== '201':
-            stack_id = body['stack']['id']
-            url = "stacks/%s/%s?with_support_info"%(stack_name,stack_id)
-            resp,body = self.orchestration_client.get_stack_info_for_fusion(
-                url,region)
-            self.assertEqual(body['stack']['rackspace_template'],False,)
-            self.assertEqual(body['stack']['application_name'],\
-                                          ('(Not Specified)'),
-                             "Expected was not specified but has "
-                             "application name")
-            self.assertNotIn('template_id', body['stack'])
-       # dresp, dbody = self.delete_stack(stack_name, stack_identifier,region)
+        body = self.client.stacks.get(stack_id,with_support_info=True)
+        body= body.to_dict()
+        self.assertNotIn('template_id', body)
+        self.assertNotIn('application_name', body)
+        self.assertNotIn('rackspace_template', body)
+        self.client.stacks.delete(stack_id)
 
     def test_stack_update(self):
 
@@ -184,11 +195,7 @@ class FusionClientTest(manager.FusionScenarioTest):
         if body['stack_status'] == 'CREATE_COMPLETE':
               body_update = self.client.stacks.update(stack_identifier,
                                    template_id=template_id,parameters=parameters)
-              print "Done"
-
-             #dresp, dbody = self.delete_stack(stack_name, stack_identifier,
-              #                              region)
-
+              self.client.stacks.delete(stack_id)
 
 
     def comp_list(self ,list1, list2):
@@ -200,7 +207,7 @@ class FusionClientTest(manager.FusionScenarioTest):
                Result.append(False)
         if False in Result:
             print "Resources in template and stack_preview response are " \
-                     "differnt"
+                     "different"
         else:
             print"Resources in template and stack_preview response are " \
                        "same"
