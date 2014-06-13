@@ -121,7 +121,7 @@ class FusionClientTest(manager.FusionScenarioTest):
         stack_id = "%s/%s"%(stack_name,body['stack']['id'])
         body = self.client.stacks.get(stack_id,with_support_info=True)
         body=body.to_dict()
-        self.assertIn('template1_id', body,)
+        self.assertIn('template_id', body,)
         self.assertIn('application_name', body)
         self.assertIn('rackspace_template', body)
         self.client.stacks.delete(stack_id)
