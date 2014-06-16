@@ -245,9 +245,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     for output in body['outputs']:
                         if output['output_key'] == "server_ip":
                             url = "http://%s" % output['output_value']
-                            customer_resp = requests.get(url, timeout=10)
-                            print customer_resp
-                            if customer_resp.status_code == '200':
+                            customer_resp = requests.get(url, timeout=10, verify=False)
+                            print customer_resp.status_code
+                            if customer_resp.status_code == 200:
                                 print "http call to %s worked!" % url
 
                     #delete stack
