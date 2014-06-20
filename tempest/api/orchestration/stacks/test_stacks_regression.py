@@ -251,7 +251,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                 print "http call to %s worked!" % url
 
                     #delete stack
-                    #pdb.set_trace()
                     print "Deleting stack now"
                     resp, body = self.delete_stack(stack_name, stack_id, region)
                     #count_minutes = 0
