@@ -52,7 +52,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp , body = self.orchestration_client.get_template_catalog_with_metadata(region)
         #print resp, body
         for template in body['templates']:
-            if 'metadata' in template:
+            if 'rackspace-metadata' in template:
                 print"Templates  %s have metadata"%template['id']
             else :
                 print "Templates  %s does not have metadata"%template['id']
