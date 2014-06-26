@@ -159,8 +159,8 @@ class FusionClientTest(manager.FusionScenarioTest):
         body = self.client.stacks.get(stack_id,with_support_info=True)
         body= body.to_dict()
         self.assertNotIn('template_id', body)
-        self.assertNotIn('application_name', body)
-        self.assertNotIn('rackspace_template', body)
+        self.assertIn('application_name', body)
+        self.assertIn('rackspace_template', body)
         self.client.stacks.delete(stack_id)
 
     def test_stack_update(self):
