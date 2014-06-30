@@ -250,6 +250,19 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             if customer_resp.status_code == 200:
                                 print "http call to %s worked!" % url
 
+                    
+                    print "Updating Stack "
+                    resp_update, body_update = self.orchestration_client.update_stack(
+                                     stack_identifier = stack_id,
+                                     name = stack_name,
+                                     region = region,
+                                     parameters=parameters,
+                                     template=yaml_template)
+                    if resp_update['status'] =='202':
+                        print "Update request went successfully"
+                    else:
+                        print resp_update['status']
+                        print "Something went wrong during update"
                     #delete stack
                     print "Deleting stack now"
                     resp, body = self.delete_stack(stack_name, stack_id, region)
