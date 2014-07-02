@@ -92,6 +92,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             url = "stacks/%s/%s?with_support_info=1"%(stack_name,stack_id)
             resp,body = self.orchestration_client.get_stack_info_for_fusion(
                 url,region)
+            print body 
+            print "only for test"
             self.assertEqual(body['stack']['rackspace_template'],True,)
             self.assertEqual(body['stack']['application_name'],\
                                           ('WordPress'),
