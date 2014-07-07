@@ -41,68 +41,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         super(StacksTestJSON, cls).setUpClass()
         cls.client = cls.orchestration_client
 
-    def test_devstack_realDeployment(self):
-        self._test_stack("devstack")
-
-    def test_dotnetnuke_realDeployment(self):
-        self._test_stack("dotnetnuke")
-
-    def test_mongodb_realDeployment(self):
-        self._test_stack("mongodb")
-
-    def test_mysql_realDeployment(self):
-        self._test_stack("mysql")
-
-    def test_php_app_realDeployment(self):
-        self._test_stack("php-app")
-
-    def test_rcbops_realDeployment(self):
-        self._test_stack("rcbops_allinone_inone")
-
-    def test_redis_realDeployment(self):
-        self._test_stack("redis")
-
-    def test_repose_realDeployment(self):
-        self._test_stack("repose")
-
-    def test_ruby_on_rails_realDeployment(self):
-        self._test_stack("ruby-on-rails")
-
     def test_wordpress_multi_realDeployment(self):
         self._test_stack("wordpress-multi")
-
-    def test_wordpress_multi_windows_realDeployment(self):
-        self._test_stack("wordpress-multinode-windows")
-
-    def test_wordpress_single_winserver_realDeployment(self):
-        self._test_stack("wordpress-single-winserver")
-
-    def test_wordpress_winserver_clouddb_realDeployment(self):
-        self._test_stack("wordpress-winserver-clouddb")
-
-    def test_wp_resource_realDeployment(self):
-        self._test_stack("wp-resource")
-
-    def test_wp_single_linux_realDeployment(self):
-        self._test_stack("wp-single-linux-cdb")
-
-    def test_rackconnect_realDeployment(self):
-        self._test_stack("php-app")
-
-    def test_wordpress_multi_dns_realDeployment(self):
-        self._test_stack("wordpress-multi-dns")
-
-    def test_ubuntu(self):
-        self._test_stack("hello-world", "ubuntu")
-
-    def test_centos(self):
-        self._test_stack("hello-world", "centos")
-
-    def test_chef_solo(self):
-        self._test_stack("chef_multi_node_wordpress")
-
-    def test_kitchen_sink(self):
-        self._test_stack("kitchen_sink")
 
     def test_all(self):
         self._test_stack()
@@ -141,7 +81,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         for region in regions:
 
             respbi, bodybi = self.orchestration_client.get_build_info(region)
-            print "The build info is: %s" % bodybi
+            print "\nThe build info is: %s" % bodybi
+
+            #Check whether the parameter has a label (display in Reach)
+            all_parameters = yaml_template['parameters']
+            for param in all_parameters:
+                if 'label' not in yaml_template['parameters'][param]:
+                    print "\nlabel does not exist for %s" % param
 
             stack_name = rand_name("qe_"+template+region)
             domain_name = "example%s.com" %datetime.now().microsecond
@@ -203,56 +149,122 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             else:
                 stack_id = stack_identifier.split('/')[1]
                 count = 0
-                resp, body = self.get_stack(stack_id, region)
+                retry = 0
 
-                if resp['status'] != '200':
-                    print "The response is: %s" % resp
-                    self.fail(resp)
-                print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
-
-                while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
+                should_restart = True
+                while should_restart:
                     resp, body = self.get_stack(stack_id, region)
-                    if resp['status'] == '200':
-                        print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
-                        time.sleep(60)
-                        count += 1
-                        if body['stack_status'] == 'CREATE_FAILED':
+                    if resp['status'] != '200':
+                        print "The response is: %s" % resp
+                        self.fail(resp)
+                    else:
+                        if body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
+                            print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
+                            time.sleep(60)
+                            count += 1
+                        elif body['stack_status'] == 'CREATE_IN_PROGRESS' and count == 90:
+                            print "Stack create has taken over 90 minutes. Force failing now."
+                            self._send_deploy_time_graphite(env, region, template, count, "failtime")
+                            #self._delete_stack(stack_name, stack_id, region)
+                            pf += 1
+                        elif body['stack_status'] == 'CREATE_FAILED' and retry < 4:
+                            #do another create and then start the loop back up
+                            stack_name = rand_name("qe_"+template+region)
+                            csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
+                            if stack_identifier == 0:
+                                print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
+                                self.fail("Stack build failed.")
+                            else:
+                                #Trying the retries
+                                stack_id = stack_identifier.split('/')[1]
+                                retry += 1
+                        elif body['stack_status'] == 'CREATE_FAILED' and retry == 4:
                             print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                             self._send_deploy_time_graphite(env, region, template, count, "failtime")
                             #self._delete_stack(stack_name, stack_id, region)
                             pf += 1
-                        if count == 90:
-                            print "Stack create has taken over 90 minutes. Force failing now."
-                            self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                            self._delete_stack(stack_name, stack_id, region)
+                            should_restart = False
+                        elif body['stack_status'] == 'CREATE_COMPLETE':
+                            print "The deployment took %s minutes" % count
+                            self._send_deploy_time_graphite(env, region, template, count, "buildtime")
+
+                            resource_dict = self._get_resource_id(stack_name,stack_id,region)
+                            self._verify_resources(resource_dict,region,domain)
+
+                            #for wordpress an http call is made to ensure it is up
+                            resp, body = self.get_stack(stack_id, region)
+                            for output in body['outputs']:
+                                if output['output_key'] == "server_ip":
+                                    url = "http://%s" % output['output_value']
+                                    print "The url is %s" % url
+                                    customer_resp = requests.get(url, timeout=10, verify=False)
+                                    #print customer_resp.status_code
+                                    if customer_resp.status_code == 200:
+                                        print "http call to %s worked!" % url
+
+                            should_restart = False
+
+                        else:
+                            print "Something went wrong. Here's what: %s, %s" % (resp, body)
                             pf += 1
-                    elif resp['status'] != '200':
-                        print "The response is: %s" % resp
-                        pf += 1
-                    else:
-                        print "Something went wrong. Here's what: %s, %s" % (resp, body)
-                        pf += 1
 
-                if body['stack_status'] == 'CREATE_COMPLETE':
-                    print "The deployment took %s minutes" % count
-                    self._send_deploy_time_graphite(env, region, template, count, "buildtime")
+                #delete stack
+                print "Deleting stack now"
+                resp, body = self.delete_stack(stack_name, stack_id, region)
 
-                    resource_dict = self._get_resource_id(stack_name,stack_id,region)
-                    self._verify_resources(resource_dict,region,domain)
-
-                    #for wordpress an http call is made to ensure it is up
-                    resp, body = self.get_stack(stack_id, region)
-                    for output in body['outputs']:
-                        if output['output_key'] == "server_ip":
-                            url = "http://%s" % output['output_value']
-                            customer_resp = requests.get(url, timeout=10, verify=False)
-                            print customer_resp.status_code
-                            if customer_resp.status_code == 200:
-                                print "http call to %s worked!" % url
+                #Normal code
+                # stack_id = stack_identifier.split('/')[1]
+                # count = 0
+                # resp, body = self.get_stack(stack_id, region)
+                #
+                # if resp['status'] != '200':
+                #     print "The response is: %s" % resp
+                #     self.fail(resp)
+                # print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
+                #
+                # while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
+                #     resp, body = self.get_stack(stack_id, region)
+                #     if resp['status'] == '200':
+                #         print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
+                #         time.sleep(60)
+                #         count += 1
+                #         if body['stack_status'] == 'CREATE_FAILED':
+                #             print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                #             self._send_deploy_time_graphite(env, region, template, count, "failtime")
+                #             #self._delete_stack(stack_name, stack_id, region)
+                #             pf += 1
+                #         if count == 90:
+                #             print "Stack create has taken over 90 minutes. Force failing now."
+                #             self._send_deploy_time_graphite(env, region, template, count, "failtime")
+                #             self._delete_stack(stack_name, stack_id, region)
+                #             pf += 1
+                #     elif resp['status'] != '200':
+                #         print "The response is: %s" % resp
+                #         pf += 1
+                #     else:
+                #         print "Something went wrong. Here's what: %s, %s" % (resp, body)
+                #         pf += 1
+                #
+                # if body['stack_status'] == 'CREATE_COMPLETE':
+                #     print "The deployment took %s minutes" % count
+                #     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
+                #
+                #     resource_dict = self._get_resource_id(stack_name,stack_id,region)
+                #     self._verify_resources(resource_dict,region,domain)
+                #
+                #     #for wordpress an http call is made to ensure it is up
+                #     resp, body = self.get_stack(stack_id, region)
+                #     for output in body['outputs']:
+                #         if output['output_key'] == "server_ip":
+                #             url = "http://%s" % output['output_value']
+                #             customer_resp = requests.get(url, timeout=10, verify=False)
+                #             print customer_resp.status_code
+                #             if customer_resp.status_code == 200:
+                #                 print "http call to %s worked!" % url
 
                     #delete stack
-                    print "Deleting stack now"
-                    resp, body = self.delete_stack(stack_name, stack_id, region)
+                    # print "Deleting stack now"
+                    # resp, body = self.delete_stack(stack_name, stack_id, region)
                     #count_minutes = 0
                     #count_deletes = 0
                     # while body['stack_status'] == 'DELETE_IN_PROGRESS' and count_minutes < 20 and count_deletes < 4:
@@ -277,9 +289,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     # if body['stack_status'] == 'DELETE_COMPLETE':
                     #     print "Stack has been deleted!"
 
-                else:
-                    print "Something went wrong! This could be the reason: %s" %body['stack_status_reason']
-                    self.fail("Stack create or delete failed.")
+                # else:
+                #     print "Something went wrong! This could be the reason: %s" %body['stack_status_reason']
+                #     self.fail("Stack create or delete failed.")
 
         #if more than 0 stacks fail, fail the test
         if pf > 0:
@@ -361,6 +373,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             elif resource == resource_network:
                 network_id = value
+                pdb.set_trace()
                 resp, body = self.network_client.list_network(self.config.identity['tenant_name'], network_id, region)
                 self._check_status_for_resource(resp['status'], resource_server)
 

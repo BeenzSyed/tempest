@@ -64,7 +64,7 @@ class NetworkClientBase(object):
 
     def get(self, uri,region, headers=None):
         headers = headers or self.rest_client.headers
-        return self.rest_client.get(uri,region, headers)
+        return self.rest_client.get(uri, region, headers)
 
     def delete(self, uri, headers=None):
         headers = headers or self.rest_client.headers
