@@ -52,7 +52,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp , body = self.orchestration_client.get_template_catalog_with_metadata(region)
         #print resp, body
         for template in body['templates']:
-            if 'metadata' in template:
+            if 'rackspace-metadata' in template:
                 print"Templates  %s have metadata"%template['id']
             else :
                 print "Templates  %s does not have metadata"%template['id']
@@ -89,9 +89,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         stack_identifier = body['stack']['id']
         if resp['status']== '201':
             stack_id = body['stack']['id']
-            url = "stacks/%s/%s?with_support_info"%(stack_name,stack_id)
+            url = "stacks/%s/%s?with_support_info=1"%(stack_name,stack_id)
             resp,body = self.orchestration_client.get_stack_info_for_fusion(
                 url,region)
+            print "For test "         
+            print "printing body %s " %body 
+            print "only for test"
             self.assertEqual(body['stack']['rackspace_template'],True,)
             self.assertEqual(body['stack']['application_name'],\
                                           ('WordPress'),
@@ -129,7 +132,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         stack_identifier = body['stack']['id']
         if resp['status']== '201':
             stack_id = body['stack']['id']
-            url = "stacks/%s/%s?with_support_info"%(stack_name,stack_id)
+            url = "stacks/%s/%s?with_support_info=1"%(stack_name,stack_id)
             resp,body = self.orchestration_client.get_stack_info_for_fusion(
                 url,region)
             self.assertEqual(body['stack']['rackspace_template'],False,)
