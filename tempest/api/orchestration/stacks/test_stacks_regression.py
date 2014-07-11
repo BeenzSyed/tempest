@@ -23,18 +23,13 @@ import os
 import re
 import pdb
 import requests
-import json
 from testconfig import config
-import urllib2
-#from bs4 import BeautifulSoup
 
 LOG = logging.getLogger(__name__)
 
 
 class StacksTestJSON(base.BaseOrchestrationTest):
     _interface = 'json'
-
-    empty_template = "HeatTemplateFormatVersion: '2013-05-23'\n"
 
     @classmethod
     def setUpClass(cls):
@@ -90,58 +85,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "\nlabel does not exist for %s" % param
 
             stack_name = rand_name("qe_"+template+region)
-            domain_name = "example%s.com" %datetime.now().microsecond
-            domain = domain = rand_name("iloveheat")
-            email_address = "heattest@rs.com"
-            domain_record_type = "A"
-
-            parameters = {}
-            if 'ssh_keypair_name' in yaml_template['parameters']:
-                keypair_name = rand_name("heat")
-                parameters['ssh_keypair_name'] = keypair_name
-            if 'ssh_keypair_name' in yaml_template['parameters'] and re.match('ansible*', template):
-                parameters['ssh_keypair_name'] = 'sabeen'
-            if 'ssh_sync_keypair_name' in yaml_template['parameters']:
-                keypair_name = rand_name("heat")
-                parameters['ssh_sync_keypair_name'] = keypair_name
-            if 'key_name' in yaml_template['parameters']:
-                parameters['key_name'] = 'sabeen'
-            if 'key_name' in yaml_template['parameters'] and re.match('chef*', template):
-                keypair_name = rand_name("heat")
-                parameters['key_name'] = keypair_name
-            if 'email_address' in yaml_template['parameters']:
-                parameters['email_address'] = email_address
-            if 'domain_record_type' in yaml_template['parameters']:
-                parameters['domain_record_type'] = domain_record_type
-            if 'service_domain' in yaml_template['parameters']:
-                parameters['service_domain'] = domain_name
-            if 'git_url' in yaml_template['parameters']:
-                parameters['git_url'] = "https://github.com/timductive/phphelloworld"
-            if 'image_id' in yaml_template['parameters'] and image=="ubuntu":
-                parameters['image_id'] = "80fbcb55-b206-41f9-9bc2-2dd7aac6c061"
-            if 'image_id' in yaml_template['parameters'] and image=="centos":
-                parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
-            if 'flavor' in yaml_template['parameters']:
-                parameters['flavor'] = "4GB Standard Instance"
-            if 'domain_name' in yaml_template['parameters']:
-                parameters['domain_name'] = domain+".com"
-            if (region == 'HKG' or region == 'SYD') and 'devops_flavor' in yaml_template['parameters']:
-                parameters['devops_flavor'] = "4GB Standard Instance"
-            if (region == 'HKG' or region == 'SYD') and 'api_flavor_ref' in yaml_template['parameters']:
-                parameters['api_flavor_ref'] = "3"
-            if 'db_pass' in yaml_template['parameters']:
-                parameters['db_pass'] = "secretes"
-            if 'database_server_flavor' in yaml_template['parameters']:
-                parameters['database_server_flavor'] = "4GB Standard Instance"
-            if 'wp_master_server_flavor' in yaml_template['parameters']:
-                parameters['wp_master_server_flavor'] = "4GB Standard Instance"
-            if 'wp_web_server_flavor' in yaml_template['parameters']:
-                parameters['wp_web_server_flavor'] = "4GB Standard Instance"
-            if 'server_flavor' in yaml_template['parameters']:
-                parameters['server_flavor'] = "4GB Standard Instance"
+            domain = rand_name("iloveheat")
+            params = self._set_parameters(yaml_template, template, region, image, domain)
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
-            csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
+            csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
 
             if stack_identifier == 0:
                 print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
@@ -154,9 +102,25 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 should_restart = True
                 while should_restart:
                     resp, body = self.get_stack(stack_id, region)
-                    if resp['status'] != '200':
+                    if retry == 4:
+                        print "Retried 4 times!"
+                        print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                        self._send_deploy_time_graphite(env, region, template, count, "failtime")
+                        pf += 1
+                        should_restart = False
+                    elif resp['status'] != '200':
                         print "The response is: %s" % resp
-                        self.fail(resp)
+                        #Retry
+                        stack_name = rand_name("qe_"+template+region)
+                        domain = rand_name("iloveheat")
+                        params = self._set_parameters(yaml_template, template, region, image, domain)
+                        csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
+                        if stack_identifier == 0:
+                            print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
+                            self.fail("Stack build failed.")
+                        else:
+                            stack_id = stack_identifier.split('/')[1]
+                            retry += 1
                     else:
                         if body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
                             print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
@@ -165,12 +129,16 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         elif body['stack_status'] == 'CREATE_IN_PROGRESS' and count == 90:
                             print "Stack create has taken over 90 minutes. Force failing now."
                             self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                            #self._delete_stack(stack_name, stack_id, region)
                             pf += 1
+                            should_restart = False
+
                         elif body['stack_status'] == 'CREATE_FAILED' and retry < 4:
-                            #do another create and then start the loop back up
+                            #Retry
+                            print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                             stack_name = rand_name("qe_"+template+region)
-                            csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
+                            domain = rand_name("iloveheat")
+                            params = self._set_parameters(yaml_template, template, region, image, domain)
+                            csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
                             if stack_identifier == 0:
                                 print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
                                 self.fail("Stack build failed.")
@@ -178,18 +146,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                 #Trying the retries
                                 stack_id = stack_identifier.split('/')[1]
                                 retry += 1
-                        elif body['stack_status'] == 'CREATE_FAILED' and retry == 4:
-                            print "Stack create failed. Here's why: %s" % body['stack_status_reason']
-                            self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                            #self._delete_stack(stack_name, stack_id, region)
-                            pf += 1
-                            should_restart = False
+
                         elif body['stack_status'] == 'CREATE_COMPLETE':
                             print "The deployment took %s minutes" % count
                             self._send_deploy_time_graphite(env, region, template, count, "buildtime")
 
-                            resource_dict = self._get_resource_id(stack_name,stack_id,region)
-                            self._verify_resources(resource_dict,region,domain)
+                            resource_dict = self._get_resource_id(stack_name, stack_id, region)
+                            self._verify_resources(resource_dict, region, domain)
 
                             #for wordpress an http call is made to ensure it is up
                             resp, body = self.get_stack(stack_id, region)
@@ -201,114 +164,88 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                     #print customer_resp.status_code
                                     if customer_resp.status_code == 200:
                                         print "http call to %s worked!" % url
+                            #update stack
+                            print "Updating Stack"
+                            resp_update, body_update = self.orchestration_client.update_stack(
+                                             stack_identifier = stack_id,
+                                             name = stack_name,
+                                             region = region,
+                                             parameters=params,
+                                             template=yaml_template)
+                            if resp_update['status'] =='202':
+                                print "Update request went successfully"
+                            else:
+                                print resp_update['status']
+                                print "Something went wrong during update"
+
+                            #delete stack
+                            print "Deleting stack now"
+                            self._delete_stack(stack_name, stack_id, region)
 
                             should_restart = False
 
                         else:
-                            print "Something went wrong. Here's what: %s, %s" % (resp, body)
+                            print body['stack_status']
+                            print "Something went wrong. Stack failed!"
                             pf += 1
-
-                print "Updating Stack"
-                resp_update, body_update = self.orchestration_client.update_stack(
-                                 stack_identifier = stack_id,
-                                 name = stack_name,
-                                 region = region,
-                                 parameters=parameters,
-                                 template=yaml_template)
-                if resp_update['status'] =='202':
-                    print "Update request went successfully"
-                else:
-                    print resp_update['status']
-                    print "Something went wrong during update"
-
-                #delete stack
-                print "Deleting stack now"
-                resp, body = self.delete_stack(stack_name, stack_id, region)
-
-                #Normal code
-                # stack_id = stack_identifier.split('/')[1]
-                # count = 0
-                # resp, body = self.get_stack(stack_id, region)
-                #
-                # if resp['status'] != '200':
-                #     print "The response is: %s" % resp
-                #     self.fail(resp)
-                # print "Stack %s status is: %s, %s" % (stack_name, body['stack_status'], body['stack_status_reason'])
-                #
-                # while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
-                #     resp, body = self.get_stack(stack_id, region)
-                #     if resp['status'] == '200':
-                #         print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
-                #         time.sleep(60)
-                #         count += 1
-                #         if body['stack_status'] == 'CREATE_FAILED':
-                #             print "Stack create failed. Here's why: %s" % body['stack_status_reason']
-                #             self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                #             #self._delete_stack(stack_name, stack_id, region)
-                #             pf += 1
-                #         if count == 90:
-                #             print "Stack create has taken over 90 minutes. Force failing now."
-                #             self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                #             self._delete_stack(stack_name, stack_id, region)
-                #             pf += 1
-                #     elif resp['status'] != '200':
-                #         print "The response is: %s" % resp
-                #         pf += 1
-                #     else:
-                #         print "Something went wrong. Here's what: %s, %s" % (resp, body)
-                #         pf += 1
-                #
-                # if body['stack_status'] == 'CREATE_COMPLETE':
-                #     print "The deployment took %s minutes" % count
-                #     self._send_deploy_time_graphite(env, region, template, count, "buildtime")
-                #
-                #     resource_dict = self._get_resource_id(stack_name,stack_id,region)
-                #     self._verify_resources(resource_dict,region,domain)
-                #
-                #     #for wordpress an http call is made to ensure it is up
-                #     resp, body = self.get_stack(stack_id, region)
-                #     for output in body['outputs']:
-                #         if output['output_key'] == "server_ip":
-                #             url = "http://%s" % output['output_value']
-                #             customer_resp = requests.get(url, timeout=10, verify=False)
-                #             print customer_resp.status_code
-                #             if customer_resp.status_code == 200:
-                #                 print "http call to %s worked!" % url
-
-                    #delete stack
-                    # print "Deleting stack now"
-                    # resp, body = self.delete_stack(stack_name, stack_id, region)
-                    #count_minutes = 0
-                    #count_deletes = 0
-                    # while body['stack_status'] == 'DELETE_IN_PROGRESS' and count_minutes < 20 and count_deletes < 4:
-                    #     pdb.set_trace()
-                    #     resp, body = self.delete_stack(stack_name, stack_id, region)
-                    #     if resp['status'] != '204':
-                    #         print "Delete did not work"
-                    #     resp, body = self.get_stack(stack_id, region)
-                    #     if resp['status'] == '200':
-                    #         print "Delete in %s status. Checking again in 1 minute" % body['stack_status']
-                    #         time.sleep(60)
-                    #         count_minutes += 1
-                    #         if body['stack_status'] == 'DELETE_FAILED':
-                    #             print "Stack delete failed. Here's why: %s" % body['stack_status_reason']
-                    #             count_deletes += 1
-                    #         if count == 20:
-                    #             print "Stack delete has taken over 20 minutes."
-                    #             pf += 1
-                    #     elif resp['status'] != '200':
-                    #         print "The response is: %s" % resp
-                    #
-                    # if body['stack_status'] == 'DELETE_COMPLETE':
-                    #     print "Stack has been deleted!"
-
-                # else:
-                #     print "Something went wrong! This could be the reason: %s" %body['stack_status_reason']
-                #     self.fail("Stack create or delete failed.")
+                            should_restart = False
 
         #if more than 0 stacks fail, fail the test
         if pf > 0:
             self.fail("Stack build failed.")
+
+    def _set_parameters(self, yaml_template, template, region, image, domain):
+        domain_name = "example%s.com" %datetime.now().microsecond
+        email_address = "heattest@rs.com"
+        domain_record_type = "A"
+
+        parameters = {}
+        if 'ssh_keypair_name' in yaml_template['parameters']:
+            keypair_name = rand_name("heat")
+            parameters['ssh_keypair_name'] = keypair_name
+        if 'ssh_keypair_name' in yaml_template['parameters'] and re.match('ansible*', template):
+            parameters['ssh_keypair_name'] = 'sabeen'
+        if 'ssh_sync_keypair_name' in yaml_template['parameters']:
+            keypair_name = rand_name("heat")
+            parameters['ssh_sync_keypair_name'] = keypair_name
+        if 'key_name' in yaml_template['parameters']:
+            parameters['key_name'] = 'sabeen'
+        if 'key_name' in yaml_template['parameters'] and re.match('chef*', template):
+            keypair_name = rand_name("heat")
+            parameters['key_name'] = keypair_name
+        if 'email_address' in yaml_template['parameters']:
+            parameters['email_address'] = email_address
+        if 'domain_record_type' in yaml_template['parameters']:
+            parameters['domain_record_type'] = domain_record_type
+        if 'service_domain' in yaml_template['parameters']:
+            parameters['service_domain'] = domain_name
+        if 'git_url' in yaml_template['parameters']:
+            parameters['git_url'] = "https://github.com/timductive/phphelloworld"
+        if 'image_id' in yaml_template['parameters'] and image=="ubuntu":
+            parameters['image_id'] = "80fbcb55-b206-41f9-9bc2-2dd7aac6c061"
+        if 'image_id' in yaml_template['parameters'] and image=="centos":
+            parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
+        if 'flavor' in yaml_template['parameters']:
+            parameters['flavor'] = "4GB Standard Instance"
+        if 'domain_name' in yaml_template['parameters']:
+            parameters['domain_name'] = domain_name
+        if (region == 'HKG' or region == 'SYD') and 'devops_flavor' in yaml_template['parameters']:
+            parameters['devops_flavor'] = "4GB Standard Instance"
+        if (region == 'HKG' or region == 'SYD') and 'api_flavor_ref' in yaml_template['parameters']:
+            parameters['api_flavor_ref'] = "3"
+        if 'db_pass' in yaml_template['parameters']:
+            parameters['db_pass'] = "secretes"
+        if 'database_server_flavor' in yaml_template['parameters']:
+            parameters['database_server_flavor'] = "4GB Standard Instance"
+        if 'wp_master_server_flavor' in yaml_template['parameters']:
+            parameters['wp_master_server_flavor'] = "4GB Standard Instance"
+        if 'wp_web_server_flavor' in yaml_template['parameters']:
+            parameters['wp_web_server_flavor'] = "4GB Standard Instance"
+        if 'server_flavor' in yaml_template['parameters']:
+            parameters['server_flavor'] = "4GB Standard Instance"
+
+        print "Parameters are set to %s" % parameters
+        return parameters
 
     def _send_deploy_time_graphite(self, env, region, template, deploy_time, buildfail):
         cmd = 'echo "heat.' + env + '.build-tests.' + region + '.' + template \
@@ -367,16 +304,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_randomstr = "OS::Heat::RandomString"
         resource_grp = 'OS::Heat::ResourceGroup'
 
-        #print region
-
-        # if region in ("QA", "Dev", "Staging"):
-        #     region = "dfw"
-
         if region == 'QA' or region == 'Dev' or region == 'Staging':
             region = 'dfw'
 
         #print resource_dict
-
         for key, value in resource_dict.iteritems():
             resource = key
             if resource == resource_server:
@@ -386,7 +317,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             elif resource == resource_network:
                 network_id = value
-                pdb.set_trace()
+                #pdb.set_trace()
                 resp, body = self.network_client.list_network(self.config.identity['tenant_name'], network_id, region)
                 self._check_status_for_resource(resp['status'], resource_server)
 
@@ -422,6 +353,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                                  resource_vol_attach)
 
             elif resource == resource_dns:
+                #pdb.set_trace()
                 dns_val = value
                 resp, body = self.dns_client.list_domain_id(dns_val, region)
                 #print "body name %s" % body['name']
