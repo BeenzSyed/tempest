@@ -76,13 +76,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         for region in regions:
 
             respbi, bodybi = self.orchestration_client.get_build_info(region)
-            print "\nThe build info is: %s" % bodybi
+            print "\nThe build info is: %s\n" % bodybi
 
             #Check whether the parameter has a label (display in Reach)
             all_parameters = yaml_template['parameters']
             for param in all_parameters:
                 if 'label' not in yaml_template['parameters'][param]:
-                    print "\nlabel does not exist for %s" % param
+                    print "label does not exist for %s" % param
 
             stack_name = rand_name("qe_"+template+region)
             domain = rand_name("iloveheat")
@@ -99,12 +99,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 count = 0
                 retry = 0
 
+                #pdb.set_trace()
                 should_restart = True
                 while should_restart:
                     resp, body = self.get_stack(stack_id, region)
                     if retry == 4:
-                        print "Retried 4 times!"
-                        print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                        print "Retried 4 times! Stack create failed."
                         self._send_deploy_time_graphite(env, region, template, count, "failtime")
                         pf += 1
                         should_restart = False
@@ -133,8 +133,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             should_restart = False
 
                         elif body['stack_status'] == 'CREATE_FAILED' and retry < 4:
-                            #Retry
                             print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                            ssresp, ssbody = self.orchestration_client.show_stack(stack_name, stack_id, region)
+                            print "Stack show output: %s" % ssbody
+                            #Retry
                             stack_name = rand_name("qe_"+template+region)
                             domain = rand_name("iloveheat")
                             params = self._set_parameters(yaml_template, template, region, image, domain)
@@ -185,7 +187,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             should_restart = False
 
                         else:
-                            print body['stack_status']
+                            print "Stack in %s state" % body['stack_status']
                             print "Something went wrong. Stack failed!"
                             pf += 1
                             should_restart = False
@@ -244,7 +246,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         if 'server_flavor' in yaml_template['parameters']:
             parameters['server_flavor'] = "4GB Standard Instance"
 
-        print "Parameters are set to %s" % parameters
+        print "\nParameters are set to %s" % parameters
         return parameters
 
     def _send_deploy_time_graphite(self, env, region, template, deploy_time, buildfail):
