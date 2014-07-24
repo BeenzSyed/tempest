@@ -167,12 +167,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                     print "The url is %s" % url
                                     try:
                                         customer_resp = requests.get(url, timeout=10, verify=False)
+                                        #print customer_resp.status_code
+                                        if customer_resp.status_code == 200:
+                                            print "http call to %s worked!" % url
                                     except Exception as e:
                                         print "http call did not work!"
-
-                                    #print customer_resp.status_code
-                                    if customer_resp.status_code == 200:
-                                        print "http call to %s worked!" % url
 
                                     #ssh call
                                     # client = paramiko.SSHClient()
