@@ -512,8 +512,7 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def get_stack_info_for_fusion(self,url , region):
-
+    def get_stack_info_for_fusion(self, url, region):
         """Returns the template from fusion for template_id."""
        # url = "stacks"
         resp, body = self.get(url, region)
@@ -521,7 +520,7 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def stack_preview(self, name,region,template_id=None,template={},
+    def stack_preview(self, name, region, template_id=None, template={},
                             parameters={}):
         headers, body = self._prepare_update_create_for_fusion(
             name, parameters=parameters,
@@ -532,15 +531,15 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def update_stack_fusion(self, stack_identifier,name,region,
-                            template_id=None,template={},
+    def update_stack_fusion(self, stack_identifier, name, region,
+                            template_id=None, template={},
                             parameters={}):
-         headers, body = self._prepare_update_create_for_fusion(
+        headers, body = self._prepare_update_create_for_fusion(
             name, parameters=parameters,
             template_id=template_id, template=template)
-         uri = "stacks/%s/%s" % (name, stack_identifier)
-         resp, body = self.put(uri, region, headers=headers, body=body)
-         return resp, body
+        uri = "stacks/%s/%s" % (name, stack_identifier)
+        resp, body = self.put(uri, region, headers=headers, body=body)
+        return resp, body
 
 def datehandler(obj):
     if isinstance(obj, datetime.date):

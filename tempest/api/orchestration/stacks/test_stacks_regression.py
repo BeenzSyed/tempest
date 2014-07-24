@@ -24,6 +24,7 @@ import re
 import pdb
 import requests
 from testconfig import config
+import paramiko
 
 LOG = logging.getLogger(__name__)
 
@@ -158,14 +159,36 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
                             #for wordpress an http call is made to ensure it is up
                             resp, body = self.get_stack(stack_id, region)
+                            #print body['outputs']
                             for output in body['outputs']:
                                 if output['output_key'] == "server_ip":
+                                    #http call
                                     url = "http://%s" % output['output_value']
                                     print "The url is %s" % url
-                                    customer_resp = requests.get(url, timeout=10, verify=False)
+                                    try:
+                                        customer_resp = requests.get(url, timeout=10, verify=False)
+                                    except Exception as e:
+                                        print "http call did not work!"
+
                                     #print customer_resp.status_code
                                     if customer_resp.status_code == 200:
                                         print "http call to %s worked!" % url
+
+                                    #ssh call
+                                    # client = paramiko.SSHClient()
+                                    # client.load_system_host_keys()
+                                    # client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                                    # try:
+                                    #     ip = output['output_value']
+                                    #     #passwd = resources[int_key]['instance']['password']
+                                    #     client.connect(ip, timeout=10, port=22, username="root",
+                                    #                    password=passwd)
+                                    #     # print "Checking %s with password %s: %s" % (ip, passwd,
+                                    #     #                                         validate_passed)
+                                    # except Exception as e:
+                                    #     print "ssh did not work!"
+                                    #     client.close()
+
                             #update stack
                             print "Updating Stack"
                             resp_update, body_update = self.orchestration_client.update_stack(
@@ -183,7 +206,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             #delete stack
                             print "Deleting stack now"
                             self._delete_stack(stack_name, stack_id, region)
-
                             should_restart = False
 
                         else:

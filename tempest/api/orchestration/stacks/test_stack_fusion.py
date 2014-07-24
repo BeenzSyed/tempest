@@ -184,6 +184,30 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                      "Expected was not specified but has "
                                      "application name")
 
+    def test_stack_show_call_checkmate_migration(self):
+        region = "IAD"
+        url = "stacks/detail?with_support_info=1"
+        resp,body = self.orchestration_client.get_stack_info_for_fusion(
+                url,region)
+
+        print resp
+        print body
+
+        for stack in body['stacks']:
+            if 'rackspace_template' in stack:
+                if stack['rackspace_template']==False:
+
+                    self.assertEqual(stack['application_name'],('(Not Specified)'),
+                                    "Expected was WordPress but has "
+                                     " no application name")
+                    self.assertNotIn('template_id', stack)
+
+                if stack['rackspace_template']==True:
+                    self.assertIn('template_id', stack)
+                    self.assertEqual(stack['application_name'],('WordPress'),
+                                     "Expected was not specified but has "
+                                     "application name")
+
     def test_stack_preview(self):
         template_id = "wordpress-single"
         region = "DFW"
