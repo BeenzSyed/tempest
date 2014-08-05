@@ -568,8 +568,13 @@ class RestClient(object):
                     resp, self._parse_resp(resp_body)) and
                 retry < MAX_RECURSION_DEPTH):
             retry += 1
-            delay = int(resp['retry-after'])
-            time.sleep(delay)
+            # TODO: Use a timezone-aware time parser (python-dateutil?)
+            delay_until = time.mktime(time.strptime(resp['retry-after'],
+                                                    '%a, %d %b %Y %H:%M:%S %Z'))
+            gmt_cdt_diff = 18000
+            seconds_delay = (delay_until - gmt_cdt_diff) - time.time()
+            time.sleep(seconds_delay)
+
             resp, resp_body = self._request(method, url,
                                             headers=headers, body=body)
         # self._error_checker(method, url, headers, body,
