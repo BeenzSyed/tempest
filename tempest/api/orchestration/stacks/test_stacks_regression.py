@@ -137,6 +137,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                             ssresp, ssbody = self.orchestration_client.show_stack(stack_name, stack_id, region)
                             print "Stack show output: %s" % ssbody
+                            rlresp, rlbody = self.orchestration_client.list_resources(stack_name, stack_id, region)
+                            print "Resource list: %s" % rlbody
+                            elresp, elbody = self.orchestration_client.list_events(stack_name, stack_id, region)
+                            print "Event list: %s" % elbody
                             #Retry
                             stack_name = rand_name("qe_"+template+region)
                             domain = rand_name("iloveheat")
