@@ -17,6 +17,7 @@ from tempest import clients
 from tempest.openstack.common import log as logging
 import json
 import datetime
+import pdb
 
 LOG = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ class BaseMultipleOrchestrationTest(tempest.test.BaseTestCase):
     @classmethod
     def create_stack(cls, manager, stack_name, region, template_data,
                      parameters={}):
+        pdb.set_trace()
         resp, body = manager.orchestration_client.create_stack(
             stack_name,
             region,

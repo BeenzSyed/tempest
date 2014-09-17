@@ -67,6 +67,7 @@ class StacksTestJSON(base_multipleusers.BaseMultipleOrchestrationTest):
                                              yaml_template, parameters)
             #stack_identifier = self.create_stack(stack_name, region,
             # yaml_template, parameters)
+        print stack_identifier
         stack_id = stack_identifier.split('/')[1]
         count = 0
         resp, body = self.get_stack(user_rackconnect, stack_id, region)

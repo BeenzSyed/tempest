@@ -86,7 +86,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     print "label does not exist for %s" % param
 
             stack_name = rand_name("qe_"+template+region)
-            domain = rand_name("iloveheat")
+            domain = "iloveheat%s.com" %datetime.now().microsecond
             params = self._set_parameters(yaml_template, template, region, image, domain)
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
@@ -113,7 +113,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         print "The response is: %s" % resp
                         #Retry
                         stack_name = rand_name("qe_"+template+region)
-                        domain = rand_name("iloveheat")
+                        domain = "iloveheat%s.com" %datetime.now().microsecond
                         params = self._set_parameters(yaml_template, template, region, image, domain)
                         csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
                         if stack_identifier == 0:
@@ -141,9 +141,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             print "Resource list: %s" % rlbody
                             elresp, elbody = self.orchestration_client.list_events(stack_name, stack_id, region)
                             print "Event list: %s" % elbody
+                            print "Deleting stack now"
+                            self._delete_stack(stack_name, stack_id, region)
+
                             #Retry
                             stack_name = rand_name("qe_"+template+region)
-                            domain = rand_name("iloveheat")
+                            domain = "iloveheat%s.com" %datetime.now().microsecond
                             params = self._set_parameters(yaml_template, template, region, image, domain)
                             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
                             if stack_identifier == 0:
@@ -222,7 +225,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             self.fail("Stack build failed.")
 
     def _set_parameters(self, yaml_template, template, region, image, domain):
-        domain_name = "example%s.com" %datetime.now().microsecond
+        #domain_name = "example%s.com" %datetime.now().microsecond
         email_address = "heattest@rs.com"
         domain_record_type = "A"
 
@@ -245,7 +248,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         if 'domain_record_type' in yaml_template['parameters']:
             parameters['domain_record_type'] = domain_record_type
         if 'service_domain' in yaml_template['parameters']:
-            parameters['service_domain'] = domain_name
+            parameters['service_domain'] = domain
         if 'git_url' in yaml_template['parameters']:
             parameters['git_url'] = "https://github.com/timductive/phphelloworld"
         if 'image_id' in yaml_template['parameters'] and image=="ubuntu":
@@ -255,7 +258,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         if 'flavor' in yaml_template['parameters']:
             parameters['flavor'] = "2 GB Performance"
         if 'domain_name' in yaml_template['parameters']:
-            parameters['domain_name'] = domain_name
+            parameters['domain_name'] = domain
         if (region == 'HKG' or region == 'SYD') and 'devops_flavor' in yaml_template['parameters']:
             parameters['devops_flavor'] = "4GB Standard Instance"
         if (region == 'HKG' or region == 'SYD') and 'api_flavor_ref' in yaml_template['parameters']:
@@ -339,13 +342,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             resource = key
             if resource == resource_server:
                 server_id = value
-                resp, body = self.servers_client.get_server(server_id,region)
+                resp, body = self.servers_client.get_server(server_id, region)
                 self._check_status_for_resource(resp['status'], resource_server)
 
             elif resource == resource_network:
                 network_id = value
-                #pdb.set_trace()
-                resp, body = self.network_client.list_network(self.config.identity['tenant_name'], network_id, region)
+                #Networks come under cloud servers right now, they do not have
+                # their own endpoints in keystone
+                resp, body = self.servers_client.list_network(network_id, region)
                 self._check_status_for_resource(resp['status'], resource_server)
 
             elif resource == resource_lb:
@@ -374,17 +378,16 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             elif resource == resource_vol_attach:
                 vol_id = value
-                resp,body =self.servers_client.get_volume_attachment(
+                resp, body =self.servers_client.get_volume_attachment(
                      server_id, vol_id, region)
                 self._check_status_for_resource(resp['status'],
                                                  resource_vol_attach)
 
             elif resource == resource_dns:
-                #pdb.set_trace()
                 dns_val = value
                 resp, body = self.dns_client.list_domain_id(dns_val, region)
-                #print "body name %s" % body['name']
-                #print "domain name %s" % domain
+                print "body name %s" % body['name']
+                print "domain name %s" % domain
                 if body['name'].split('.')[0] == domain:
                         print "%s is up." % resource_dns
                 else:

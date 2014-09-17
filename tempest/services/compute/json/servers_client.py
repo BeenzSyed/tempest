@@ -441,3 +441,11 @@ class ServersClientJSON(RestClient):
     def restore_soft_deleted_server(self, server_id, **kwargs):
         """Restore a soft-deleted server."""
         return self.action(server_id, 'restore', None, **kwargs)
+
+    def list_network(self, network_id, region):
+        """Get the status of a specific network"""
+        uri = "os-networksv2/%s" % network_id
+        resp, body = self.get(uri, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body

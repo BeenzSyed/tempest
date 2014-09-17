@@ -522,14 +522,3 @@ class NetworkClientJSON(network_client_base.NetworkClientBase):
         resp, body = self.put(uri, body)
         body = json.loads(body)
         return resp, body
-
-    def list_network(self, tenant_id, network_id, region):
-        # uri = "https://%s.networks.api.rackspacecloud.com/v2" \
-        #       ".0/%s/os-networksv2" \
-        #       %(region, tenant_id)
-        uri = "https://%s.servers.api.rackspacecloud.com/v2/%s/os-networksv2/%s" \
-              % (region, tenant_id, network_id)
-        resp, body = self.get(uri, region)
-        if resp['status'] == '200':
-             body = json.loads(body)
-        return resp ,body
