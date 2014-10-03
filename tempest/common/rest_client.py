@@ -539,7 +539,7 @@ class RestClient(object):
             req_url = url
         else:
             req_url = "%s/%s" % (self.base_url, url)
-            print "Request url: %s" % req_url
+            #print "Request url: %s" % req_url
         resp, resp_body = self.http_obj.request(req_url, method,
                                                 headers=headers, body=body)
         #uncomment below to see responses

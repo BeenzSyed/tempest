@@ -97,6 +97,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 self.fail("Stack build failed.")
             else:
                 stack_id = stack_identifier.split('/')[1]
+                print "Stack ID is: %s" % stack_id
                 count = 0
                 retry = 0
 
@@ -141,7 +142,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             print "Resource list: %s" % rlbody
                             elresp, elbody = self.orchestration_client.list_events(stack_name, stack_id, region)
                             print "Event list: %s" % elbody
-                            print "Deleting stack now"
+                            #print "Deleting stack now"
                             self._delete_stack(stack_name, stack_id, region)
 
                             #Retry
@@ -181,36 +182,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                         print "http call did not work!"
 
                                     #ssh call
-                                    # client = paramiko.SSHClient()
-                                    # client.load_system_host_keys()
-                                    # client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                                    # try:
-                                    #     ip = output['output_value']
-                                    #     #passwd = resources[int_key]['instance']['password']
-                                    #     client.connect(ip, timeout=10, port=22, username="root",
-                                    #                    password=passwd)
-                                    #     # print "Checking %s with password %s: %s" % (ip, passwd,
-                                    #     #                                         validate_passed)
-                                    # except Exception as e:
-                                    #     print "ssh did not work!"
-                                    #     client.close()
+                                    #self._ssh_call(output)
 
                             #update stack
-                            print "Updating Stack"
-                            resp_update, body_update = self.orchestration_client.update_stack(
-                                             stack_identifier = stack_id,
-                                             name = stack_name,
-                                             region = region,
-                                             parameters=params,
-                                             template=yaml_template)
-                            if resp_update['status'] =='202':
-                                print "Update request went successfully"
-                            else:
-                                print resp_update['status']
-                                print "Something went wrong during update"
+                            self._update_stack(stack_id, stack_name, region, params, yaml_template)
 
                             #delete stack
-                            print "Deleting stack now"
                             self._delete_stack(stack_name, stack_id, region)
                             should_restart = False
 
@@ -286,11 +263,86 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         os.system(cmd)
         print "Deploy time sent to graphite"
 
+    def _ssh_call(self, output):
+        client = paramiko.SSHClient()
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ip = output['output_value']
+            #passwd = resources[int_key]['instance']['password']
+            #client.connect(ip, timeout=10, port=22, username="root",
+            #               password=passwd)
+            # print "Checking %s with password %s: %s" % (ip, passwd,
+            #                                         validate_passed)
+        except Exception as e:
+            print "ssh did not work!"
+            client.close()
+
+    def _update_stack(self, stack_id, stack_name, region, params, yaml_template):
+        print "Updating Stack"
+        resp_update, body_update = self.orchestration_client.update_stack(
+                         stack_identifier = stack_id,
+                         name = stack_name,
+                         region = region,
+                         parameters=params,
+                         template=yaml_template)
+        if resp_update['status'] =='202':
+            print "Update request sent"
+        else:
+            print resp_update['status']
+            print "Something went wrong during update"
+
+        #ensuring update stack was successful
+        u_count = 0
+        u_progress = True
+
+        while(u_progress):
+            resp_u, body_u = self.get_stack(stack_id, region)
+            if body_u['stack_status'] == 'UPDATE_IN_PROGRESS' and u_count < 10:
+                print "Deployment in %s status. Checking again in 1 minute" % body_u['stack_status']
+                time.sleep(60)
+                u_count += 1
+            elif body_u['stack_status'] == 'UPDATE_COMPLETE':
+                print "Deployment in %s status." % body_u['stack_status']
+                u_progress = False
+            elif body_u['stack_status'] == 'UPDATE_FAILED':
+                print "Deployment in %s status." % body_u['stack_status']
+                u_progress = False
+            else:
+                print "Deployment in %s status." % body_u['stack_status']
+                print "Update status is not normal."
+                u_progress = False
+
+
     def _delete_stack(self, stack_name, stack_id, region):
         print "Deleting stack now"
-        resp, body = self.delete_stack(stack_name, stack_id, region)
-        if resp['status'] != '204':
-            print "Delete did not work"
+        resp_delete, body_delete = self.delete_stack(stack_name, stack_id, region)
+        if resp_delete['status'] == '204':
+            print "Delete request sent"
+        else:
+            print resp_delete['status']
+            print "Something went wrong during the delete call"
+
+        #ensuring delete stack was successful
+        d_count = 0
+        d_progress = True
+
+        while(d_progress):
+            resp_d, body_d = self.get_stack(stack_id, region)
+            if body_d['stack_status'] == 'DELETE_IN_PROGRESS' and d_count < 10:
+                print "Deployment in %s status. Checking again in 1 minute" % body_d['stack_status']
+                time.sleep(60)
+                d_count += 1
+            elif body_d['stack_status'] == 'DELETE_COMPLETE':
+                print "Deployment in %s status." % body_d['stack_status']
+                d_progress = False
+            elif body_d['stack_status'] == 'DELETE_FAILED':
+                print "Deployment in %s status." % body_d['stack_status']
+                d_progress = False
+            else:
+                print "Deployment in %s status." % body_d['stack_status']
+                print "Delete status is not normal."
+                d_progress = False
 
     def _verify_dns_entries(self,stack_name ,stack_id,region,email_address ,
                             domain_record_type,domain_name):
@@ -388,7 +440,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 resp, body = self.dns_client.list_domain_id(dns_val, region)
                 print "body name %s" % body['name']
                 print "domain name %s" % domain
-                if body['name'].split('.')[0] == domain:
+                if body['name'] == domain:
                         print "%s is up." % resource_dns
                 else:
                         print "%s is down." % resource_dns
