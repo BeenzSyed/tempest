@@ -54,6 +54,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         env = self.config.orchestration['env']
         account = self.config.identity['username']
 
+        print template
+
         if template == None:
             template_giturl = config['template_url']
             template = template_giturl.split("/")[-1].split(".")[0]
@@ -72,8 +74,21 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         pf = 0
 
         regionsConfig = self.config.orchestration['regions']
+
+        #Take out HKG for the kitchen sink template temporarily because
+        #BadRequest: Datastore version '5.6' is not active. in HKG
+        if template == 'kitchen_sink' and 'HKG' in regionsConfig:
+            print regionsConfig
+            regions_temp = regionsConfig.replace(",HKG", "")
+            print "Skipping HKG for now because it does not support Datastore version 5.6"
+            print regions_temp
+            regions = regions_temp.split(",")
+        else:
+            regions = regionsConfig.split(",")
+
         #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
-        regions = regionsConfig.split(",")
+        #regions = regionsConfig.split(",")
+        #regions = regions_temp.split(",")
         for region in regions:
 
             respbi, bodybi = self.orchestration_client.get_build_info(region)
