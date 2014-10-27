@@ -73,35 +73,36 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #0 if no failures occur, adds 1 every time a stack fails
         pf = 0
 
-        regionsConfig = self.config.orchestration['regions']
+        region = self.config.orchestration['regions']
 
         #Take out HKG for the kitchen sink template temporarily because
         #BadRequest: Datastore version '5.6' is not active. in HKG
-        #Hacky way to do this. Assuming ,HKG is not the first region in config list
-        if template == 'kitchen_sink' and 'HKG' in regionsConfig:
-            print regionsConfig
-            regions_temp = regionsConfig.replace(",HKG", "")
-            print "Skipping HKG for now because it does not support Datastore version 5.6"
-            print regions_temp
-            regions = regions_temp.split(",")
-        else:
-            regions = regionsConfig.split(",")
+        # if template == 'kitchen_sink' and 'HKG' in regionsConfig:
+        #     print regionsConfig
+        #     regions_temp = regionsConfig.replace(",HKG", "")
+        #     print "Skipping HKG for now because it does not support Datastore version 5.6"
+        #     print regions_temp
+        #     regions = regions_temp.split(",")
+        # else:
+        #     regions = regionsConfig.split(",")
 
         #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
         #regions = regionsConfig.split(",")
         #regions = regions_temp.split(",")
-        for region in regions:
+
+        #3 stacks per region - CREATE_, UPDATE_ and ADOPT_
+        stack_name_create = "CREATE_%s" %datetime.now().microsecond
+        stack_name_update = "UPDATE_%s" %datetime.now().microsecond
+        stack_name_adopt = "ADOPT_%s" %datetime.now().microsecond
+        stack_names = [stack_name_create, stack_name_update, stack_name_adopt]
+        for stack_nm in stack_names:
+
+            #for region in regions:
 
             respbi, bodybi = self.orchestration_client.get_build_info(region)
             print "\nThe build info is: %s\n" % bodybi
 
-            #Check whether the parameter has a label (display in Reach)
-            all_parameters = yaml_template['parameters']
-            for param in all_parameters:
-                if 'label' not in yaml_template['parameters'][param]:
-                    print "label does not exist for %s" % param
-
-            stack_name = rand_name("qe_"+template+region)
+            stack_name = stack_nm
             domain = "iloveheat%s.com" %datetime.now().microsecond
             params = self._set_parameters(yaml_template, template, region, image, domain)
 
@@ -114,6 +115,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             else:
                 stack_id = stack_identifier.split('/')[1]
                 print "Stack ID is: %s" % stack_id
+                print "Stack name is: %s" % stack_name
                 count = 0
                 retry = 0
 
@@ -183,7 +185,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
                             #for wordpress an http call is made to ensure it is up
                             resp, body = self.get_stack(stack_id, region)
-                            print body['outputs']
+                            #print body['outputs']
                             for output in body['outputs']:
                                 if output['output_key'] == "server_ip":
                                     #http call
@@ -201,10 +203,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                     #self._ssh_call(output)
 
                             #update stack
-                            self._update_stack(stack_id, stack_name, region, params, yaml_template)
+                            #self._update_stack(stack_id, stack_name, region, params, yaml_template)
 
                             #delete stack
-                            self._delete_stack(stack_name, stack_id, region)
+                            #self._delete_stack(stack_name, stack_id, region)
                             should_restart = False
 
                         else:

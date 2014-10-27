@@ -58,7 +58,7 @@ class BaseMultipleOrchestrationTest(tempest.test.BaseTestCase):
     @classmethod
     def create_stack(cls, manager, stack_name, region, template_data,
                      parameters={}):
-        pdb.set_trace()
+        #pdb.set_trace()
         resp, body = manager.orchestration_client.create_stack(
             stack_name,
             region,
