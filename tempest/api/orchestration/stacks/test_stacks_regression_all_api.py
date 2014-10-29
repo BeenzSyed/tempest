@@ -245,6 +245,10 @@ adopt_data = """
         }
 }"""
 
+adopt_data2 = """
+{"status": "COMPLETE", "name": "ADOPT_554748", "stack_user_project_id": "883286", "environment": {"parameters": {"server_hostname": "WordPress", "username": "wp_user", "domain": "example1234.com", "image": "Ubuntu 12.04 LTS (Precise Pangolin)", "chef_version": "11.16.2", "prefix": "wp_", "version": "3.9.2", "flavor": "2 GB Performance", "database_name": "wordpress", "kitchen": "https://github.com/rackspace-orchestration-templates/wordpress-single.git"}, "resource_registry": {"resources": {}}}, "template": {"parameter_groups": [{"parameters": ["server_hostname", "image", "flavor"], "label": "Server Settings"}, {"parameters": ["domain", "username"], "label": "WordPress Settings"}, {"parameters": ["kitchen", "chef_version", "version", "prefix"], "label": "rax-dev-params"}], "heat_template_version": "2013-05-23", "description": "This is a Heat template to deploy a single Linux server running WordPress.\\n", "parameters": {"server_hostname": {"default": "WordPress", "label": "Server Name", "type": "string", "description": "Hostname to use for the server that\'s built.", "constraints": [{"length": {"max": 64, "min": 1}}, {"allowed_pattern": "^[a-zA-Z][a-zA-Z0-9-]*$", "description": "Must begin with a letter and contain only alphanumeric characters.\\n"}]}, "username": {"default": "wp_user", "label": "Username", "type": "string", "description": "Username for system, database, and WordPress logins.", "constraints": [{"allowed_pattern": "^[a-zA-Z0-9 _.@-]{1,16}$", "description": "Must be shorter than 16 characters and may only contain alphanumeric\\ncharacters, \' \', \'_\', \'.\', \'@\', and/or \'-\'.\\n"}]}, "domain": {"default": "example.com", "label": "Site Domain", "type": "string", "description": "Domain to be used with WordPress site", "constraints": [{"allowed_pattern": "^[a-zA-Z0-9.-]{1,255}.[a-zA-Z]{2,15}$", "description": "Must be a valid domain name"}]}, "database_name": {"default": "wordpress", "label": "Database Name", "type": "string", "description": "WordPress database name", "constraints": [{"allowed_pattern": "^[0-9a-zA-Z$_]{1,64}$", "description": "Maximum length of 64 characters, may only contain letters, numbers, and\\nunderscores.\\n"}]}, "chef_version": {"default": "11.16.2", "type": "string", "description": "Version of chef client to use", "label": "Chef Version"}, "prefix": {"default": "wp_", "label": "Database Prefix", "type": "string", "description": "Prefix to use for WordPress database tables", "constraints": [{"allowed_pattern": "^[0-9a-zA-Z$_]{0,10}$", "description": "Prefix must be shorter than 10 characters, and can only include\\nletters, numbers, $, and/or underscores.\\n"}]}, "version": {"default": "3.9.2", "label": "WordPress Version", "type": "string", "description": "Version of WordPress to install", "constraints": [{"allowed_values": ["3.9.2"]}]}, "flavor": {"default": "1 GB Performance", "label": "Server Size", "type": "string", "description": "Required: Rackspace Cloud Server flavor to use. The size is based on the\\namount of RAM for the provisioned server.\\n", "constraints": [{"description": "Must be a valid Rackspace Cloud Server flavor for the region you have\\nselected to deploy into.\\n", "allowed_values": ["1 GB Performance", "2 GB Performance", "4 GB Performance", "8 GB Performance", "15 GB Performance", "30 GB Performance", "1GB Standard Instance", "2GB Standard Instance", "4GB Standard Instance", "8GB Standard Instance", "15GB Standard Instance", "30GB Standard Instance"]}]}, "image": {"default": "Ubuntu 12.04 LTS (Precise Pangolin)", "label": "Operating System", "type": "string", "description": "Required: Server image used for all servers that are created as a part of\\nthis deployment.\\n", "constraints": [{"description": "Must be a supported operating system.", "allowed_values": ["Ubuntu 12.04 LTS (Precise Pangolin)"]}]}, "kitchen": {"default": "https://github.com/rackspace-orchestration-templates/wordpress-single.git", "type": "string", "description": "URL for a git repo containing required cookbooks", "label": "Kitchen URL"}}, "outputs": {"mysql_root_password": {"description": "MySQL Root Password", "value": {"get_attr": ["mysql_root_password", "value"]}}, "wordpress_password": {"description": "WordPress Password", "value": {"get_attr": ["database_password", "value"]}}, "private_key": {"description": "SSH Private Key", "value": {"get_attr": ["ssh_key", "private_key"]}}, "server_ip": {"description": "Server IP", "value": {"get_attr": ["wordpress_server", "accessIPv4"]}}, "wordpress_user": {"description": "WordPress User", "value": {"get_param": "username"}}}, "resources": {"sync_key": {"type": "OS::Nova::KeyPair", "properties": {"name": {"str_replace": {"params": {"%stack_id%": {"get_param": "OS::stack_id"}}, "template": "%stack_id%-sync"}}, "save_private_key": true}}, "wp_secure_auth": {"type": "OS::Heat::RandomString", "properties": {"length": 32, "sequence": "hexdigits"}}, "wordpress_server": {"type": "Rackspace::Cloud::Server", "properties": {"key_name": {"get_resource": "ssh_key"}, "flavor": {"get_param": "flavor"}, "image": {"get_param": "image"}, "name": {"get_param": "server_hostname"}, "metadata": {"rax-heat": {"get_param": "OS::stack_id"}}}}, "mysql_root_password": {"type": "OS::Heat::RandomString", "properties": {"length": 16, "sequence": "lettersdigits"}}, "mysql_debian_password": {"type": "OS::Heat::RandomString", "properties": {"length": 16, "sequence": "lettersdigits"}}, "ssh_key": {"type": "OS::Nova::KeyPair", "properties": {"name": {"get_param": "OS::stack_id"}, "save_private_key": true}}, "wp_auth": {"type": "OS::Heat::RandomString", "properties": {"length": 32, "sequence": "hexdigits"}}, "wordpress_setup": {"depends_on": "wordpress_server", "type": "OS::Heat::ChefSolo", "properties": {"node": {"varnish": {"version": "3.0", "listen_port": "80"}, "sysctl": {"values": {"fs.inotify.max_user_watches": 1000000}}, "lsyncd": {"interval": 5}, "monit": {"mail_format": {"from": "monit@localhost"}, "notify_email": "root@localhost"}, "vsftpd": {"chroot_local_user": false, "ssl_ciphers": "AES256-SHA", "write_enable": true, "local_umask": "002", "hide_ids": false, "ssl_enable": true, "ipaddress": ""}, "wordpress": {"keys": {"logged_in": {"get_attr": ["wp_logged_in", "value"]}, "secure_auth_key": {"get_attr": ["wp_secure_auth", "value"]}, "nonce_key": {"get_attr": ["wp_nonce", "value"]}, "auth": {"get_attr": ["wp_auth", "value"]}}, "server_aliases": [{"get_param": "domain"}], "version": {"get_param": "version"}, "db": {"host": "127.0.0.1", "user": {"get_param": "username"}, "name": {"get_param": "database_name"}, "pass": {"get_attr": ["database_password", "value"]}}, "dir": {"str_replace": {"params": {"%domain%": {"get_param": "domain"}}, "template": "/var/www/vhosts/%domain%"}}}, "run_list": ["recipe[apt]", "recipe[build-essential]", "recipe[rax-wordpress::apache-prep]", "recipe[sysctl::attribute_driver]", "recipe[mysql::server]", "recipe[rax-wordpress::mysql]", "recipe[hollandbackup]", "recipe[hollandbackup::mysqldump]", "recipe[hollandbackup::main]", "recipe[hollandbackup::backupsets]", "recipe[hollandbackup::cron]", "recipe[rax-wordpress::x509]", "recipe[memcached]", "recipe[php]", "recipe[rax-install-packages]", "recipe[wordpress]", "recipe[rax-wordpress::wp-setup]", "recipe[rax-wordpress::user]", "recipe[rax-wordpress::memcache]", "recipe[lsyncd]", "recipe[vsftpd]", "recipe[rax-wordpress::vsftpd]", "recipe[varnish::repo]", "recipe[varnish]", "recipe[rax-wordpress::apache]", "recipe[rax-wordpress::varnish]", "recipe[rax-wordpress::firewall]", "recipe[rax-wordpress::vsftpd-firewall]", "recipe[rax-wordpress::lsyncd]"], "mysql": {"remove_test_database": true, "server_debian_password": {"get_attr": ["mysql_debian_password", "value"]}, "server_root_password": {"get_attr": ["mysql_root_password", "value"]}, "bind_address": "127.0.0.1", "remove_anonymous_users": true, "server_repl_password": {"get_attr": ["mysql_repl_password", "value"]}}, "apache": {"listen_ports": [8080], "serversignature": "Off", "traceenable": "Off", "timeout": 30}, "memcached": {"listen": "127.0.0.1"}, "hollandbackup": {"main": {"mysqldump": {"host": "localhost", "password": {"get_attr": ["mysql_root_password", "value"]}, "user": "root"}, "backup_directory": "/var/lib/mysqlbackup"}}, "rax": {"apache": {"domain": {"get_param": "domain"}}, "varnish": {"master_backend": "localhost"}, "packages": ["php5-imagick"], "wordpress": {"admin_pass": {"get_attr": ["database_password", "value"]}, "admin_user": {"get_param": "username"}, "user": {"group": {"get_param": "username"}, "name": {"get_param": "username"}}}, "lsyncd": {"ssh": {"private_key": {"get_attr": ["sync_key", "private_key"]}}}}}, "username": "root", "private_key": {"get_attr": ["ssh_key", "private_key"]}, "host": {"get_attr": ["wordpress_server", "accessIPv4"]}, "chef_version": {"get_param": "chef_version"}, "kitchen": {"get_param": "kitchen"}}}, "database_password": {"type": "OS::Heat::RandomString", "properties": {"length": 16, "sequence": "lettersdigits"}}, "wp_logged_in": {"type": "OS::Heat::RandomString", "properties": {"length": 32, "sequence": "hexdigits"}}, "mysql_repl_password": {"type": "OS::Heat::RandomString", "properties": {"length": 16, "sequence": "lettersdigits"}}, "wp_nonce": {"type": "OS::Heat::RandomString", "properties": {"length": 32, "sequence": "hexdigits"}}}}, "action": "UPDATE", "project_id": "883286", "id": "b10bfa80-e495-40d7-bb5a-f663f514c804", "resources": {"sync_key": {"status": "COMPLETE", "name": "sync_key", "resource_data": {"private_key": "-----BEGIN RSA PRIVATE KEY-----\\nMIIEpAIBAAKCAQEAxPfyF/OT4yzSOBmH8yYtC3OB37Kd17jPvpdE0kAuRoWYAcyV\\nCTOn9z9XgmB4wjllC1Jbs/YqHh5m3ygQUMxHES8cf6AoCmH/oM1JdHUFgvRe8W8s\\nDNqUdhuuHRiiV9jD2sv30hnCNtyNJuBPgSYjV0xM0LmY1k2WVFmpLaFf+sd0cIGD\\nfUYcELSdnmgCz2LAESZgkmay1sY0FCpLcorVhTGcw7GNvRpQSApdWpq6D//+0lIL\\npneyUzziX6uYYOuCTxSJVKJk14IyTSakbfgFlrNFLIh5CZme+uCM9o6rDbJgCcMa\\nQdPstwfJbUcCpWC9t4Hl5rA/37/0tWMXITCg7QIDAQABAoIBAQCDU43mylDgNxIy\\ntVMfm2SNLgZ5z+3N1zssKE+Kn6A7BPfEu1LjP73N7D28f/YECaCFW/QomQib7ElK\\noLvAI3N+0Zp+vZn00kJORJGlRCDYn3ZuI2GLcHFsDiiY3cPgLnbnevdQ7ju/uG2k\\nbgqUYYlOu2C8CgMNX83Lj7xs4BvOZ+EDfOY9dAU37D9oahjTNLSR4XpkpsAgrXi0\\nTW+Hqx3MFK9DtVxYqr8+4REzZlxkpSQU5ipTOP6TwxMtKooN8qB5fGaAY3lQIWgH\\n29Oy3tBn2WO948qoZbJqDogVIn9i743ldnEYU5hJ8bWr0NhGdGY6yZDtRjiUipbA\\nXzeMwmFBAoGBAPjn2vMRKcFwoztOAqtvdu+KUD2w2tjR7JgzlcbHf3qFBMwMY6FQ\\nQCyK8S2X/LfMi/H+prxrsaISvm70bTvHBbSjYrts17CQzERcmdlBTvIecskTP6M7\\n4Ht7VU7sjOWfhgFT/5o/qaxgL+D/F4veO21u8Nq6aLfW3a3tLnAz4FJbAoGBAMqV\\nIU3+qGI96kCKdUUEil/oegNZVmSFYTGRPcmhO7FKrsOjH53KRJSLIkdbLeYT0zzD\\nHHTbhA+dYRHt7bRKbUPN1WzPpH7q+LecWaNv2zT9NaMNJeoSznKdcOOnVPwMUQRR\\nECPG5RGT/v/JKtjJIj1aYMscBVFSczlQL3M09yxXAoGAB1pSDXwkT6KUL9xOF+Jj\\nERB07l2bGWyaIKTld8nM6kGjsqNrDgjg3G/+T+p9fLB+Mdfj9Qz5YmBLX9u4nlty\\nv7NT51V/yad9YUebA9/6BQ0BNw9qgdfy+bLbAknan63mt4NTuarHyF/PCkZ+25Ll\\nDoaIdu2qykN+qPSouofNyKECgYBpaDcwEfUjSPv+IQzroHUvehMicvWU0CHGXMA9\\njXs1wJo2iUYGIByW/d4UKskzEdWzpAHGfAG27jh3z8kDKka4JP2L5G6+6xwGzX+G\\nnsj8RVQHRuwXYzmwQWNf0M1TaEUvbc5sDy1ZfBwOk2mL6vu52LDMfgP2UGRLygEm\\nfMSveQKBgQCEXBICU51DmMtkkshrbZuvYyNQ+vZ7D6mGLZcF7rzcYBwhieDs6jDq\\n5yfD/WmtNHPER7vgSekXsB0Z9QPN3FAKhhXUNeIFH0780P+vnR8iuCc1p4QmySGW\\nJi/fF1kCdJKTYlFtGSd/Q6PELn6brD41lVnm/MCfYGw7Q06zdxDnHg==\\n-----END RSA PRIVATE KEY-----\\n"}, "resource_id": "b10bfa80-e495-40d7-bb5a-f663f514c804-sync", "action": "CREATE", "type": "OS::Nova::KeyPair", "metadata": {}}, "wp_secure_auth": {"status": "COMPLETE", "name": "wp_secure_auth", "resource_data": {"value": "30BA76B73A52FAC6DBEBE265AD6C2617"}, "resource_id": "30BA76B73A52FAC6DBEBE265AD6C2617", "action": "CREATE", "type": "OS::Heat::RandomString", "metadata": {}}, "wordpress_server": {"status": "COMPLETE", "name": "wordpress_server", "resource_data": {"private_key": "-----BEGIN RSA PRIVATE KEY-----\\nMIICXAIBAAKBgQDlcT+x9kDr/J9cd3G9ep9T6UPCGGCunB+h1xO2SuJdwe5AJkPc\\nDPWT/BGncIyq5PdHwIB9w/PNRbe015GvdMh9ToIK539G2gv/F8denVLv5VRRPL2k\\nmO5uCn273LqK4kiuTP65WQWj+HDpQBAiB6r2VQh0S4DR1JadmbR2c5clhwIDAQAB\\nAoGAAdzNe5BYLpI6aPG/Rp58NJ4sIqM4BbLWvuWUD2LEO6abXIHzAxJH3A+rxQQw\\n4CJDr51sbZjtnbj3KMynLhlwly/ghZrP+a7fwwD6S30W/8qItzfO3YFLbTxEUhK4\\nOU3oMNMgRGq6shuKkYJVwt4fKESpDmryxcZr3TOFyvsffyECQQDuVOB1yuQE1ulE\\nL+9lUz3evtSNOyrDD8pu75UftJ9rcObTuk470Vc/gl5YmaymOuV6GDExjG1DR4k5\\nr0BJG/+7AkEA9nOruhZQI23tDLYBzO/fe8DqJdh16KtgYvyqFmJMmrHkrLYzxwPG\\n1XqMZO031807SfC0qb4mZiydVPSbvX/WpQJAFM4R/hZlC0sbd9lbY5P9rako8t88\\nX2TMfhyp/ueMlxt2+vqjg7NFk4S06bUYjjZL+/mKqdGhZCMlhoSW7wrjqwJBAOZi\\nGxZJ5YA5Mm+/dM9vLSsym6/lOdPW4LOoHhfurE2wHmSVrrFMBoNpm/R9DMbfQ51L\\nNpe2+Y5qBml0gGIVL0ECQBHoLdqvn/zuL9zWDshdjcdu2dKaQtImMyC7DGx/ouNG\\nw6kTXE6vwCIBhcXbipSa3MyH+If78m4tqGcnCh6PqGI=\\n-----END RSA PRIVATE KEY-----"}, "resource_id": "e45541dc-7d6c-4ada-bdd6-b6e8c27c7d2b", "action": "CREATE", "type": "Rackspace::Cloud::Server", "metadata": {}}, "mysql_root_password": {"status": "COMPLETE", "name": "mysql_root_password", "resource_data": {"value": "xmBpiAQU5a3q9lsF"}, "resource_id": "xmBpiAQU5a3q9lsF", "action": "CREATE", "type": "OS::Heat::RandomString", "metadata": {}}, "mysql_debian_password": {"status": "COMPLETE", "name": "mysql_debian_password", "resource_data": {"value": "kOIKVAaIpItvS8yM"}, "resource_id": "kOIKVAaIpItvS8yM", "action": "CREATE", "type": "OS::Heat::RandomString", "metadata": {}}, "ssh_key": {"status": "COMPLETE", "name": "ssh_key", "resource_data": {"private_key": "-----BEGIN RSA PRIVATE KEY-----\\nMIIEpAIBAAKCAQEAwwWQFqJWvP+0mRhnJSHQIDNEj9BFskQLe2n++0SZgGP7fb22\\nw3DtjZ9iSKQ2tFJmCb3OscZQDZx+IG/PtFD/GbDgSZHA6hBzgYMFEkW1fSHj/g2Y\\n2W3FQplxBIA9uBV62M+ILpn1xw/SLQgFvbBzetOpr6/mMiswLUqxVdc53KxnAF/F\\nXbfThSFfGtLb6z7DA7MP1J7SVqz6xggtCUGYzudLYm4DTIj3TPkloyXuFdLpb4+R\\nqhmRpSq9Jt02ZUsPMdg9Jqhk9CeFhkZFsy7SBS+NsfiB++wVAIQF7VtE0gFk3WwC\\nsU6gwpMSYTFxf9i4ovyrBgLZ2Vc73IBFrRx8zwIDAQABAoIBAB4skiquW3VKqwq0\\n9+CK5sTUqdsGgoIefRhPQiBmcMmorpS58bkzk83Bx1ct8TjdNuRy9bQT1vcEK4+h\\nPSXNEmtLLqizYIHWoch8GSDGoFoIEFqSh/+8ODUhwJbNsL72s9cv5QYw1BJEpGRL\\nRXggAP4UGcERGjDQ9ddMIzwA3PcDgJaTJ/O9umzdTGiQsXDOYW7YGJNS6akZPkhr\\nbccLIzUA/PkAZdf+j6Q9zzWE1cBHYwZ6e/HcqIy7ElIvctvnVPL1Oizsnt7/lVz7\\n7KgQcT0VB4UiADJJrBbQjChUpuldeoZi3IYUDRmPrYBWLSELVFok/jD2AKViqaoV\\n464xYgECgYEA4e3bHLMgfQnCqvt4Pzy7hcof31Rbra4/2//zRCNDg8V5JWxNh3dh\\nWx9A5W24evuMU7Zu62eiYXuASUZt6ZxsIgETkCm540MKBMSfqDcFRSydRDmUEw25\\nN8An7639HluOkF8PlYl8PtfQLdMAHsaa9/s6+uqyRJdZGIRDKzi9UQ8CgYEA3PqX\\nRwpid6QTCGYeEhc9ZrMF0szseOFPJJbG5Jg1xQ1dIfkFWPuE7jWpN74pZ0JWqMMw\\nI+CyGmpoVKPmPD1AqN2z4idGeIMA6iv08GUcFgw4F1OYToGxPS0OJsl/F0OKqmLB\\nvjlHJK2++l47fFl+psP/r1m4J4BRk59YH4B2mEECgYEAmW5qHmx7xM7LGEkdGX0K\\nMMraqFVmyWWL0sFYmM6F/EgwhLyvTi9Bu5tW/DhuT37jhrpfS5keyqsPrTOaU0s6\\nmEE44u+jYPZXKHPLpXZwKtEooHul1ua8AWOK+5eiTWqKP/t+3uP2r8rqgyRHcZ8Z\\nAQ3puRuII1LRW/f+kay/zPsCgYAQZM7gSFbxxUxcLSdB9FNr0RA3iVhpx11Vu5HZ\\n16j1i35DTPQmm9JK0dRR/FuZ+4PuVTy3DK5p40cGMHqeMXUgkgIMXxmNSzrAJK6x\\nPu8Me6+Vm3ALMvfxL+yC2CQDl9ErvtPcxucOQ42NiXwkR4dr29KWMbPFynFC4Glr\\nPN6PgQKBgQDK89IhMt3IeSUcBl4oEKpCrKPOapbIlEETCVCNAMesB1lnr7qGGJNZ\\nWXHiNzJ207NeXfNxvnnn4MgR7EnZR0U3rxco5danwBQ05VUfApL3mqXcTJMl2ntV\\nJpNLjtqJJgu7trxFpo2PCXFPQHKDitDiBi9WSE4jqqTu7uJNSq7KrA==\\n-----END RSA PRIVATE KEY-----\\n"}, "resource_id": "b10bfa80-e495-40d7-bb5a-f663f514c804", "action": "CREATE", "type": "OS::Nova::KeyPair", "metadata": {}}, "wp_auth": {"status": "COMPLETE", "name": "wp_auth", "resource_data": {"value": "2F8369B266B2C92CF7A1A5DB841443F3"}, "resource_id": "2F8369B266B2C92CF7A1A5DB841443F3", "action": "CREATE", "type": "OS::Heat::RandomString", "metadata": {}}, "wordpress_setup": {"status": "COMPLETE", "name": "wordpress_setup", "resource_data": {"process_id": "24089"}, "resource_id": "8cc78f9d-4066-4f6c-9876-ace25ca83f30", "action": "CREATE", "type": "OS::Heat::ChefSolo", "metadata": {}}, "database_password": {"status": "COMPLETE", "name": "database_password", "resource_data": {"value": "TPAGoiCwash9T1fi"}, "resource_id": "TPAGoiCwash9T1fi", "action": "CREATE", "type": "OS::Heat::RandomString", "metadata": {}}, "wp_logged_in": {"status": "COMPLETE", "name": "wp_logged_in", "resource_data": {"value": "026611BAE58FDE37C69E2F2EDB563EB2"}, "resource_id": "026611BAE58FDE37C69E2F2EDB563EB2", "action": "CREATE", "type": "OS::Heat::RandomString", "metadata": {}}, "mysql_repl_password": {"status": "COMPLETE", "name": "mysql_repl_password", "resource_data": {"value": "3kRxPiIAt8xksyXA"}, "resource_id": "3kRxPiIAt8xksyXA", "action": "CREATE", "type": "OS::Heat::RandomString", "metadata": {}}, "wp_nonce": {"status": "COMPLETE", "name": "wp_nonce", "resource_data": {"value": "705CC92E02C3F6877C27EFD5B4925D0F"}, "resource_id": "705CC92E02C3F6877C27EFD5B4925D0F", "action": "CREATE", "type": "OS::Heat::RandomString", "metadata": {}}}}
+"""
+
 class StacksTestJSON(base.BaseOrchestrationTest):
     _interface = 'json'
 
@@ -308,8 +312,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #https://github.com/beenzsyed/phphelloworld
 
         #region = "Dev"
-        rstype = "Rackspace::Cloud::Server"
-        rsname = "devstack_server"
+        #rstype = "Rackspace::Cloud::Server"
+        #rsname = "devstack_server"
 
         usertype = self.config.identity['username']
         print "User is: %s" % usertype
@@ -319,6 +323,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         regions = regionsConfig.split(",")
         for region in regions:
             print "\nRegion is: %s" % region
+
             # #-------  Stacks  --------------
             #stack-list
             apiname = "stack list"
@@ -339,7 +344,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #update stack
             apiname = "update stack"
             parameters = {
-                    'key_name': 'sabeen',
                     'flavor': '1GB Standard Instance'
             }
             #pdb.set_trace()
@@ -371,8 +375,46 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             apiname = "adopt stack"
             adopt_stack_name = "ADOPT_%s" %datetime.datetime.now().microsecond
             #pdb.set_trace()
-            asresp, asbody, stack_identifier = self.adopt_stack(adopt_stack_name, region, adopt_data, yaml_template, parameters)
+            asresp, asbody, stack_identifier = self.adopt_stack(adopt_stack_name, region, adopt_data2, yaml_template, parameters)
             self._check_resp(asresp, asbody, apiname)
+
+
+            #--------  Stack resources  --------
+            #Lists resources in a stack
+            apiname = "list resources"
+            if updateStackName != 0:
+                lrresp, lrbody = self.orchestration_client.list_resources(updateStackName, updateStackId, region)
+                self._check_resp(lrresp, lrbody, apiname)
+
+            #Gets metadata for a specified resource.
+            apiname = "resource metadata"
+            if updateStackName != 0:
+                rs_name = self._get_resource_name(lrbody)
+                rmresp, rmbody = self.orchestration_client.show_resource_metadata(updateStackName, updateStackId, rs_name, region)
+                self._check_resp(rmresp, rmbody, apiname)
+
+            #Gets data for a specified resource.
+            apiname = "get resources"
+            if updateStackName != 0:
+                rsresp, rsbody = self.orchestration_client.get_resource(updateStackName, updateStackId, rs_name, region)
+                self._check_resp(rsresp, rsbody, apiname)
+
+            #Gets a template representation for a specified resource type.
+            apiname = "resource template"
+            rs_type = self._get_resource_type(lrbody)
+            rtresp, rtbody = self.orchestration_client.resource_template(rs_type, region)
+            self._check_resp(rtresp, rtbody, apiname)
+
+            #Lists the supported template resource types.
+            apiname = "template resource types"
+            rtresp, rtbody = self.orchestration_client.template_resource(region)
+            self._check_resp(rtresp, rtbody, apiname)
+
+            #Gets the interface schema for a specified resource type.
+            apiname = "schema for resource type"
+            rtresp, rtbody = self.orchestration_client.resource_schema(rs_type, region)
+            self._check_resp(rtresp, rtbody, apiname)
+
 
             #-------  Stack events  ----------
             #event list
@@ -384,8 +426,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #event show
             apiname = "show event"
             if updateStackName != 0:
-                event_id = self._get_event_id(evbody)
-                esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rsname, event_id, region)
+                event_id, rs_name_event = self._get_event_id(evbody)
+                esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rs_name_event, event_id, region)
                 self._check_resp(esresp, esbody, apiname)
 
 
@@ -401,40 +443,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             tvresp, tvbody = self.orchestration_client.validate_template(region, yaml_template, parameters)
             self._check_resp(tvresp, tvbody, apiname)
 
-
-            #--------  Stack resources  --------
-            #Lists resources in a stack
-            apiname = "list resources"
-            if updateStackName != 0:
-                lrresp, lrbody = self.orchestration_client.list_resources(updateStackName, updateStackId, region)
-                self._check_resp(lrresp, lrbody, apiname)
-
-            #Gets metadata for a specified resource.
-            apiname = "resource metadata"
-            if updateStackName != 0:
-                rmresp, rmbody = self.orchestration_client.show_resource_metadata(updateStackName, updateStackId, rsname, region)
-                self._check_resp(rmresp, rmbody, apiname)
-
-            #Gets data for a specified resource.
-            apiname = "get resources"
-            if updateStackName != 0:
-                rsresp, rsbody = self.orchestration_client.get_resource(updateStackName, updateStackId, rsname, region)
-                self._check_resp(rsresp, rsbody, apiname)
-
-            #Gets a template representation for a specified resource type.
-            apiname = "resource template"
-            rtresp, rtbody = self.orchestration_client.resource_template(rstype, region)
-            self._check_resp(rtresp, rtbody, apiname)
-
-            #Lists the supported template resource types.
-            apiname = "template resource types"
-            rtresp, rtbody = self.orchestration_client.template_resource(region)
-            self._check_resp(rtresp, rtbody, apiname)
-
-            #Gets the interface schema for a specified resource type.
-            apiname = "schema for resource type"
-            rtresp, rtbody = self.orchestration_client.resource_schema(rstype, region)
-            self._check_resp(rtresp, rtbody, apiname)
 
         if updateStackName == 0:
             print "Create a stack named UPDATE_123 so that I can verify more api calls"
@@ -484,7 +492,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def _get_event_id(self, body):
         for stackname in body:
-            return stackname['id']
+            return stackname['id'], stackname['resource_name']
+
+    def _get_resource_name(self, body):
+        for resource in body:
+            return resource['resource_name']
+
+    def _get_resource_type(self, body):
+        for resource in body:
+            return resource['resource_type']
 
 
 

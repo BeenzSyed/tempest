@@ -54,7 +54,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         env = self.config.orchestration['env']
         account = self.config.identity['username']
 
-        print template
+        #print template
 
         if template == None:
             template_giturl = config['template_url']
@@ -179,11 +179,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             self._send_deploy_time_graphite(env, region, template, count, "buildtime")
 
                             resource_dict = self._get_resource_id(stack_name, stack_id, region)
+                            print "Checking downstream api's to ensure resources are up."
                             self._verify_resources(resource_dict, region, domain)
 
                             #for wordpress an http call is made to ensure it is up
                             resp, body = self.get_stack(stack_id, region)
-                            print body['outputs']
+                            #print body['outputs']
                             for output in body['outputs']:
                                 if output['output_key'] == "server_ip":
                                     #http call
@@ -199,6 +200,20 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
                                     #ssh call
                                     #self._ssh_call(output)
+
+                            #Checking stack outputs
+                            print "Checking stack outputs."
+                            output_exists = 0
+                            template_outputs = yaml_template['outputs']
+                            for temp_output in template_outputs:
+                                for output in body['outputs']:
+                                    if temp_output == output['output_key']:
+                                        print "Output %s exists" % temp_output
+                                        output_exists = 1
+                                        break
+                                if output_exists == 0:
+                                    print "Output %s does not exist" % temp_output
+                                    pf += 1
 
                             #update stack
                             self._update_stack(stack_id, stack_name, region, params, yaml_template)
@@ -277,7 +292,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 'nc graphite.staging.rs-heat.com ' \
                 '2003 -q 2'
         os.system(cmd)
-        print cmd
+        #print cmd
         print "Deploy time sent to graphite"
 
     def _ssh_call(self, output):
@@ -298,11 +313,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def _update_stack(self, stack_id, stack_name, region, params, yaml_template):
         print "Updating Stack"
         resp_update, body_update = self.orchestration_client.update_stack(
-                         stack_identifier = stack_id,
-                         name = stack_name,
-                         region = region,
-                         parameters=params,
-                         template=yaml_template)
+            stack_identifier=stack_id,
+            name=stack_name,
+            region=region,
+            parameters=params,
+            template=yaml_template)
         if resp_update['status'] =='202':
             print "Update request sent"
         else:
