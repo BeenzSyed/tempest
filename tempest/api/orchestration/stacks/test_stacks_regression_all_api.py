@@ -347,7 +347,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     'flavor': '1GB Standard Instance'
             }
             #pdb.set_trace()
-            updateStackName, updateStackId = self._get_stacks("UPDATE_", stacklist)
+            updateStackName, updateStackId = self._get_stacks("UPDATE_", stacklist, region)
             if updateStackName != 0:
                 ssresp, ssbody = self.update_stack(updateStackId, updateStackName, region, yaml_template, parameters)
                 self._check_resp(ssresp, ssbody, apiname)
@@ -360,14 +360,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             #delete stack
             apiname = "delete stack"
-            deleteStackName, deleteStackId = self._get_stacks("CREATE_", stacklist)
+            deleteStackName, deleteStackId = self._get_stacks("CREATE_", stacklist, region)
             if deleteStackName != 0:
                 ssresp, ssbody = self.orchestration_client.delete_stack(deleteStackName, deleteStackId, region)
                 self._check_resp(ssresp, ssbody, apiname)
 
             #abandon stack
             apiname = "abandon stack"
-            abandonStackName, abandonStackId = self._get_stacks("ADOPT_", stacklist)
+            abandonStackName, abandonStackId = self._get_stacks("ADOPT_", stacklist, region)
             if abandonStackName != 0:
                 asresp, asbody, = self.abandon_stack(abandonStackId, abandonStackName, region)
                 self._check_resp(asresp, asbody, apiname)
@@ -401,9 +401,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             #Gets a template representation for a specified resource type.
             apiname = "resource template"
-            rs_type = self._get_resource_type(lrbody)
-            rtresp, rtbody = self.orchestration_client.resource_template(rs_type, region)
-            self._check_resp(rtresp, rtbody, apiname)
+            if updateStackName != 0:
+                rs_type = self._get_resource_type(lrbody)
+                rtresp, rtbody = self.orchestration_client.resource_template(rs_type, region)
+                self._check_resp(rtresp, rtbody, apiname)
 
             #Lists the supported template resource types.
             apiname = "template resource types"
@@ -412,8 +413,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             #Gets the interface schema for a specified resource type.
             apiname = "schema for resource type"
-            rtresp, rtbody = self.orchestration_client.resource_schema(rs_type, region)
-            self._check_resp(rtresp, rtbody, apiname)
+            if updateStackName != 0:
+                rtresp, rtbody = self.orchestration_client.resource_schema(rs_type, region)
+                self._check_resp(rtresp, rtbody, apiname)
 
 
             #-------  Stack events  ----------
@@ -483,10 +485,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             print "%s did not work. The response is: %s %s" % (apiname, resp['status'], body)
             self.fail_flag += 1
 
-    def _get_stacks(self, typestack, body):
+    def _get_stacks(self, typestack, body, region):
         for stackname in body:
             match = re.search(typestack + '_*', stackname['stack_name'])
             if match:
+                print stackname
+                ssresp, ssbody = self.orchestration_client.show_stack(stackname['stack_name'], stackname['id'], region)
+                print ssresp
+                print ssbody
                 return stackname['stack_name'], stackname['id']
         return 0, 0
 

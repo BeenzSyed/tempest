@@ -28,6 +28,9 @@ import paramiko
 
 LOG = logging.getLogger(__name__)
 
+#0 if no failures occur, adds 1 every time a stack fails
+global_pf = 0
+
 
 class StacksTestJSON(base.BaseOrchestrationTest):
     _interface = 'json'
@@ -54,8 +57,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         env = self.config.orchestration['env']
         account = self.config.identity['username']
 
-        #print template
-
         if template == None:
             template_giturl = config['template_url']
             template = template_giturl.split("/")[-1].split(".")[0]
@@ -71,7 +72,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             yaml_template = yaml.safe_load(response_templates.content)
 
         #0 if no failures occur, adds 1 every time a stack fails
-        pf = 0
+        #global global_pf
 
         regionsConfig = self.config.orchestration['regions']
 
@@ -124,7 +125,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     if retry == 4:
                         print "Retried 4 times! Stack create failed."
                         self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                        pf += 1
+                        global global_pf
+                        global_pf += 1
                         should_restart = False
                     elif resp['status'] != '200':
                         print "The response is: %s" % resp
@@ -147,7 +149,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         elif body['stack_status'] == 'CREATE_IN_PROGRESS' and count == 90:
                             print "Stack create has taken over 90 minutes. Force failing now."
                             self._send_deploy_time_graphite(env, region, template, count, "failtime")
-                            pf += 1
+                            #global global_pf
+                            global_pf += 1
                             should_restart = False
 
                         elif body['stack_status'] == 'CREATE_FAILED' and retry < 4:
@@ -213,7 +216,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                         break
                                 if output_exists == 0:
                                     print "Output %s does not exist" % temp_output
-                                    pf += 1
+                                    global_pf += 1
 
                             #update stack
                             self._update_stack(stack_id, stack_name, region, params, yaml_template)
@@ -225,11 +228,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         else:
                             print "Stack in %s state" % body['stack_status']
                             print "Something went wrong. Stack failed!"
-                            pf += 1
+                            global_pf += 1
                             should_restart = False
 
         #if more than 0 stacks fail, fail the test
-        if pf > 0:
+        if global_pf  > 0:
             self.fail("Stack build failed.")
 
     def _set_parameters(self, yaml_template, template, region, image, domain):
@@ -340,6 +343,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             elif body_u['stack_status'] == 'UPDATE_FAILED':
                 print "Deployment in %s status." % body_u['stack_status']
                 u_progress = False
+                global global_pf
+                global_pf += 1
             else:
                 print "Deployment in %s status." % body_u['stack_status']
                 print "Update status is not normal."
@@ -371,6 +376,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             elif body_d['stack_status'] == 'DELETE_FAILED':
                 print "Deployment in %s status." % body_d['stack_status']
                 d_progress = False
+                #global global_pf
+                #global_pf += 1
             else:
                 print "Deployment in %s status." % body_d['stack_status']
                 print "Delete status is not normal."
