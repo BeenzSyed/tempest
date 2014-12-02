@@ -435,7 +435,7 @@ class OrchestrationClient(rest_client.RestClient):
         resp, body = self.post(url,region ,body=None,headers=self.headers)
         return resp , body
 
-    def get_template_catalog(self,region):
+    def get_template_catalog(self, region):
 
         """Returns the template_catalog from fusion."""
         url = "templates"
@@ -445,7 +445,7 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def get_template_catalog_with_metadata(self,region):
+    def get_template_catalog_with_metadata(self, region):
 
         """Returns the template_catalog from fusion."""
         url = "templates?with_metadata=True"
@@ -455,7 +455,7 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def get_single_template(self,template_id,region):
+    def get_single_template(self,template_id, region):
 
         """Returns the template from fusion for template_id."""
         url = "templates/%s" % template_id
@@ -464,7 +464,7 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def get_single_template_with_metadata(self,template_id,region):
+    def get_single_template_with_metadata(self, template_id,region):
 
         """Returns the template from fusion for template_id."""
         url = "templates/%s?with_metadata=True" % template_id
@@ -473,7 +473,7 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def get_list_of_stacks_fusion(self,region):
+    def get_list_of_stacks_fusion(self, region):
 
         """Returns the template from fusion for template_id."""
         url = "stacks"
@@ -481,11 +481,11 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def _prepare_update_create_for_fusion(self, name,
-                                          parameters={},template_id=None,\
+                                          parameters={}, template_id=None, \
                                                                   template={}):
         post_body = {
             "stack_name": name,
-            "parameters" : parameters,
+            "parameters": parameters,
             "disable_rollback": True,
             "timeout_mins": "120"
         }
@@ -494,13 +494,13 @@ class OrchestrationClient(rest_client.RestClient):
         if template:
             post_body['template'] = template
         body = json.dumps(post_body, default=datehandler)
-        print "This is the Request Body: %s" % body
+        #print "This is the Request Body: %s" % body
         headers = dict(self.headers)
         headers['X-Auth-Key'] = self.password
         headers['X-Auth-User'] = self.user
         return headers, body
 
-    def create_stack_fusion(self, name,region,template_id=None,template={},
+    def create_stack_fusion(self, name, region, template_id=None, template={},
                             parameters={}):
 
         headers, body = self._prepare_update_create_for_fusion(
