@@ -19,7 +19,7 @@ from datetime import datetime
 from tempest.test import attr
 import requests
 import yaml
-import time
+from testconfig import config
 import os
 import pdb
 
@@ -37,73 +37,29 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         super(StacksTestJSON, cls).setUpClass()
         cls.client = cls.orchestration_client
 
-    def test_devstack_realDeployment(self):
-        self._test_stack("devstack")
-
-    def test_dotnetnuke_realDeployment(self):
-        self._test_stack("dotnetnuke")
-
-    def test_mongodb_realDeployment(self):
-        self._test_stack("mongodb")
-
-    def test_mysql_realDeployment(self):
-        self._test_stack("mysql")
-
-    def test_php_app_realDeployment(self):
-        self._test_stack("php-app")
-
-    def test_rcbops_realDeployment(self):
-        self._test_stack("rcbops_allinone_inone")
-
-    def test_redis_realDeployment(self):
-        self._test_stack("redis")
-
-    def test_repose_realDeployment(self):
-        self._test_stack("repose")
-
-    def test_ruby_on_rails_realDeployment(self):
-        self._test_stack("ruby-on-rails")
-
-    def test_wordpress_multi_realDeployment(self):
-        self._test_stack("wordpress-multi")
-
-    def test_wordpress_multi_windows_realDeployment(self):
-        self._test_stack("wordpress-multinode-windows")
-
-    def test_wordpress_single_winserver_realDeployment(self):
-        self._test_stack("wordpress-single-winserver")
-
-    def test_wordpress_winserver_clouddb_realDeployment(self):
-        self._test_stack("wordpress-winserver-clouddb")
-
-    def test_wp_resource_realDeployment(self):
-        self._test_stack("wp-resource")
-
-    def test_wp_single_linux_realDeployment(self):
-        self._test_stack("wp-single-linux-cdb")
-
-    def test_rackconnect_realDeployment(self):
-        self._test_stack("php-app")
-
-    def test_wordpress_multi_dns_realDeployment(self):
-        self._test_stack("wordpress-multi-dns")
-
-    def test_ubuntu(self):
-        self._test_stack("hello-world", "ubuntu")
-
-    def test_centos(self):
-        self._test_stack("hello-world", "centos")
+    def test_all(self):
+        self._test_stack()
 
     @attr(type='smoke')
-    def _test_stack(self, template, image=None):
+    def _test_stack(self, template=None, image=None):
         print os.environ.get('TEMPEST_CONFIG')
 
-        env = self.config.orchestration['env']
+        print os.environ.get('TEMPEST_CONFIG')
+        if os.environ.get('TEMPEST_CONFIG') == None:
+            print "Set the environment varible TEMPEST_CONFIG to a config file."
+            self.fail("Environment variable is not set.")
 
-        #templates on github
-        template_giturl = "https://raw2.github.com/heat-ci/heat-templates/master/" + env + "/" + template + ".template"
-        #template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/heat-ci/master/" + env + "/" + template + ".template"
-        response_templates = requests.get(template_giturl, timeout=3)
+        env = self.config.orchestration['env']
+        account = self.config.identity['username']
+
+        if template == None:
+            template_giturl = config['template_url']
+            template = template_giturl.split("/")[-1].split(".")[0]
+            print "template is %s" % template
+        else:
+            template_giturl = "https://raw.githubusercontent.com/heat-ci/heat-templates/master/"+env+"/"+template+".template"
+
+        response_templates = requests.get(template_giturl, timeout=10)
         if response_templates.status_code != requests.codes.ok:
             print "This template does not exist: %s" % template_giturl
             self.fail("The template does not exist.")
@@ -129,7 +85,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if 'email_address' in yaml_template['parameters']:
                     parameters['email_address'] = email_address
             if 'domain_record_type' in yaml_template['parameters']:
-                    parameters['domain_record_type']= domain_record_type
+                    parameters['domain_record_type'] = domain_record_type
             if 'domain_name' in yaml_template['parameters']:
                     parameters['domain_name'] = domain_name
 
@@ -141,7 +97,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
 
             print "\nDeploying %s in %s" % (template, region)
-            #pdb.set_trace()
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, parameters)
             print csresp
             print csbody

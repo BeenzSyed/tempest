@@ -419,7 +419,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rs_name, event_id, region)
             self._test_RBAC(usertype, apiname, esresp)
 
-
         if self.fail_flag == 0:
             print "All api's are up!"
         elif self.fail_flag > 0:
