@@ -126,8 +126,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             #update stack
             apiname = "update stack"
-            parameters = {
-                    'db_pass': 'sabeenwashere'
+            parameters_update = {
+                    'username': 'sabeen'
             }
 
             updateStackName, updateStackId = self._get_stacks("UPDATE_",
@@ -136,7 +136,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             if updateStackName != 0:
                 ssresp, ssbody = self.update_stack(updateStackId,
                                                    updateStackName, region,
-                                                   yaml_template, parameters)
+                                                   yaml_template, parameters_update)
                 self._check_resp(ssresp, ssbody, apiname)
 
             #stack show
