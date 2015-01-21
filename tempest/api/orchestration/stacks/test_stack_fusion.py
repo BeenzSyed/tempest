@@ -71,8 +71,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
-    def test_create_stack_with_supported_template_id(self, template_id=None):
-        template_id = config['template_id']
+    def test_create_stack_with_supported_template_id(self, template=None):
+        template_id = config['template']
 
         if template_id == None:
             #Use default
