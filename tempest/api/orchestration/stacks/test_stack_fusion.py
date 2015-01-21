@@ -16,10 +16,9 @@ import time
 from tempest.api.orchestration import base
 from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
+from testconfig import config
+import pdb
 import yaml
-
-
-
 
 LOG = logging.getLogger(__name__)
 
@@ -34,80 +33,81 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def test_get_template_catalog(self):
         region = "DFW"
-        resp , body = self.orchestration_client.get_template_catalog(region)
+        resp, body = self.orchestration_client.get_template_catalog(region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
-
     def test_get_single_template(self):
         region = "DFW"
-        template_id="wordpress-single"
-        resp , body = self.orchestration_client.get_single_template(
+        template_id = "wordpress-single"
+        resp, body = self.orchestration_client.get_single_template(
             template_id,region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
     def test_get_template_catalog_with_metadata(self):
         region = "DFW"
-        resp , body = self.orchestration_client.get_template_catalog_with_metadata(region)
+        resp, body = self.orchestration_client.get_template_catalog_with_metadata(region)
         #print resp, body
         for template in body['templates']:
             if 'rackspace-metadata' in template:
                 print"Templates  %s have metadata"%template['id']
-            else :
+            else:
                 print "Templates  %s does not have metadata"%template['id']
-
 
     def test_get_single_template_with_metadata(self):
         region = "DFW"
-        template_id="wordpress-single"
-        resp , body = self.orchestration_client.get_single_template_with_metadata(
-            template_id,region)
+        template_id = "wordpress-single"
+        resp, body = self.orchestration_client.get_single_template_with_metadata(
+            template_id, region)
         if body['template']['rackspace-metadata']:
-            print"Template %s call responded with metadata" %template_id
+            print "Template %s call responded with metadata" %template_id
         else:
-           print"Test fail to get metadata of %s" %template_id
+            print "Test fail to get metadata of %s" %template_id
 
     def test_get_list_of_stacks(self):
         region = "DFW"
-        resp , body = self.orchestration_client.get_list_of_stacks_fusion(region)
+        resp, body = self.orchestration_client.get_list_of_stacks_fusion(region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
-    def test_create_stack_with_supported_template_id(self):
+    def test_create_stack_with_supported_template_id(self, template_id=None):
+        template_id = config['template_id']
 
-        template_id = "wordpress-single"
+        if template_id == None:
+            #Use default
+            template_id = "wordpress-single"
+
         region = "DFW"
-        parameters={}
+        parameters = {}
         # parameters= {"ssh_keypair_name": "foo",
         #             "ssh_sync_keypair_name": "foo"}
         stack_name = rand_name("fusion_"+template_id+region)
-        resp,body = self.orchestration_client.create_stack_fusion(
+        resp, body = self.orchestration_client.create_stack_fusion(
             stack_name, region, template_id, parameters=parameters)
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
         stack_identifier = body['stack']['id']
-        if resp['status']== '201':
+        if resp['status'] == '201':
             stack_id = body['stack']['id']
-            url = "stacks/%s/%s?with_support_info=1"%(stack_name,stack_id)
-            resp,body = self.orchestration_client.get_stack_info_for_fusion(
-                url,region)
+            url = "stacks/%s/%s?with_support_info=1" % (stack_name, stack_id)
+            resp, body = self.orchestration_client.get_stack_info_for_fusion(
+                url, region)
             print "For test "         
-            print "printing body %s " %body 
+            print "printing body %s " % body
             print "only for test"
-            self.assertEqual(body['stack']['rackspace_template'],True,)
-            self.assertEqual(body['stack']['application_name'],\
-                                          ('WordPress'),
-                             "Expected wasWordpress but has "
-                             "no application name")
+            self.assertEqual(body['stack']['rackspace_template'], True,)
+            # self.assertEqual(body['stack']['application_name'],\
+            #                               ('WordPress'),
+            #                  "Expected wasWordpress but has "
+            #                  "no application name")
             self.assertIn('template_id', body['stack'])
-        dresp, dbody = self.delete_stack(stack_name, stack_identifier,region)
-
+        dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
 
     def test_create_stack_with_supported_template(self):
         # Unsupported Template with flag as False
         region = "DFW"
-        resp , body = self.orchestration_client.get_template_catalog(region)
+        resp, body = self.orchestration_client.get_template_catalog(region)
         for template in body['templates']:
              if template['id'] == "wordpress-single":
                  yaml_template = template
@@ -123,8 +123,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         stack_name = rand_name("Fusion_")
         resp, body = self.orchestration_client.create_stack_fusion(stack_name,
                                                                    region,
-                                              template_id=None,
-                                              template=yaml.safe_dump(
+                                              template_id = None,
+                                              template = yaml.safe_dump(
                                                   yaml_template),
                                               parameters=parameters)
         self.assertEqual(resp['status'], '201', "expected response was 201 "
@@ -133,21 +133,21 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         if resp['status']== '201':
             stack_id = body['stack']['id']
             url = "stacks/%s/%s?with_support_info=1"%(stack_name,stack_id)
-            resp,body = self.orchestration_client.get_stack_info_for_fusion(
-                url,region)
-            self.assertEqual(body['stack']['rackspace_template'],False,)
+            resp, body = self.orchestration_client.get_stack_info_for_fusion(
+                url, region)
+            self.assertEqual(body['stack']['rackspace_template'], False,)
             self.assertEqual(body['stack']['application_name'],\
                                           ('(Not Specified)'),
                              "Expected was not specified but has "
                              "application name")
             self.assertNotIn('template_id', body['stack'])
-        dresp, dbody = self.delete_stack(stack_name, stack_identifier,region)
+        dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
 
     def test_stack_show_call(self):
         region = "DFW"
         url = "stacks?with_support_info"
-        resp,body = self.orchestration_client.get_stack_info_for_fusion(
-                url,region)
+        resp, body = self.orchestration_client.get_stack_info_for_fusion(
+                url, region)
         for stack in body['stacks']:
             if 'rackspace_template' in stack:
                 if stack['rackspace_template']==False:
@@ -166,8 +166,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_stack_show_call_with_details(self):
         region = "DFW"
         url = "stacks/detail?with_support_info"
-        resp,body = self.orchestration_client.get_stack_info_for_fusion(
-                url,region)
+        resp, body = self.orchestration_client.get_stack_info_for_fusion(
+                url, region)
 
         for stack in body['stacks']:
             if 'rackspace_template' in stack:
@@ -187,8 +187,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_stack_show_call_checkmate_migration(self):
         region = "IAD"
         url = "stacks/detail?with_support_info=1"
-        resp,body = self.orchestration_client.get_stack_info_for_fusion(
-                url,region)
+        resp, body = self.orchestration_client.get_stack_info_for_fusion(
+                url, region)
 
         print resp
         print body
@@ -211,13 +211,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_stack_preview(self):
         template_id = "wordpress-single"
         region = "DFW"
-        parameters={}
+        parameters = {}
         # parameters= {"ssh_keypair_name": "foo",
         #             "ssh_sync_keypair_name": "foo"}
         stack_name = rand_name("fusion_"+template_id+region)
-        resp_temp , body_temp = self.orchestration_client.get_single_template(
+        resp_temp, body_temp = self.orchestration_client.get_single_template(
             template_id,region)
-        resp,body = self.orchestration_client.stack_preview(
+        resp, body = self.orchestration_client.stack_preview(
             stack_name, region, template_id, parameters=parameters)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
@@ -234,7 +234,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.comp_list(response_resource_list,template_resource_list)
 
     def test_stack_update(self):
-
         template_id = "wordpress-single"
         region = "QA"
         parameters={}
@@ -251,22 +250,22 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp, body = self.get_stack(stack_id, region)
         count = 0
         while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 20:
-           resp, body = self.get_stack(stack_id, region)
-           if resp['status'] == '200':
-               print "Deployment in %s status. Checking again in 1 minute" % \
+            resp, body = self.get_stack(stack_id, region)
+            if resp['status'] == '200':
+                print "Deployment in %s status. Checking again in 1 minute" % \
                    body['stack_status']
-               time.sleep(60)
-               count += 1
-               if body['stack_status'] == 'CREATE_FAILED':
+                time.sleep(60)
+                count += 1
+                if body['stack_status'] == 'CREATE_FAILED':
                             print "Stack create failed. Here's why: %s" % body['stack_status_reason']
-               if count == 20:
+                if count == 20:
                    print "Stack create has taken over 20 minutes. Force " \
                         "failing now."
                    self._delete_stack(stack_name, stack_id, region)
-           elif resp['status'] != '200':
-               print "The response is: %s" % resp
-           else:
-               print "Something went wrong. Here's what: %s, %s" % (resp, body)
+            elif resp['status'] != '200':
+                print "The response is: %s" % resp
+            else:
+                print "Something went wrong. Here's what: %s, %s" % (resp, body)
         if body['stack_status'] == 'CREATE_COMPLETE':
              resp_update, body_update = self.orchestration_client\
                        .update_stack_fusion(stack_identifier,stack_name,region,
@@ -277,7 +276,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
              dresp, dbody = self.delete_stack(stack_name, stack_identifier,
                                             region)
 
-    def comp_list(self ,list1, list2):
+    def comp_list(self,list1, list2):
         Result = []
         for val in list1:
             if val in list2:

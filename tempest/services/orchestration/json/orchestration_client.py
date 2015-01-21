@@ -502,7 +502,6 @@ class OrchestrationClient(rest_client.RestClient):
 
     def create_stack_fusion(self, name, region, template_id=None, template={},
                             parameters={}):
-
         headers, body = self._prepare_update_create_for_fusion(
             name, parameters=parameters,
             template_id=template_id, template=template)
