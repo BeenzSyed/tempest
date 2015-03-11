@@ -383,8 +383,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 print "Delete status is not normal."
                 d_progress = False
 
-    def _verify_dns_entries(self,stack_name ,stack_id,region,email_address ,
-                            domain_record_type,domain_name):
+    def _verify_dns_entries(self, stack_name, stack_id, region, email_address,
+                            domain_record_type, domain_name):
         print "Testing the DNS parameters "
         resp, body = self.orchestration_client.show_stack(stack_name,
                         stack_id ,region)
@@ -509,7 +509,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def _get_resource_id(self, stack_name, stack_id, region):
 
-        resource_ids={}
+        resource_ids = {}
         resource_server = "OS::Nova::Server"
         resource_db = "OS::Trove::Instance"
         resource_lb = "Rackspace::Cloud::LoadBalancer"

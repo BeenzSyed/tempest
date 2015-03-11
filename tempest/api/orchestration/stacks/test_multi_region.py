@@ -82,18 +82,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             respbi, bodybi = self.orchestration_client.get_build_info(region)
             print "\nThe build info is: %s\n" % bodybi
 
-            #Check whether the parameter has a label (display in Reach)
-            all_parameters = yaml_template['parameters']
-            for param in all_parameters:
-                if 'label' not in yaml_template['parameters'][param]:
-                    print "label does not exist for %s" % param
-
             stack_name = rand_name("qe_"+template+region)
             domain = "iloveheat%s.com" %datetime.now().microsecond
-            params = self._set_parameters(yaml_template, template, region, image, domain)
+            #params = self._set_parameters(yaml_template, template, region, image, domain)
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
-            csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
+            csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template)
 
             if stack_identifier == 0:
                 print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
@@ -131,7 +125,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     elif body['stack_status'] == 'CREATE_COMPLETE':
                             print "The deployment took %s minutes" % count
 
-                            #do a stack list for each region and check
+                            #do a stack list for each region and check whether that stack exists or not
+                            #ssresp, ssbody = self.orchestration_client.list_stacks(region)
+                            #loop through list to make sure stack exists
+                            #do this for all regions
                     else:
                         print "This stack is crazy"
 
