@@ -123,7 +123,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 csresp, csbody, stack_identifier = self.create_stack(
                     create_stack_name, region, yaml_template, parameters)
             except BadStatusLine:
-                print csresp
+                print "Create stack did not work"
             self._check_resp(csresp, csbody, apiname)
 
             #stack-list - doing this again because it has known to fail if
