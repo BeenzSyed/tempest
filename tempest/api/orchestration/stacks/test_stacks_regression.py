@@ -206,9 +206,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
                             #Checking stack outputs
                             print "Checking stack outputs."
-                            output_exists = 0
                             template_outputs = yaml_template['outputs']
                             for temp_output in template_outputs:
+                                output_exists = 0
                                 for output in body['outputs']:
                                     if temp_output == output['output_key']:
                                         print "Output %s exists" % temp_output
