@@ -127,10 +127,24 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             print "The deployment took %s minutes" % count
                             should_restart = False
 
-                            #do a stack list for each region and check whether that stack exists or not
-                            #ssresp, ssbody = self.orchestration_client.list_stacks(region)
-                            #loop through list to make sure stack exists
-                            #do this for all regions
+                            ssresp, ssbody = self.orchestration_client.list_stacks(region)
+                            dfwssresp, dfwssbody = self.orchestration_client.list_stacks("DFW")
+                            stack_name_dfw = str(stack_name) + "-DFW_stack-"
+
+                            if str(stack_name) + "/" in str(ssbody):
+                                print "Base stack %s from multi-region exists" % stack_name
+                                #including / so it doesn't accidentally match the
+                                #-DFW_stack one in case they're in the same region
+                            else:
+                                print "Base stack %s for multi-region does not exist" % stack_name
+
+                            if stack_name_dfw in str(dfwssbody):
+                                print "Secondary stack %s************ in multi-region (DFW) exists" % stack_name_dfw
+                            else:
+                                print "Secondary stack %s************ in multi-region (DFW) does not exist" % stack_name_dfw
+
+                            self._delete_stack(stack_name, stack_id, region)
+
                     else:
                         print "This stack is crazy"
 
