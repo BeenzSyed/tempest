@@ -21,6 +21,7 @@ import os
 import datetime
 import re
 from testconfig import config
+from httplib import BadStatusLine
 
 
 LOG = logging.getLogger(__name__)
@@ -118,8 +119,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             apiname = "create stack"
             create_stack_name = "CREATE_%s" % datetime.datetime.now().\
                 microsecond
-            csresp, csbody, stack_identifier = self.create_stack(
-                create_stack_name, region, yaml_template, parameters)
+            try:
+                csresp, csbody, stack_identifier = self.create_stack(
+                    create_stack_name, region, yaml_template, parameters)
+            except BadStatusLine:
+                print csresp
             self._check_resp(csresp, csbody, apiname)
 
             #stack-list - doing this again because it has known to fail if
