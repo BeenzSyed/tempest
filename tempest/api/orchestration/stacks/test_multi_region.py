@@ -134,7 +134,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                     else:
                         print "This stack is crazy"
 
-
+    def _delete_stack(self, stack_name, stack_id, region):
+        print "Deleting stack now"
+        resp_delete, body_delete = self.delete_stack(stack_name, stack_id, region)
+        if resp_delete['status'] == '204':
+            print "Delete request sent"
+        else:
+            print resp_delete['status']
+            print "Something went wrong during the delete call"
 
 
 
