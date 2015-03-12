@@ -102,6 +102,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 while should_restart:
                     resp, body = self.get_stack(stack_id, region)
                     #pdb.set_trace()
+                    global global_pf
 
                     if body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
                         print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
@@ -137,16 +138,21 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                 #-DFW_stack one in case they're in the same region
                             else:
                                 print "Base stack %s for multi-region does not exist" % stack_name
+                                global_pf += 1
 
                             if stack_name_dfw in str(dfwssbody):
                                 print "Secondary stack %s************ in multi-region (DFW) exists" % stack_name_dfw
                             else:
                                 print "Secondary stack %s************ in multi-region (DFW) does not exist" % stack_name_dfw
+                                global_pf += 1
 
                             self._delete_stack(stack_name, stack_id, region)
 
                     else:
                         print "This stack is crazy"
+
+        if global_pf > 0:
+            self.fail("At least one stack failed to build.")
 
     def _delete_stack(self, stack_name, stack_id, region):
         print "Deleting stack now"
