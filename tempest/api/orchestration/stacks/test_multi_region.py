@@ -101,6 +101,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 should_restart = True
                 while should_restart:
                     resp, body = self.get_stack(stack_id, region)
+                    #pdb.set_trace()
 
                     if body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
                         print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
@@ -124,6 +125,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         self._delete_stack(stack_name, stack_id, region)
                     elif body['stack_status'] == 'CREATE_COMPLETE':
                             print "The deployment took %s minutes" % count
+                            should_restart = False
 
                             #do a stack list for each region and check whether that stack exists or not
                             #ssresp, ssbody = self.orchestration_client.list_stacks(region)
