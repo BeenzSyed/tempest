@@ -129,9 +129,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             should_restart = False
 
                             ssresp, ssbody = self.orchestration_client.list_stacks(region)
-                            dfwssresp, dfwssbody = self.orchestration_client.list_stacks("DFW")
-                            stack_name_dfw = str(stack_name) + "-DFW_stack-"
-
                             if str(stack_name) + "/" in str(ssbody):
                                 print "Base stack %s from multi-region exists" % stack_name
                                 #including / so it doesn't accidentally match the
@@ -140,11 +137,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                 print "Base stack %s for multi-region does not exist" % stack_name
                                 global_pf += 1
 
-                            if stack_name_dfw in str(dfwssbody):
-                                print "Secondary stack %s************ in multi-region (DFW) exists" % stack_name_dfw
-                            else:
-                                print "Secondary stack %s************ in multi-region (DFW) does not exist" % stack_name_dfw
-                                global_pf += 1
+                            for reg in regions:
+                                regssresp, regssbody = self.orchestration_client.list_stacks(str(reg))
+                                stack_name_reg = str(stack_name) + "-" + str(reg) + "_stack-"
+
+                                if stack_name_reg in str(regssbody):
+                                    print "Secondary stack %s************ in multi-region (%s) exists" % (stack_name_reg, reg)
+                                else:
+                                    print "Secondary stack %s************ in multi-region (%s) does not exist" % (stack_name_reg, reg)
+                                    global_pf += 1
 
                             self._delete_stack(stack_name, stack_id, region)
 
@@ -152,7 +153,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         print "This stack is crazy"
 
         if global_pf > 0:
-            self.fail("At least one stack failed to build.")
+            self.fail("Looks like %s stacks failed to build." % global_pf)
 
     def _delete_stack(self, stack_name, stack_id, region):
         print "Deleting stack now"
