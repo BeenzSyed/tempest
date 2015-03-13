@@ -97,6 +97,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 print "Stack ID is: %s" % stack_id
                 count = 0
                 retry = 0
+                #this doesn't get incremented anywhere
 
                 should_restart = True
                 while should_restart:
@@ -147,13 +148,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                     print "Secondary stack %s************ in multi-region (%s) does not exist" % (stack_name_reg, reg)
                                     global_pf += 1
 
-                            self._delete_stack(stack_name, stack_id, region)
-
                     else:
                         print "This stack is crazy"
-
+            self._delete_stack(stack_name, stack_id, region)
         if global_pf > 0:
             self.fail("Looks like %s stacks failed to build." % global_pf)
+
 
     def _delete_stack(self, stack_name, stack_id, region):
         print "Deleting stack now"
