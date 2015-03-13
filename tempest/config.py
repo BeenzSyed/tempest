@@ -440,6 +440,9 @@ orchestration_group = cfg.OptGroup(name='orchestration',
                                    title='Orchestration Service Options')
 
 OrchestrationGroup = [
+    cfg.StrOpt('template',
+               default='wordpress-single',
+               help="The template ID if not specified in CLI args"),
     cfg.StrOpt('catalog_type',
                default='orchestration',
                help="Catalog type of the Orchestration service."),
