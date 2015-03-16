@@ -97,11 +97,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 print "Stack ID is: %s" % stack_id
                 count = 0
                 retry = 0
+                #this doesn't get incremented anywhere
 
                 should_restart = True
                 while should_restart:
                     resp, body = self.get_stack(stack_id, region)
                     #pdb.set_trace()
+                    global global_pf
 
                     if body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
                         print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
@@ -127,14 +129,40 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             print "The deployment took %s minutes" % count
                             should_restart = False
 
-                            #do a stack list for each region and check whether that stack exists or not
-                            #ssresp, ssbody = self.orchestration_client.list_stacks(region)
-                            #loop through list to make sure stack exists
-                            #do this for all regions
+                            ssresp, ssbody = self.orchestration_client.list_stacks(region)
+                            if str(stack_name) + "/" in str(ssbody):
+                                print "Base stack %s from multi-region exists" % stack_name
+                                #including / so it doesn't accidentally match the
+                                #-DFW_stack one in case they're in the same region
+                            else:
+                                print "Base stack %s for multi-region does not exist" % stack_name
+                                global_pf += 1
+
+                            for reg in regions:
+                                regssresp, regssbody = self.orchestration_client.list_stacks(str(reg))
+                                stack_name_reg = str(stack_name) + "-" + str(reg) + "_stack-"
+
+                                if stack_name_reg in str(regssbody):
+                                    print "Secondary stack %s************ in multi-region (%s) exists" % (stack_name_reg, reg)
+                                else:
+                                    print "Secondary stack %s************ in multi-region (%s) does not exist" % (stack_name_reg, reg)
+                                    global_pf += 1
+
                     else:
                         print "This stack is crazy"
+            self._delete_stack(stack_name, stack_id, region)
+        if global_pf > 0:
+            self.fail("Looks like %s stacks failed to build." % global_pf)
 
 
+    def _delete_stack(self, stack_name, stack_id, region):
+        print "Deleting stack now"
+        resp_delete, body_delete = self.delete_stack(stack_name, stack_id, region)
+        if resp_delete['status'] == '204':
+            print "Delete request sent"
+        else:
+            print resp_delete['status']
+            print "Something went wrong during the delete call"
 
 
 
