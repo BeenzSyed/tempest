@@ -72,7 +72,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                             "but actual was %s"%resp['status'])
 
     def test_create_stack_with_supported_template_id(self, template=None):
-        template_id = config['template']
+        template_id = self.config.orchestration['template']
 
         if template_id == None:
             #Use default
