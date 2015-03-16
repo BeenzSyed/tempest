@@ -102,7 +102,7 @@ class OrchestrationClient(rest_client.RestClient):
             timeout_mins,
             template,
             template_url)
-        uri = "stacks/%s/%s/abandon" % (name, stack_identifier)
+        uri = "stacks/%s/%s/" % (name, stack_identifier)
         resp, body = self.delete(uri, region, headers=headers)
         return resp, body
 
