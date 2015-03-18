@@ -21,7 +21,6 @@ import os
 import re
 from testconfig import config
 from datetime import datetime
-import pdb
 
 
 LOG = logging.getLogger(__name__)
