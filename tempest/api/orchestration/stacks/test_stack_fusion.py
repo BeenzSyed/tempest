@@ -17,7 +17,6 @@ from tempest.api.orchestration import base
 from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
 from testconfig import config
-import pdb
 import yaml
 
 LOG = logging.getLogger(__name__)
@@ -41,7 +40,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         region = "DFW"
         template_id = "wordpress-single"
         resp, body = self.orchestration_client.get_single_template(
-            template_id,region)
+            template_id, region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
@@ -246,7 +245,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                             "but actual was %s"%resp['status'])
 
         stack_identifier = body['stack']['id']
-        stack_id = "%s/%s" % (stack_name,stack_identifier)
+        stack_id = "%s/%s" % (stack_name, stack_identifier)
         resp, body = self.get_stack(stack_id, region)
         count = 0
         while body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 20:
@@ -276,7 +275,42 @@ class StacksTestJSON(base.BaseOrchestrationTest):
              dresp, dbody = self.delete_stack(stack_name, stack_identifier,
                                             region)
 
-    def comp_list(self,list1, list2):
+    def test_store_template_in_fusion(self, template=None):
+        template_id = self.config.orchestration['template']
+
+        if template == None:
+            #Use default
+            template = """
+            {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}
+            """
+
+        region = "DFW"
+        parameters = {}
+        # parameters= {"ssh_keypair_name": "foo",
+        #             "ssh_sync_keypair_name": "foo"}
+        stack_name = rand_name("fusion_"+region)
+        resp, body = self.orchestration_client.store_stack_fusion(
+            stack_name, region, template, parameters=parameters)
+        self.assertEqual(resp['status'], '201', "expected response was 201 "
+                                            "but actual was %s"%resp['status'])
+        stack_identifier = body['stack']['id']
+        if resp['status'] == '201':
+            stack_id = body['stack']['id']
+            url = "stacks/%s/%s?with_support_info=1" % (stack_name, stack_id)
+            resp, body = self.orchestration_client.get_stack_info_for_fusion(
+                url, region)
+            print "For test "
+            print "printing body %s " % body
+            print "only for test"
+            self.assertEqual(body['stack']['rackspace_template'], True,)
+            # self.assertEqual(body['stack']['application_name'],\
+            #                               ('WordPress'),
+            #                  "Expected wasWordpress but has "
+            #                  "no application name")
+            self.assertIn('template_id', body['stack'])
+        dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
+
+    def comp_list(self, list1, list2):
         Result = []
         for val in list1:
             if val in list2:

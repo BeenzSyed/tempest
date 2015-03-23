@@ -430,10 +430,10 @@ class OrchestrationClient(rest_client.RestClient):
         }
         return self._validate_template(post_body)
 
-    def validate_autoscale_response(self, url ,region):
+    def validate_autoscale_response(self, url, region):
         """Returns the response for Autoscale url for the stack."""
-        resp, body = self.post(url,region ,body=None,headers=self.headers)
-        return resp , body
+        resp, body = self.post(url, region, body=None, headers=self.headers)
+        return resp, body
 
     def get_template_catalog(self, region):
 
@@ -455,7 +455,7 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def get_single_template(self,template_id, region):
+    def get_single_template(self, template_id, region):
 
         """Returns the template from fusion for template_id."""
         url = "templates/%s" % template_id
@@ -464,7 +464,7 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def get_single_template_with_metadata(self, template_id,region):
+    def get_single_template_with_metadata(self, template_id, region):
 
         """Returns the template from fusion for template_id."""
         url = "templates/%s?with_metadata=True" % template_id
@@ -481,8 +481,9 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def _prepare_update_create_for_fusion(self, name,
-                                          parameters={}, template_id=None, \
-                                                                  template={}):
+                                          parameters={},
+                                          template_id=None,
+                                          template={}):
         post_body = {
             "stack_name": name,
             "parameters": parameters,
@@ -538,6 +539,17 @@ class OrchestrationClient(rest_client.RestClient):
             template_id=template_id, template=template)
         uri = "stacks/%s/%s" % (name, stack_identifier)
         resp, body = self.put(uri, region, headers=headers, body=body)
+        return resp, body
+
+    def store_stack_fusion(self, name, region, template_id=None, template={},
+                            parameters={}):
+        headers, body = self._prepare_update_create_for_fusion(
+            name, parameters=parameters,
+            template_id=template_id, template=template)
+        uri = 'templates'
+        resp, body = self.post(uri, region, headers=headers, body=body)
+        if resp['status'] == '201':
+            body = json.loads(body)
         return resp, body
 
 def datehandler(obj):
