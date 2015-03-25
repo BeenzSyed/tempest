@@ -334,6 +334,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         template = """
             {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}
             """
+        #description is slightly different
         resp, body = self.orchestration_client.update_stack_fusion(stack_name, region, template, parameters=parameters)
 
         #verify changes
@@ -379,6 +380,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
 
         #now make sure it is gone
+
         stack_identifier = body['stack']['id']
         if resp['status'] == '201':
             stack_id = body['stack']['id']
@@ -386,17 +388,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             resp, body = self.orchestration_client.get_stack_info_for_fusion(
                 url, region)
 
-            #This shouldn't have worked this time
-
-            print "For test "
-            print "printing body %s " % body
-            print "only for test"
-            self.assertEqual(body['stack']['rackspace_template'], True,)
-            # self.assertEqual(body['stack']['application_name'],\
-            #                               ('WordPress'),
-            #                  "Expected wasWordpress but has "
-            #                  "no application name")
-            self.assertIn('template_id', body['stack'])
+            if resp['status'] == '201' or resp['status'] == '200':
+                self.fail("template was removed and should not exist.")
 
 
 
