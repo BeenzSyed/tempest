@@ -358,7 +358,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
 
 
-    def test_delete_template_in_fusion(self):
+    def test_delete_template_in_fusion(self, template=None):
         template_id = self.config.orchestration['template']
 
         if template == None:
@@ -376,6 +376,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             stack_name, region, template, parameters=parameters)
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
+        stack_identifier = body['stack']['id']
         #it exists, now delete
         dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
 
