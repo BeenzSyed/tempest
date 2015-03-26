@@ -555,6 +555,7 @@ class OrchestrationClient(rest_client.RestClient):
     def update_template(self, template_id, new_template, region):
 
         container = "rackspace_orchestration_templates_store"
+        heatqe_account_id = "862456"
 
         '''
         curl -i -X PUT -H 'X-Auth-Key: ****' -H 'X-Auth-User: heatdevunmanaged' -H 'User-Agent: python-heatclient'
@@ -566,7 +567,7 @@ class OrchestrationClient(rest_client.RestClient):
         '''
 
         #container?!?!?
-        uri = "%s/%s/%s" % userid, container, template_id
+        uri = "%s/%s/%s" % heatqe_account_id, container, template_id
 
         headers = dict(self.headers)
         headers['X-Auth-User'] = self.user
@@ -580,14 +581,17 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def delete_template(self, template_id, region):
+
         container = "rackspace_orchestration_templates_store"
+        heatqe_account_id = "862456"
+
         '''
         curl -i -X DELETE -H 'X-Auth-Key: *****' -H 'X-Auth-User: heatdevunmanaged' -H 'Uer-Agent: python-heatclient'
         -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'X-Auth-Token:70cfb33cd43a41198aee10fbb239153c'
         -k http://localhost:8008/v1/897686/templates/9cbc7fed518c9d507072e186f37868e8
         '''
 
-        uri = "%s/%s/%s" % userid, container, template_id
+        uri = "%s/%s/%s" % heatqe_account_id, container, template_id
 
         headers = dict(self.headers)
         headers['X-Auth-User'] = self.user
