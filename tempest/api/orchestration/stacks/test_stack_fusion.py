@@ -294,6 +294,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
         stack_identifier = body['stack']['id']
+        new_template_id = body['template_id']
         if resp['status'] == '201':
             stack_id = body['stack']['id']
             url = "stacks/%s/%s?with_support_info=1" % (stack_name, stack_id)
@@ -309,6 +310,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #                  "no application name")
             self.assertIn('template_id', body['stack'])
         dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
+        return new_template_id
 
     def test_templates_in_fusion(self):
         region = "DFW"
@@ -316,9 +318,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         template = """
             {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}
             """
-        self.test_store_template_in_fusion(template)
+        template_id = self.test_store_template_in_fusion(template)
 
-        template_id = 1 #...
         #verify response
         #exists
         #compare
@@ -328,20 +329,19 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         uresp, ubody = self.orchestration_client.update_template(template_id, new_template, region)
         print uresp
 
+        #verify response
         self.assertEqual('202', uresp['status'], "Response to update should be 202 accept")
 
-        #verify response
-        #exists
+        #verify existence
         #compare
-
-
 
         dresp, dbody = self.orchestration_client.delete_template(template_id, region)
         print dresp
 
+        #verify response
         self.assertEqual('204', dresp['status'], "Response to delete should be 204 no content")
 
-        #verify response -> non-existing
+        #verify non-existence
 
     def test_update_template_in_fusion(self, template=None):
         #store a template
