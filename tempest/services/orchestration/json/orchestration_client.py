@@ -552,20 +552,27 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def update_template(self, template_id, new_template, region)
+    def update_template(self, template_id, new_template, region):
+
+        container = "rackspace_orchestration_templates_store"
+
         '''
-        curl -i -X PUT -H 'X-Auth-Key: ****' -H 'X-Auth-User: heatdevunmanaged' -H 'User-Agent: python-heatclient' -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'X-Auth-Token:  70cfb33cd43a41198aee10fbb239153c'  -d '{"files": {}, "environment": {}, "template_name": "test_template_1", "template": {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}' http://localhost:8008/v1/897686/templates/
-9cbc7fed518c9d507072e186f37868e8
-'''
+        curl -i -X PUT -H 'X-Auth-Key: ****' -H 'X-Auth-User: heatdevunmanaged' -H 'User-Agent: python-heatclient'
+        -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'X-Auth-Token:  70cfb33cd43a41198aee10fbb239153c'
+        -d '{"files": {}, "environment": {}, "template_name": "test_template_1", "template": {"heat_template_version": "2013-05-23",
+        "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server",
+        "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}' http://localhost:8008/v1/897686/templates/
+        9cbc7fed518c9d507072e186f37868e8
+        '''
 
-        uri = 'templates/%s' % template_id
+        #container?!?!?
+        uri = "%s/%s/%s" % userid, container, template_id
 
-
-        headers = {}
-        headers['X-Auth-Key'] = self.password
+        headers = dict(self.headers)
         headers['X-Auth-User'] = self.user
-
-        body = None
+        headers['X-Auth-Key'] = self.password
+        headers['Content-Type'] = 'application/json'
+        body = new_template
 
         resp, body = self.put(uri, region, body=body, headers=headers)
         if resp['status'] == '202':
@@ -573,42 +580,23 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def delete_template(self, template_id, region):
+        container = "rackspace_orchestration_templates_store"
         '''
-        curl -i -X DELETE -H 'X-Auth-Key: *****' -H 'X-Auth-User: heatdevunmanaged' -H 'Uer-Agent: python-heatclient' -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'X-Auth-Token:70cfb33cd43a41198aee10fbb239153c' -k http://localhost:8008/v1/897686/templates/9cbc7fed518c9d507072e186f37868e8
+        curl -i -X DELETE -H 'X-Auth-Key: *****' -H 'X-Auth-User: heatdevunmanaged' -H 'Uer-Agent: python-heatclient'
+        -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'X-Auth-Token:70cfb33cd43a41198aee10fbb239153c'
+        -k http://localhost:8008/v1/897686/templates/9cbc7fed518c9d507072e186f37868e8
         '''
 
-        uri = 'templates/%s' % template_id
-        resp, body = self.delete(uri, region)
-        if resp['status'] == '204':
-                body = json.loads(body)
-        return resp, body
-
-'''
-def create_object(self, container, object_name, data, params=None):
-        """Create storage object."""
+        uri = "%s/%s/%s" % userid, container, template_id
 
         headers = dict(self.headers)
-        if not data:
-            headers['content-length'] = '0'
-        url = "%s/%s" % (str(container), str(object_name))
-        if params:
-            url += '?%s' % urllib.urlencode(params)
+        headers['X-Auth-User'] = self.user
+        headers['X-Auth-Key'] = self.password
 
-        resp, body = self.put(url, data, headers)
+        resp, body = self.delete(uri, region, headers=headers)
+        if resp['status'] == '204':
+            body = json.loads(body)
         return resp, body
-
-    def update_object(self, container, object_name, data):
-        """Upload data to replace current storage object."""
-        return self.create_object(container, object_name, data)
-
-    def delete_object(self, container, object_name, params=None):
-        """Delete storage object."""
-        url = "%s/%s" % (str(container), str(object_name))
-        if params:
-            url += '?%s' % urllib.urlencode(params)
-        resp, body = self.delete(url)
-        return resp, body
-'''
 
 
 def datehandler(obj):
