@@ -309,6 +309,40 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #                  "no application name")
             self.assertIn('template_id', body['stack'])
         dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
+
+    def test_templates_in_fusion(self):
+        region = "DFW"
+
+        template = """
+            {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}
+            """
+        self.test_store_template_in_fusion(template)
+
+        template_id = 1 #...
+        #verify response
+        #exists
+        #compare
+        new_template = """
+            {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}
+            """
+        uresp, ubody = self.orchestration_client.update_template(template_id, new_template, region)
+        print uresp
+
+        self.assertEqual('202', uresp['status'], "Response to update should be 202 accept")
+
+        #verify response
+        #exists
+        #compare
+
+
+
+        dresp, dbody = self.orchestration_client.delete_template(template_id, region)
+        print dresp
+
+        self.assertEqual('204', dresp['status'], "Response to delete should be 204 no content")
+
+        #verify response -> non-existing
+
     def test_update_template_in_fusion(self, template=None):
         #store a template
         template_id = self.config.orchestration['template']
@@ -324,6 +358,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         # parameters= {"ssh_keypair_name": "foo",
         #             "ssh_sync_keypair_name": "foo"}
         stack_name = rand_name("fusion_"+region)
+
+        #does this store a template?
+        #or does store_stack mean something else
         resp, body = self.orchestration_client.store_stack_fusion(
             stack_name, region, template, parameters=parameters)
         self.assertEqual(resp['status'], '201', "expected response was 201 "
@@ -377,7 +414,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
         stack_identifier = body['stack']['id']
+
         #it exists, now delete
+        #does this delete a template?
+        #doesn't seem like it does
         dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
 
         #now make sure it is gone
