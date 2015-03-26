@@ -318,11 +318,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         template = """
             {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}
             """
+
+        #calling the existing function that was testing POST
         template_id = self.test_store_template_in_fusion(template)
 
-        #verify response
-        #exists
-        #compare
+        #testing PUT on an existing template (the one we added with POST)
         new_template = """
             {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}
             """
@@ -334,7 +334,10 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         #verify existence
         #compare
+        #should I be doing a get and then compare the returned body
+        #or should I be comparing the body returned from the PUT?
 
+        #deleting the template we added to fusion earlier
         dresp, dbody = self.orchestration_client.delete_template(template_id, region)
         print dresp
 
@@ -342,6 +345,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.assertEqual('204', dresp['status'], "Response to delete should be 204 no content")
 
         #verify non-existence
+        #Should I do a get and make sure it's a 4xx response?
 
     def test_update_template_in_fusion(self, template=None):
         #store a template
