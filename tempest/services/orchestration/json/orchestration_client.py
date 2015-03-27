@@ -22,6 +22,7 @@ import pdb
 
 from tempest.common import rest_client
 from tempest import exceptions
+from tempest.services import object_storage
 
 
 class OrchestrationClient(rest_client.RestClient):
@@ -553,52 +554,33 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def update_template(self, template_id, new_template, region):
-
         container = "rackspace_orchestration_templates_store"
-        heatqe_account_id = "862456"
-
-        '''
-        curl -i -X PUT -H 'X-Auth-Key: ****' -H 'X-Auth-User: heatdevunmanaged' -H 'User-Agent: python-heatclient'
-        -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'X-Auth-Token:  70cfb33cd43a41198aee10fbb239153c'
-        -d '{"files": {}, "environment": {}, "template_name": "test_template_1", "template": {"heat_template_version": "2013-05-23",
-        "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server",
-        "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}' http://localhost:8008/v1/897686/templates/
-        9cbc7fed518c9d507072e186f37868e8
-        '''
-
-        #container?!?!?
-        uri = "%s/%s/%s" % heatqe_account_id, container, template_id
-
         headers = dict(self.headers)
-        headers['X-Auth-User'] = self.user
-        headers['X-Auth-Key'] = self.password
-        headers['Content-Type'] = 'application/json'
-        body = new_template
 
-        resp, body = self.put(uri, region, body=body, headers=headers)
+        url = "%s/%s" % (str(container), str(template_id))
+
+        resp, body = self.put(url, region, new_template, headers)
+
         if resp['status'] == '202':
             body = json.loads(body)
         return resp, body
 
     def delete_template(self, template_id, region):
-
         container = "rackspace_orchestration_templates_store"
-        heatqe_account_id = "862456"
+        url = "%s/%s" % (str(container), str(template_id))
 
-        '''
-        curl -i -X DELETE -H 'X-Auth-Key: *****' -H 'X-Auth-User: heatdevunmanaged' -H 'Uer-Agent: python-heatclient'
-        -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'X-Auth-Token:70cfb33cd43a41198aee10fbb239153c'
-        -k http://localhost:8008/v1/897686/templates/9cbc7fed518c9d507072e186f37868e8
-        '''
+        resp, body = self.delete(url, region)
 
-        uri = "%s/%s/%s" % heatqe_account_id, container, template_id
-
-        headers = dict(self.headers)
-        headers['X-Auth-User'] = self.user
-        headers['X-Auth-Key'] = self.password
-
-        resp, body = self.delete(uri, region, headers=headers)
         if resp['status'] == '204':
+            body = json.loads(body)
+        return resp, body
+
+    def get_template(self, template_id, region):
+        container = "rackspace_orchestration_templates_store"
+        url = str(container) + "/" + str(template_id)
+        resp, body = self.get(url, region)
+
+        if resp['status'] == '200':
             body = json.loads(body)
         return resp, body
 
