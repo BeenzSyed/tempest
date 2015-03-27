@@ -325,26 +325,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #calling the existing function that was testing POST
         template_id = self.test_store_template_in_fusion(template)
 
-        #testing PUT on an existing template (the one we added with POST)
-
+        #testing PUT on an existing template (the one we added with POST) and check status code
         uresp, ubody = self.orchestration_client.update_template(template_id, new_template, region)
-        print uresp
-
-        #verify response
         self.assertEqual('202', uresp['status'], "Response to update should be 202 accept")
 
-        #verify existence
+        #verify existence and compare
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('200', gresp['status'], "Template should exist")
-
-        #compare
         self.assertEqual(new_template, gbody['template'], "Template should equal what it was updated to")
 
-        #deleting the template we added to fusion earlier
+        #deleting the template we added to fusion earlier and check status code
         dresp, dbody = self.orchestration_client.delete_template(template_id, region)
-        print dresp
-
-        #verify response
         self.assertEqual('204', dresp['status'], "Response to delete should be 204 no content")
 
         #verify non-existence
