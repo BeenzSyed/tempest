@@ -21,7 +21,7 @@ import yaml
 import time
 import os
 import re
-import pdb
+import ipdb
 import requests
 from testconfig import config
 import paramiko
@@ -96,15 +96,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             respbi, bodybi = self.orchestration_client.get_build_info(region)
             print "\nThe build info is: %s\n" % bodybi
 
-            #Check whether the parameter has a label (display in Reach)
-            all_parameters = yaml_template['parameters']
-            for param in all_parameters:
-                if 'label' not in yaml_template['parameters'][param]:
-                    print "label does not exist for %s" % param
-
             stack_name = rand_name("qe_"+template+region)
             domain = "iloveheat%s.com" %datetime.now().microsecond
-            params = self._set_parameters(yaml_template, template, region, image, domain)
+            if 'parameters' in yaml_template:
+                params = self._set_parameters(yaml_template, template, region, image, domain)
+            else:
+                params = []
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
@@ -453,7 +450,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 db_id = value
                 resp, body = self.database_client.get_instance(db_id,
                                                                  region)
-                self._check_status_for_resource(resp['status'],resource_db)
+                self._check_status_for_resource(resp['status'], resource_db)
 
             elif resource == resource_keypair:
                 key_name = value
