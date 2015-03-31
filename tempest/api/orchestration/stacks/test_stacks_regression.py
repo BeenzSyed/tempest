@@ -21,7 +21,6 @@ import yaml
 import time
 import os
 import re
-import ipdb
 import requests
 from testconfig import config
 import paramiko
