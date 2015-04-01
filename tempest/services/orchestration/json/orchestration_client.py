@@ -19,6 +19,7 @@ import time
 import urllib
 import datetime
 import pdb
+import ast
 
 from tempest.common import rest_client
 from tempest import exceptions
@@ -554,7 +555,7 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def update_template(self, template_id, new_template, region):
-        container = "rackspace_orchestration_templates_store"
+        container = "templates"
         headers = dict(self.headers)
 
         url = "%s/%s" % (str(container), str(template_id))
@@ -566,17 +567,16 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def delete_template(self, template_id, region):
-        container = "rackspace_orchestration_templates_store"
+        container = "templates"
         url = "%s/%s" % (str(container), str(template_id))
 
         resp, body = self.delete(url, region)
-
         if resp['status'] == '204':
             body = json.loads(body)
         return resp, body
 
     def get_template(self, template_id, region):
-        container = "rackspace_orchestration_templates_store"
+        container = "templates"
         url = str(container) + "/" + str(template_id)
         resp, body = self.get(url, region)
 
