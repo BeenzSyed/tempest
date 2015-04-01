@@ -18,6 +18,7 @@ from tempest.openstack.common import log as logging
 from datetime import datetime
 from tempest.test import attr
 import yaml
+import json
 import time
 import os
 import re
@@ -27,7 +28,7 @@ from testconfig import config
 import paramiko
 from urlparse import urlparse
 from tempest.common import rest_client
-
+import ast
 
 
 LOG = logging.getLogger(__name__)
@@ -61,10 +62,19 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #get the resource list
 
         resp, body = self.get_resource_types()
+        body = ast.literal_eval(body)
 
         #verify it
+        if not self.verify_resources(body):
+            self.fail("Expected resource type list does not match what we get.")
 
 
+    def verify_resources(self, resources_returned):
+        resources_expected = {}
+        resource_list = ["AWS::EC2::Instance", "Rackspace::RackConnect::PublicIP", "Rackspace::CloudMonitoring::Entity", "OS::Heat::SoftwareDeployment", "OS::Heat::SwiftSignal", "OS::Heat::ChefSolo", "Rackspace::Cloud::WinServer", "Rackspace::RackConnect::PoolNode", "OS::Heat::SoftwareDeployments", "AWS::CloudFormation::WaitConditionHandle", "OS::Cinder::VolumeAttachment", "OS::Trove::Instance", "OS::Heat::CloudConfig", "DockerInc::Docker::Container", "OS::Cinder::Volume", "OS::Heat::SoftwareConfig", "Rackspace::CloudMonitoring::AgentToken", "Rackspace::Cloud::LoadBalancer", "AWS::CloudFormation::WaitCondition", "Rackspace::CloudMonitoring::Alarm", "OS::Heat::SwiftSignalHandle", "OS::Neutron::Port", "OS::Heat::RandomString", "OS::Trove::Cluster", "OS::Nova::KeyPair", "OS::Heat::MultipartMime", "OS::Nova::Server", "OS::Neutron::Net", "Rackspace::Cloud::ChefSolo", "Rackspace::AutoScale::WebHook", "Rackspace::CloudMonitoring::Notification", "Rackspace::Cloud::DNS", "Rackspace::Cloud::Network", "OS::Swift::Container", "Rackspace::Cloud::Server", "OS::Zaqar::Queue", "OS::Heat::Stack", "OS::Heat::ResourceGroup", "Rackspace::CloudMonitoring::Check", "Rackspace::CloudMonitoring::NotificationPlan", "OS::Neutron::Subnet", "Rackspace::CloudMonitoring::PlanNotifications", "Rackspace::AutoScale::ScalingPolicy", "AWS::ElasticLoadBalancing::LoadBalancer", "Rackspace::AutoScale::Group"]
+        resources_expected["resource_types"] = resource_list
+
+        return resources_returned == resources_expected
 
 
 
@@ -74,7 +84,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #request
         resp, body = self.orchestration_client.get(url, region)
         #making the response bad until finished implementing
-        resp['status'] = '404'
         if resp['status'] == '200':
             print "Got resource type list"
         else:
