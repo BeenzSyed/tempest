@@ -445,7 +445,6 @@ class OrchestrationClient(rest_client.RestClient):
         headers['X-Auth-User'] = self.user
         headers['X-Auth-Key'] = self.password
         resp, body = self.get(url, region, headers=headers)
-        resp, body = self.get(url, region)
         if resp['status'] == '200':
             body = json.loads(body)
         return resp, body
