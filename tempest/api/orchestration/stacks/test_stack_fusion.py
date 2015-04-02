@@ -338,7 +338,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('200', gresp['status'], "Response to get should be 200")
         print "The template still exists after update."
-        self.comp_stored_template(new_template, gbody)g
+        self.comp_stored_template(new_template, gbody)
         print "The changes to the template have happened correctly."
 
         #deleting the template we added to fusion earlier and check status code
