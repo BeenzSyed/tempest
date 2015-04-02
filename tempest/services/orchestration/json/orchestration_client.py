@@ -556,14 +556,12 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
-    def update_template(self, template_id, new_template, region):
+    def update_template(self, template_id, new_template, region, name):
         container = "templates"
-        headers = dict(self.headers)
+        headers, body = self._prepare_update_create_for_fusion(name, {}, template_id=template_id, template=new_template)
 
         url = "%s/%s" % (str(container), str(template_id))
-
-        resp, body = self.put(url, region, new_template, headers)
-
+        resp, body = self.put(url, region, headers=headers, body=body)
         if resp['status'] == '202':
             body = json.loads(body)
         return resp, body

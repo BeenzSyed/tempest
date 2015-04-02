@@ -313,16 +313,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #                  "no application name")
             self.assertIn('template_id', body['stack'])'''
         #dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
-        return template_identifier, template
+        return template_identifier, template, stack_name
 
     def test_templates_in_fusion(self):
         region = "DFW"
-        new_template = """
-            {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}}
-            """
+        new_template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
 
         #calling the existing function that was testing POST
-        template_id, stored_template_for_check = self.test_store_template_in_fusion()
+        template_id, stored_template_for_check, name = self.test_store_template_in_fusion()
 
         #verify existence and contents:
         print "\nGetting the template we just stored...ID = " + str(template_id)
@@ -331,13 +329,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.comp_stored_template(stored_template_for_check, gbody)
         print "Got template and it was the same"
 
+
         #testing PUT on an existing template (the one we added with POST) and check status code
-        '''print "\nUpdating the same template to test updating..ID = " + str(template_id)
-        uresp, ubody = self.orchestration_client.update_template(template_id, new_template, region)
-        self.assertEqual('202', uresp['status'], "Response to put should be 202 accept")
+        print "\nUpdating the same template to test updating..ID = " + str(template_id)
+        uresp, ubody = self.orchestration_client.update_template(template_id, new_template, region, name)
+        self.assertEqual('200', uresp['status'], "Response to put should be 200")
+        print "The update request was successful."
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('200', gresp['status'], "Response to get should be 200")
-        self.comp_stored_template(new_template, gbody)'''
+        print "The template still exists after update."
+        self.comp_stored_template(new_template, gbody)g
+        print "The changes to the template have happened correctly."
 
         #deleting the template we added to fusion earlier and check status code
         print "\nDeleting the template we have stored...ID = " + str(template_id)
@@ -350,8 +352,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('404', gresp['status'], "Template should not exist after deletion")
         print "GET failed like it should."
-
-        self.fail("\nThe repose config currently does not allow PUT.")
 
     def comp_stored_template(self, template_sent, template_from_get):
         actual_template = template_from_get['template']
