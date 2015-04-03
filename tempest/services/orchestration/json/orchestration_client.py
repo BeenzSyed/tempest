@@ -19,9 +19,11 @@ import time
 import urllib
 import datetime
 import pdb
+import ast
 
 from tempest.common import rest_client
 from tempest import exceptions
+from tempest.services import object_storage
 
 
 class OrchestrationClient(rest_client.RestClient):
@@ -439,8 +441,10 @@ class OrchestrationClient(rest_client.RestClient):
 
         """Returns the template_catalog from fusion."""
         url = "templates"
-
-        resp, body = self.get(url, region)
+        headers = {}
+        headers['X-Auth-User'] = self.user
+        headers['X-Auth-Key'] = self.password
+        resp, body = self.get(url, region, headers=headers)
         if resp['status'] == '200':
             body = json.loads(body)
         return resp, body
@@ -551,6 +555,35 @@ class OrchestrationClient(rest_client.RestClient):
         if resp['status'] == '201':
             body = json.loads(body)
         return resp, body
+
+    def update_template(self, template_id, new_template, region, name):
+        container = "templates"
+        headers, body = self._prepare_update_create_for_fusion(name, {}, template_id=template_id, template=new_template)
+
+        url = "%s/%s" % (str(container), str(template_id))
+        resp, body = self.put(url, region, headers=headers, body=body)
+        if resp['status'] == '202':
+            body = json.loads(body)
+        return resp, body
+
+    def delete_template(self, template_id, region):
+        container = "templates"
+        url = "%s/%s" % (str(container), str(template_id))
+
+        resp, body = self.delete(url, region)
+        if resp['status'] == '204':
+            body = json.loads(body)
+        return resp, body
+
+    def get_template(self, template_id, region):
+        container = "templates"
+        url = str(container) + "/" + str(template_id)
+        resp, body = self.get(url, region)
+
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
 
 def datehandler(obj):
     if isinstance(obj, datetime.date):
