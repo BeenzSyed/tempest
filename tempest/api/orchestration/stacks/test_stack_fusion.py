@@ -282,9 +282,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         new_template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
 
         resp, body = self.orchestration_client.get_template_catalog(region)
-        print "\nGot template catalog from fusion"
+        print "\nGot template catalog from fusion\n\nStoring a template in fusion to test storage"
 
-        print "\nStoring a template in fusion to test storage"
         parameters = {}
         # parameters= {"ssh_keypair_name": "foo",
         #             "ssh_sync_keypair_name": "foo"}
@@ -294,17 +293,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
         template_id = body['template_id']
-        print "Template stored. ID = " + str(template_id)
+        print "Template stored. ID = " + str(template_id) + "\n\nGetting the template we just stored...ID = " + str(template_id)
 
         #verify existence and contents:
-        print "\nGetting the template we just stored...ID = " + str(template_id)
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('200', gresp['status'], "Response to get should be 200")
         self.comp_stored_template(template, gbody)
-        print "Got template and it was the same"
+        print "Got template and it was the same" + "\n\nUpdating the same template to test updating..ID = " + str(template_id)
 
         #testing PUT on an existing template (the one we added with POST) and check status code
-        print "\nUpdating the same template to test updating..ID = " + str(template_id)
         uresp, ubody = self.orchestration_client.update_template(template_id, new_template, region, stack_name)
         self.assertEqual('200', uresp['status'], "Response to put should be 200")
         print "The update request was successful."
@@ -312,16 +309,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.assertEqual('200', gresp['status'], "Response to get should be 200")
         print "The template still exists after update."
         self.comp_stored_template(new_template, gbody)
-        print "The changes to the template have happened correctly."
+        print "The changes to the template have happened correctly." "\n\nDeleting the template we have stored...ID = " + str(template_id)
 
         #deleting the template we added to fusion earlier and check status code
-        print "\nDeleting the template we have stored...ID = " + str(template_id)
         dresp, dbody = self.orchestration_client.delete_template(template_id, region)
         self.assertEqual('200', dresp['status'], "Response to delete should be 200")
-        print "Template deleted?"
+        print "Template deleted?" + "\n\nMaking sure a GET on the deleted template fails...ID = " + str(template_id)
 
         #verify non-existence
-        print "\nMaking sure a GET on the deleted template fails...ID = " + str(template_id)
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('404', gresp['status'], "Template should not exist after deletion")
         print "GET failed like it should."
