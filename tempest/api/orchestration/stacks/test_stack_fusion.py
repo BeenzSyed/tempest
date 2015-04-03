@@ -304,10 +304,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #testing PUT on an existing template (the one we added with POST) and check status code
         uresp, ubody = self.orchestration_client.update_template(template_id, new_template, region, stack_name)
         self.assertEqual('200', uresp['status'], "Response to put should be 200")
-        print "The update request was successful."
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('200', gresp['status'], "Response to get should be 200")
-        print "The template still exists after update."
+        print "The update request was successful, and the template still exists after update."
         self.comp_stored_template(new_template, gbody)
         print "The changes to the template have happened correctly." "\n\nDeleting the template we have stored...ID = " + str(template_id)
 
