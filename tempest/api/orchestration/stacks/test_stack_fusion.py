@@ -20,7 +20,6 @@ import yaml
 import json
 import ast
 import requests
-import ipdb
 
 LOG = logging.getLogger(__name__)
 
