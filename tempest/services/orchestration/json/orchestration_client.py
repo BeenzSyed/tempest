@@ -578,7 +578,10 @@ class OrchestrationClient(rest_client.RestClient):
     def get_template(self, template_id, region):
         container = "templates"
         url = str(container) + "/" + str(template_id)
-        resp, body = self.get(url, region)
+        headers = {}
+        headers['X-Auth-User'] = self.user
+        headers['X-Auth-Key'] = self.password
+        resp, body = self.get(url, region, headers)
 
         if resp['status'] == '200':
             body = json.loads(body)

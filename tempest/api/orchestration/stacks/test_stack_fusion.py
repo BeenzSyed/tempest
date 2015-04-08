@@ -277,87 +277,46 @@ class StacksTestJSON(base.BaseOrchestrationTest):
              dresp, dbody = self.delete_stack(stack_name, stack_identifier,
                                             region)
 
-    def test_store_template_in_fusion(self, template=None):
-        template_id = self.config.orchestration['template']
+    def test_templates_in_fusion(self):
         region = "DFW"
-        resp, body = self.orchestration_client.get_template_catalog(region)
-        #if template == None:
-        #    #Use default
-        #    template = json.dumps(body['templates'][1])
-        print "\nGot template catalog from fusion"
+        template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
+        new_template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
 
-        template_giturl = "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-single/master/wordpress-single.yaml"
-        response_templates = requests.get(template_giturl, timeout=10)
-        if response_templates.status_code != requests.codes.ok:
-            print "This template does not exist: %s" % template_giturl
-            self.fail("The template does not exist.")
-        else:
-            yaml_template = yaml.safe_load(response_templates.content)
+        resp, body = self.orchestration_client.get_template_catalog(region)
+        print "\nGot template catalog from fusion\n\nStoring a template in fusion to test storage"
 
         parameters = {}
         # parameters= {"ssh_keypair_name": "foo",
         #             "ssh_sync_keypair_name": "foo"}
         stack_name = rand_name("fusion_"+region)
-        print "\nStoring a template in fusion to test storage"
-        template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
         resp, body = self.orchestration_client.store_stack_fusion(
             stack_name, region, template=template, parameters=parameters)
-
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
-        template_identifier = body['template_id']
-        print "Template stored. ID = " + str(template_identifier)
-#         '''if resp['status'] == '201':
-#             stack_id = body['template_id']
-#             url = "stacks/%s/%s?with_support_info=1" % (stack_name, stack_id)
-#             resp, body = self.orchestration_client.get_stack_info_for_fusion(
-#                 url, region)
-#             print "For test "
-#             print "printing body %s " % body
-#             print "only for test"
-#             self.assertEqual(body['stack']['rackspace_template'], True,)
-# <<<<<<< Updated upstream
-#             # self.assertEqual(body['stack']['application_name'],\
-#             #                               ('WordPress'),
-#             #                  "Expected wasWordpress but has "
-#             #                  "no application name")
-#             self.assertIn('template_id', body['stack'])'''
-        #dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
-        return template_identifier, template, stack_name
-
-    def test_templates_in_fusion(self):
-        region = "DFW"
-        new_template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
-
-        #calling the existing function that was testing POST
-        template_id, stored_template_for_check, name = self.test_store_template_in_fusion()
+        template_id = body['template_id']
+        print "Template stored. ID = " + str(template_id) + "\n\nGetting the template we just stored...ID = " + str(template_id)
 
         #verify existence and contents:
-        print "\nGetting the template we just stored...ID = " + str(template_id)
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('200', gresp['status'], "Response to get should be 200")
-        self.comp_stored_template(stored_template_for_check, gbody)
-        print "Got template and it was the same"
+        self.comp_stored_template(template, gbody)
+        print "Got template and it was the same" + "\n\nUpdating the same template to test updating..ID = " + str(template_id)
 
         #testing PUT on an existing template (the one we added with POST) and check status code
-        print "\nUpdating the same template to test updating..ID = " + str(template_id)
-        uresp, ubody = self.orchestration_client.update_template(template_id, new_template, region, name)
+        uresp, ubody = self.orchestration_client.update_template(template_id, new_template, region, stack_name)
         self.assertEqual('200', uresp['status'], "Response to put should be 200")
-        print "The update request was successful."
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('200', gresp['status'], "Response to get should be 200")
-        print "The template still exists after update."
+        print "The update request was successful, and the template still exists after update."
         self.comp_stored_template(new_template, gbody)
-        print "The changes to the template have happened correctly."
+        print "The changes to the template have happened correctly." "\n\nDeleting the template we have stored...ID = " + str(template_id)
 
         #deleting the template we added to fusion earlier and check status code
-        print "\nDeleting the template we have stored...ID = " + str(template_id)
         dresp, dbody = self.orchestration_client.delete_template(template_id, region)
         self.assertEqual('200', dresp['status'], "Response to delete should be 200")
-        print "Template deleted?"
+        print "Template deleted?" + "\n\nMaking sure a GET on the deleted template fails...ID = " + str(template_id)
 
         #verify non-existence
-        print "\nMaking sure a GET on the deleted template fails...ID = " + str(template_id)
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('404', gresp['status'], "Template should not exist after deletion")
         print "GET failed like it should."
