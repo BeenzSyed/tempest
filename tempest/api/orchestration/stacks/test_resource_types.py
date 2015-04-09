@@ -66,13 +66,20 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def verify_resources(self, resources_returned):
         resources_expected = {}
-        resource_list = ["AWS::EC2::Instance", "Rackspace::RackConnect::PublicIP", "Rackspace::CloudMonitoring::Entity", "OS::Heat::SoftwareDeployment", "OS::Heat::SwiftSignal", "OS::Heat::ChefSolo", "Rackspace::Cloud::WinServer", "Rackspace::RackConnect::PoolNode", "OS::Heat::SoftwareDeployments", "AWS::CloudFormation::WaitConditionHandle", "OS::Cinder::VolumeAttachment", "OS::Trove::Instance", "OS::Heat::CloudConfig", "DockerInc::Docker::Container", "OS::Cinder::Volume", "OS::Heat::SoftwareConfig", "Rackspace::CloudMonitoring::AgentToken", "Rackspace::Cloud::LoadBalancer", "AWS::CloudFormation::WaitCondition", "Rackspace::CloudMonitoring::Alarm", "OS::Heat::SwiftSignalHandle", "OS::Neutron::Port", "OS::Heat::RandomString", "OS::Nova::KeyPair", "OS::Heat::MultipartMime", "OS::Nova::Server", "OS::Neutron::Net", "Rackspace::Cloud::ChefSolo", "Rackspace::AutoScale::WebHook", "Rackspace::CloudMonitoring::Notification", "Rackspace::Cloud::DNS", "Rackspace::Cloud::Network", "OS::Swift::Container", "Rackspace::Cloud::Server", "OS::Zaqar::Queue", "OS::Heat::Stack", "OS::Heat::ResourceGroup", "Rackspace::CloudMonitoring::Check", "Rackspace::CloudMonitoring::NotificationPlan", "OS::Neutron::Subnet", "Rackspace::CloudMonitoring::PlanNotifications", "Rackspace::AutoScale::ScalingPolicy", "AWS::ElasticLoadBalancing::LoadBalancer", "Rackspace::AutoScale::Group"]
+        resource_list = ['Rackspace::Cloud::BackupConfig', "AWS::EC2::Instance", "Rackspace::RackConnect::PublicIP", "Rackspace::CloudMonitoring::Entity", "OS::Heat::SoftwareDeployment", "OS::Heat::SwiftSignal", "OS::Heat::ChefSolo", "Rackspace::Cloud::WinServer", "Rackspace::RackConnect::PoolNode", "OS::Heat::SoftwareDeployments", "AWS::CloudFormation::WaitConditionHandle", "OS::Cinder::VolumeAttachment", "OS::Trove::Instance", "OS::Heat::CloudConfig", "DockerInc::Docker::Container", "OS::Cinder::Volume", "OS::Heat::SoftwareConfig", "Rackspace::CloudMonitoring::AgentToken", "Rackspace::Cloud::LoadBalancer", "AWS::CloudFormation::WaitCondition", "Rackspace::CloudMonitoring::Alarm", "OS::Heat::SwiftSignalHandle", "OS::Neutron::Port", "OS::Heat::RandomString", "OS::Nova::KeyPair", "OS::Heat::MultipartMime", "OS::Nova::Server", "OS::Neutron::Net", "Rackspace::Cloud::ChefSolo", "Rackspace::AutoScale::WebHook", "Rackspace::CloudMonitoring::Notification", "Rackspace::Cloud::DNS", "Rackspace::Cloud::Network", "OS::Swift::Container", "Rackspace::Cloud::Server", "OS::Zaqar::Queue", "OS::Heat::Stack", "OS::Heat::ResourceGroup", "Rackspace::CloudMonitoring::Check", "Rackspace::CloudMonitoring::NotificationPlan", "OS::Neutron::Subnet", "Rackspace::CloudMonitoring::PlanNotifications", "Rackspace::AutoScale::ScalingPolicy", "AWS::ElasticLoadBalancing::LoadBalancer", "Rackspace::AutoScale::Group"]
         resources_expected["resource_types"] = resource_list
         print "Comparing list returned and expected list"
-
-        self.assertEqual(resources_returned, resources_expected, "Expected resource type list does not match what we get.")
+        resources_returned['resource_types'] = sorted(resources_returned['resource_types'])
+        resources_expected['resource_types'] = sorted(resources_expected['resource_types'])
+        if (resources_returned['resource_types'] != resources_expected['resource_types']):
+            list_diff_1 = [item for item in resources_expected["resource_types"] if item not in resources_returned['resource_types']]
+            list_diff_2 = [item for item in resources_returned['resource_types'] if item not in resources_expected["resource_types"]]
+            print "Difference in lists: \n"
+            print "Items in test list that aren't in actual list: " + str(list_diff_1)
+            print "Items in actual list that aren't in test list: " + str(list_diff_2)
+        self.assertEqual(resources_returned['resource_types'], resources_expected["resource_types"], "Expected resource type list does not match what we get.")
         resources_returned['eric'] = 'Eric'
-        self.assertNotEqual(resources_returned, resources_expected, "Make sure things don't have false positives")
+        self.assertNotEqual(resources_returned['resource_types'], resources_expected, "Make sure things don't have false positives")
 
     def get_resource_types(self):
         url = "resource_types"
