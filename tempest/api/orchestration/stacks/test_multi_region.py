@@ -21,7 +21,6 @@ import yaml
 import time
 import os
 import re
-import pdb
 import requests
 from testconfig import config
 import paramiko
@@ -72,11 +71,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #global global_pf
 
         regionsConfig = self.config.orchestration['regions']
+        regionsCheck = regionsConfig.split(",")
 
-
-        #regions = ['DFW', 'ORD', 'IAD', 'SYD', 'HKG']
-        regions = regionsConfig.split(",")
-        #regions = regions_temp.split(",")
+        regions = ['DFW', 'ORD', 'IAD', 'SYD']
         for region in regions:
 
             respbi, bodybi = self.orchestration_client.get_build_info(region)
@@ -102,7 +99,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 should_restart = True
                 while should_restart:
                     resp, body = self.get_stack(stack_id, region)
-                    #pdb.set_trace()
                     global global_pf
 
                     if body['stack_status'] == 'CREATE_IN_PROGRESS' and count < 90:
@@ -138,7 +134,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                 print "Base stack %s for multi-region does not exist" % stack_name
                                 global_pf += 1
 
-                            for reg in regions:
+                            for reg in regionsCheck:
                                 regssresp, regssbody = self.orchestration_client.list_stacks(str(reg))
                                 stack_name_reg = str(stack_name) + "-" + str(reg) + "_stack-"
 
