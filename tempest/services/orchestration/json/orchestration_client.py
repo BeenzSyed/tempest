@@ -159,7 +159,6 @@ class OrchestrationClient(rest_client.RestClient):
         # Password must be provided on stack create so that heat
         # can perform future operations on behalf of the user
         headers = dict(self.headers)
-        headers['X-Auth-Key'] = self.password
         headers['X-Auth-User'] = self.user
         return headers, body
 
@@ -193,7 +192,6 @@ class OrchestrationClient(rest_client.RestClient):
         # Password must be provided on stack create so that heat
         # can perform future operations on behalf of the user
         headers = dict(self.headers)
-        headers['X-Auth-Key'] = self.password
         headers['X-Auth-User'] = self.user
         return headers, body
 
@@ -443,7 +441,6 @@ class OrchestrationClient(rest_client.RestClient):
         url = "templates"
         headers = {}
         headers['X-Auth-User'] = self.user
-        headers['X-Auth-Key'] = self.password
         resp, body = self.get(url, region, headers=headers)
         if resp['status'] == '200':
             body = json.loads(body)
@@ -501,7 +498,6 @@ class OrchestrationClient(rest_client.RestClient):
         body = json.dumps(post_body, default=datehandler)
         #print "This is the Request Body: %s" % body
         headers = dict(self.headers)
-        headers['X-Auth-Key'] = self.password
         headers['X-Auth-User'] = self.user
         return headers, body
 
@@ -580,7 +576,6 @@ class OrchestrationClient(rest_client.RestClient):
         url = str(container) + "/" + str(template_id)
         headers = {}
         headers['X-Auth-User'] = self.user
-        headers['X-Auth-Key'] = self.password
         resp, body = self.get(url, region, headers)
 
         if resp['status'] == '200':
