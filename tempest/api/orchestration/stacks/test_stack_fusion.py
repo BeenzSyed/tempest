@@ -17,10 +17,6 @@ from tempest.api.orchestration import base
 from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
 import yaml
-import ipdb
-import json
-import ast
-import requests
 
 LOG = logging.getLogger(__name__)
 

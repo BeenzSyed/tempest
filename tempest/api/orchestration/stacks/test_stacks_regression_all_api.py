@@ -22,7 +22,6 @@ import datetime
 import re
 from testconfig import config
 from httplib import BadStatusLine
-import ipdb
 
 
 LOG = logging.getLogger(__name__)
