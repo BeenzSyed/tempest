@@ -22,6 +22,7 @@ import datetime
 import re
 from testconfig import config
 from httplib import BadStatusLine
+import ipdb
 
 
 LOG = logging.getLogger(__name__)
@@ -279,6 +280,30 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 region, yaml_template, parameters)
             self._check_resp(tvresp, tvbody, apiname)
 
+
+            #--------- Fusion -----------------
+            # Get template catalog
+            apiname = "fusion template catalog"
+            tcresp, tcbody = self.orchestration_client.get_template_catalog(region)
+            self._check_resp(tcresp, tcbody, apiname)
+
+            # Get single template from catalog
+            apiname = "fusion single template"
+            template_id = "wordpress-single"
+            tsresp, tsbody = self.orchestration_client.get_single_template(template_id, region)
+            self._check_resp(tsresp, tsbody, apiname)
+
+            # Get template catalog with metadata
+            apiname = "fusion template catalog metadata"
+            cmresp, cmbody = self.orchestration_client.get_template_catalog_with_metadata(region)
+            self._check_resp(cmresp, cmbody, apiname)
+
+            # Get single template catalog with metadata
+            apiname = "fusion single catalog metadata"
+            template_id = "wordpress-single"
+            smresp, smbody = self.orchestration_client.get_single_template_with_metadata(template_id, region)
+            self._check_resp(smresp, smbody, apiname)
+
         if updateStackName == 0:
             print "Create a stack named UPDATE_123 so that I can verify " \
                   "more api calls"
@@ -331,9 +356,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #                                                        body)
 
     def _get_stacks(self, typestack, body, region):
+
         for stackname in body:
             match = re.search(typestack + '_*', stackname['stack_name'])
-            if match:
+            if match and (stackname['stack_status'] not in
+                ['CREATE_IN_PROGRESS', 'ADOPT_FAILED',
+                               'ADOPT_IN_PROGRESS', 'DELETE_FAILED']):
                 #print stackname
                 ssresp, ssbody = self.orchestration_client.show_stack(
                     stackname['stack_name'], stackname['id'], region)

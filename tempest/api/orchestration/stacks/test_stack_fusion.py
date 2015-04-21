@@ -17,6 +17,7 @@ from tempest.api.orchestration import base
 from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
 import yaml
+import ipdb
 import json
 import ast
 import requests
@@ -105,43 +106,44 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             self.assertIn('template_id', body['stack'])
         dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
 
-    # def test_create_stack_with_supported_template(self):
-    #     # Unsupported Template with flag as False
-    #     region = "DFW"
-    #     resp, body = self.orchestration_client.get_template_catalog(region)
-    #     for template in body['templates']:
-    #          if template['id'] == "wordpress-single":
-    #              yaml_template = template
-    #              yaml_template.pop("version", None)
-    #              yaml_template.pop("id", None)
-    #              yaml_template.pop("metadata", None)
-    #              parameters={}
-    #              # parameters= {"ssh_keypair_name": "foo",
-    #              #          "ssh_sync_keypair_name": "foo"}
-    #              break
-    #
-    #     stack_name = rand_name("Fusion_")
-    #     resp, body = self.orchestration_client.create_stack_fusion(stack_name,
-    #                                                                region,
-    #                                           template_id = None,
-    #                                           template = yaml.safe_dump(
-    #                                               yaml_template),
-    #                                           parameters=parameters)
-    #     self.assertEqual(resp['status'], '200', "expected response was 201 "
-    #                                         "but actual was %s"%resp['status'])
-    #     stack_identifier = body['stack']['id']
-    #     if resp['status'] == '200':
-    #         stack_id = body['stack']['id']
-    #         url = "stacks/%s/%s?with_support_info=1"%(stack_name,stack_id)
-    #         resp, body = self.orchestration_client.get_stack_info_for_fusion(
-    #             url, region)
-    #         self.assertEqual(body['stack']['rackspace_template'], False,)
-    #         self.assertEqual(body['stack']['application_name'],\
-    #                                       ('(Not Specified)'),
-    #                          "Expected was not specified but has "
-    #                          "application name")
-    #         self.assertNotIn('template_id', body['stack'])
-    #     dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
+    def test_create_stack_with_supported_template(self):
+        # Unsupported Template with flag as False
+        region = "DFW"
+        resp, body = self.orchestration_client.get_template_catalog(region)
+        for template in body['templates']:
+             if template['id'] == "wordpress-single":
+                 yaml_template = template
+                 yaml_template.pop("version", None)
+                 yaml_template.pop("id", None)
+                 yaml_template.pop("metadata", None)
+                 parameters={}
+                 # parameters= {"ssh_keypair_name": "foo",
+                 #          "ssh_sync_keypair_name": "foo"}
+                 break
+
+        stack_name = rand_name("Fusion_")
+        resp, body = self.orchestration_client.create_stack_fusion(stack_name,
+                                                                   region,
+                                              template_id = None,
+                                              template = yaml.safe_dump(
+                                                  yaml_template),
+                                              parameters=parameters)
+        self.assertIn(resp['status'], ['200', '201'])
+        # self.assertEqual(resp['status'], '200', "expected response was 201 "
+        #                                     "but actual was %s"%resp['status'])
+        stack_identifier = body['stack']['id']
+        if resp['status'] == '200':
+            stack_id = body['stack']['id']
+            url = "stacks/%s/%s?with_support_info=1"%(stack_name,stack_id)
+            resp, body = self.orchestration_client.get_stack_info_for_fusion(
+                url, region)
+            self.assertEqual(body['stack']['rackspace_template'], False,)
+            self.assertEqual(body['stack']['application_name'],\
+                                          ('(Not Specified)'),
+                             "Expected was not specified but has "
+                             "application name")
+            self.assertNotIn('template_id', body['stack'])
+        dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
 
     def test_stack_show_call(self):
         region = "DFW"
@@ -190,9 +192,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp, body = self.orchestration_client.get_stack_info_for_fusion(
                 url, region)
 
-        print resp
-        print body
-
         for stack in body['stacks']:
             if 'rackspace_template' in stack:
                 if stack['rackspace_template']==False:
@@ -236,7 +235,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_stack_update(self):
         template_id = "wordpress-single"
         region = "QA"
-        parameters={}
+        parameters = {}
         # parameters= {"ssh_keypair_name": "OMG",
         #              "ssh_sync_keypair_name": "OMG"}
         stack_name =rand_name("fusion_test_"+template_id+region)
@@ -277,6 +276,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                             region)
 
     def test_templates_in_fusion(self):
+        '''todo: Add a call to Swift'''
         region = "DFW"
         template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
         new_template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
@@ -285,20 +285,18 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print "\nGot template catalog from fusion\n\nStoring a template in fusion to test storage"
 
         parameters = {}
-        # parameters= {"ssh_keypair_name": "foo",
-        #             "ssh_sync_keypair_name": "foo"}
         stack_name = rand_name("fusion_"+region)
         resp, body = self.orchestration_client.store_stack_fusion(
             stack_name, region, template=template, parameters=parameters)
-        self.assertEqual(resp['status'], '201', "expected response was 201 "
-                                            "but actual was %s"%resp['status'])
+        self.assertIn(resp['status'], ['200', '201'])
         template_id = body['template_id']
         print "Template stored. ID = " + str(template_id) + "\n\nGetting the template we just stored...ID = " + str(template_id)
 
         #verify existence and contents:
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('200', gresp['status'], "Response to get should be 200")
-        self.comp_stored_template(template, gbody)
+        self.assertEqual(template, gbody['template'], "Template we sent should equal the one we get back")
+        #self.comp_stored_template(template, gbody)
         print "Got template and it was the same" + "\n\nUpdating the same template to test updating..ID = " + str(template_id)
 
         #testing PUT on an existing template (the one we added with POST) and check status code
@@ -307,7 +305,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
         self.assertEqual('200', gresp['status'], "Response to get should be 200")
         print "The update request was successful, and the template still exists after update."
-        self.comp_stored_template(new_template, gbody)
+        self.assertEqual(new_template, gbody['template'], "Template we sent should equal the one we get back")
+        #self.comp_stored_template(new_template, gbody)
         print "The changes to the template have happened correctly." "\n\nDeleting the template we have stored...ID = " + str(template_id)
 
         #deleting the template we added to fusion earlier and check status code
@@ -324,7 +323,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         actual_template = template_from_get['template']
         del actual_template['id']
         del actual_template['metadata']
-
         self.assertEqual(template_sent, actual_template, "Template we sent should equal the one we get back")
         template_sent['eric'] = 'Eric'
         self.assertNotEqual(template_sent, actual_template, "Make sure things don't have false positives")
