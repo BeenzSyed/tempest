@@ -487,6 +487,7 @@ class OrchestrationClient(rest_client.RestClient):
                                           template_id=None,
                                           template={}):
         post_body = {
+            "stack_name": name,
             "parameters": parameters,
             "timeout_mins": "120"
         }
