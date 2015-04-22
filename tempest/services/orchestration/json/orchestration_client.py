@@ -487,9 +487,7 @@ class OrchestrationClient(rest_client.RestClient):
                                           template_id=None,
                                           template={}):
         post_body = {
-            "stack_name": name,
             "parameters": parameters,
-            "disable_rollback": True,
             "timeout_mins": "120"
         }
         if template_id:
@@ -500,6 +498,7 @@ class OrchestrationClient(rest_client.RestClient):
         #print "This is the Request Body: %s" % body
         headers = dict(self.headers)
         headers['X-Auth-User'] = self.user
+        headers['X-Auth-Token'] = self.token
         return headers, body
 
     def create_stack_fusion(self, name, region, template_id=None, template={},
