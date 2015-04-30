@@ -20,7 +20,6 @@ import json
 from lxml import etree
 import re
 import time
-import pdb
 from urlparse import urlparse
 
 from tempest.common import http
@@ -177,7 +176,6 @@ class RestClient(object):
     def keystone_auth_urls(self, user, password, auth_url, service, tenant_name,
                       region):
         #urls that need to go to the catalog to get endpoints
-        #pdb.set_trace()
         if re.search('http://auth.staging.rs-heat.com*', auth_url) or re.search('https://identity.api.rackspacecloud.com*', auth_url):
             if 'tokens' not in auth_url:
                 auth_url = auth_url.rstrip('/') + '/tokens'

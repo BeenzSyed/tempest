@@ -263,7 +263,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         if 'image_id' in yaml_template['parameters'] and image=="centos":
             parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
         if 'flavor' in yaml_template['parameters']:
-            parameters['flavor'] = "1 GB General Purpose v1"
+            #parameters['flavor'] = "1 GB General Purpose v1"
+            parameters['flavor'] = "4GB Standard Instance"
         if 'domain_name' in yaml_template['parameters']:
             parameters['domain_name'] = domain
         if (region == 'HKG' or region == 'SYD') and 'devops_flavor' in yaml_template['parameters']:
@@ -420,6 +421,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_dns = "Rackspace::Cloud::DNS"
         resource_randomstr = "OS::Heat::RandomString"
         resource_grp = 'OS::Heat::ResourceGroup'
+        resource_winserver = 'Rackspace::Cloud::WinServer'
+        resource_backup = 'Rackspace::Cloud::BackupConfig'
 
         if region == 'QA' or region == 'Dev' or region == 'Staging':
             region = 'dfw'
@@ -431,6 +434,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 server_id = value
                 resp, body = self.servers_client.get_server(server_id, region)
                 self._check_status_for_resource(resp['status'], resource_server)
+
+            elif resource == resource_winserver:
+                server_id = value
+                resp, body = self.servers_client.get_server(server_id, region)
+                self._check_status_for_resource(resp['status'], resource_winserver)
 
             elif resource == resource_network:
                 network_id = value
@@ -480,6 +488,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 else:
                         print "%s is down." % resource_dns
 
+            elif resource == resource_backup:
+                agent_id = value
+                resp, body = self.backup_client.list_backup_config(agent_id, region)
+                if resp['status'] == ('200'):
+                    print "%s is up." % resource_backup
+
             elif resource == resource_randomstr:
                     random_str = value
                     if random_str!=None:
@@ -516,7 +530,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resource_grp = 'OS::Heat::ResourceGroup'
         resource_vol_attach = "OS::Cinder::VolumeAttachment"
         resource_dns = "Rackspace::Cloud::DNS"
-        resp, body = self.orchestration_client.list_resources(stack_name,stack_id, region)
+        resource_backup = "Rackspace::Cloud::BackupConfig"
+        resource_winserver = "Rackspace::Cloud::WinServer"
+        resp, body = self.orchestration_client.list_resources(stack_name, stack_id, region)
         if resp['status'] == '200':
             for resource in body:
                 if resource['resource_type'] == resource_server:
@@ -538,5 +554,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 if resource['resource_type'] == resource_randomstr:
                     resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
                 if resource['resource_type'] == resource_grp:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] == resource_backup:
+                    resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
+                if resource['resource_type'] == resource_winserver:
                     resource_ids.update({resource['resource_type']:resource['physical_resource_id']})
         return resource_ids

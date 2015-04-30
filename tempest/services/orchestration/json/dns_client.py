@@ -1,7 +1,6 @@
 __author__ = 'sabe6191'
 
 import json
-import datetime
 
 from tempest.common import rest_client
 
@@ -22,10 +21,3 @@ class DnsClient(rest_client.RestClient):
         if resp['status'] == ('200'):
             body = json.loads(body)
         return resp, body
-
-def datehandler(obj):
-    if isinstance(obj, datetime.date):
-        return str(obj)
-    else:
-        raise TypeError, 'Object of type %s with value of %s is not ' \
-                         'JSON serializable' % (type(obj), repr(obj))

@@ -703,6 +703,25 @@ DnsGroup = [
                     "one is used.")
 ]
 
+backup_group = cfg.OptGroup(name='backup',
+                                   title='Backup Options')
+
+BackupGroup = [
+
+    cfg.StrOpt('catalog_type',
+               default='rax:backup',
+               help="Catalog type of the dns."),
+    cfg.StrOpt('url',
+               default=None,
+               help="for backup url"),
+    cfg.StrOpt('region',
+               default='STAGING',
+               help="The orchestration region name to use. If empty, the "
+                    "value of identity.region is used instead. If no such "
+                    "region is found in the service catalog, the first found "
+                    "one is used.")
+]
+
 loadbalancer_group = cfg.OptGroup(name='loadbalancer', title='loadbalancer '
                                                              'test option ')
 
@@ -832,6 +851,7 @@ class TempestConfigPrivate(object):
                            ServiceAvailableGroup)
         register_opt_group(cfg.CONF, debug_group, DebugGroup)
         register_opt_group(cfg.CONF, dns_group, DnsGroup)
+        register_opt_group(cfg.CONF, backup_group, BackupGroup)
         register_opt_group(cfg.CONF, baremetal_group, BaremetalGroup)
         register_opt_group(cfg.CONF, input_scenario_group, InputScenarioGroup)
         register_opt_group(cfg.CONF, database_group, DatabaseGroup)
@@ -865,6 +885,7 @@ class TempestConfigPrivate(object):
         self.service_available = cfg.CONF.service_available
         self.debug = cfg.CONF.debug
         self.dns = cfg.CONF.dns
+        self.backup = cfg.CONF.backup
         self.baremetal = cfg.CONF.baremetal
         self.input_scenario = cfg.CONF['input-scenario']
 
