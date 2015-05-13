@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-import pdb
 import json
 from tempest import clients
 from tempest.common.utils import data_utils
@@ -84,11 +82,6 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
 
     @classmethod
     def create_stack(cls, stack_name, region, template_data, parameters={}):
-        # parameters = {
-        # #     'InstanceType': self.orchestration_cfg.instance_type,
-        # #     'ImageId': self.orchestration_cfg.image_ref,
-        #     'key_name': "sabeen"
-        # }
         resp, body = cls.client.create_stack(
             stack_name,
             region,
@@ -108,19 +101,12 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
 
     @classmethod
     def adopt_stack(cls, stack_name, region, stack_adopt_data, template_data, parameters={}):
-        # parameters = {
-        # #     'InstanceType': self.orchestration_cfg.instance_type,
-        # #     'ImageId': self.orchestration_cfg.image_ref,
-        #     'key_name': "sabeen"
-        # }
         resp, body = cls.client.adopt_stack(
             stack_name,
             region,
             stack_adopt_data,
-            #template_url='https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template',
             template=template_data,
             parameters=parameters)
-        #print "resp is %s" % resp
         if (resp['status'] == '200' or resp['status'] == '201'):
             stack_id = resp['location'].split('/')[-1]
             stack_identifier = '%s/%s' % (stack_name, stack_id)
