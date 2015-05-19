@@ -114,7 +114,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 count = 0
                 retry = 0
 
-                #pdb.set_trace()
                 should_restart = True
                 while should_restart:
                     resp, body = self.get_stack(stack_id, region)
@@ -201,18 +200,19 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                     #self._ssh_call(output)
 
                             #Checking stack outputs
-                            print "Checking stack outputs."
-                            template_outputs = yaml_template['outputs']
-                            for temp_output in template_outputs:
-                                output_exists = 0
-                                for output in body['outputs']:
-                                    if temp_output == output['output_key']:
-                                        print "Output %s exists" % temp_output
-                                        output_exists = 1
-                                        break
-                                if output_exists == 0:
-                                    print "Output %s does not exist" % temp_output
-                                    global_pf += 1
+                            if 'outputs' in yaml_template:
+                                print "Checking stack outputs."
+                                template_outputs = yaml_template['outputs']
+                                for temp_output in template_outputs:
+                                    output_exists = 0
+                                    for output in body['outputs']:
+                                        if temp_output == output['output_key']:
+                                            print "Output %s exists" % temp_output
+                                            output_exists = 1
+                                            break
+                                    if output_exists == 0:
+                                        print "Output %s does not exist" % temp_output
+                                        global_pf += 1
 
                             #update stack
                             self._update_stack(stack_id, stack_name, region, params, yaml_template)
