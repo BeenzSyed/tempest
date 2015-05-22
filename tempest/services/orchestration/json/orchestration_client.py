@@ -55,7 +55,7 @@ class OrchestrationClient(rest_client.RestClient):
         #     uri += '?%s?GLOBAL_TENANT=1' % urllib.urlencode(params)
         # print uri
 
-        url = "stacks?global_tenant=1"
+        url = "stacks?global_tenant=True"
         resp, body = self.get(url, region)
         if resp['status'] == '200':
             body = json.loads(body)

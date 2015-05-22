@@ -145,20 +145,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 else:
                     print "Management api is not working. Stack list gives back %s stacks and the management api gives back %s stacks." % (numstacks, numstacksmgmt)
                     self.fail("Management api is not working.")
-            elif slrespm['status'] == '403':
+            elif re.search('40*', slrespm['status']):
                 print "%s does not have access. Error: %s" % (usertype, stacklistm)
+                self.fail("Heatdev is a superuser and should have access.")
         else:
-            if slrespm['status'] == '403':
+            if re.search('40*', slrespm['status']):
                 print "%s is not a superuser and does not have access." % (usertype)
             else:
                 print "%s is not a superuser and has access." % (usertype)
                 self.fail("Something is wrong! A normal user has superuser access.")
-
-            # if (numstacksmgmt == numstacks):
-            #     print "The user %s is not a super user. Stack list gives back %s stacks and the management api gives back %s stacks." %(usertype, numstacks, numstacksmgmt)
-            # else:
-            #     print "Something is wrong. The user %s is not a super user. Stack list gives back %s stacks and the management api gives back %s stacks." %(usertype, numstacks, numstacksmgmt)
-            #     self.fail("Management api is not working.")
 
     def _get_stacks(self, typestack, body):
         for stackname in body:
