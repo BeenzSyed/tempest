@@ -263,8 +263,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         if 'image_id' in yaml_template['parameters'] and image=="centos":
             parameters['image_id'] = "ea8fdf8a-c0e4-4a1f-b17f-f5a421cda051"
         if 'flavor' in yaml_template['parameters']:
-            #parameters['flavor'] = "1 GB General Purpose v1"
             parameters['flavor'] = "4GB Standard Instance"
+            if template == 'lamp':
+                parameters['flavor'] = "1 GB General Purpose v1"
         if 'domain_name' in yaml_template['parameters']:
             parameters['domain_name'] = domain
         if (region == 'HKG' or region == 'SYD') and 'devops_flavor' in yaml_template['parameters']:
