@@ -415,9 +415,6 @@ class OrchestrationClient(rest_client.RestClient):
 
         """Returns the template_catalog from fusion."""
         url = "templates"
-        #headers = {}
-        #headers['X-Auth-User'] = self.user
-        #resp, body = self.get(url, region, headers=headers)
         resp, body = self.get(url, region)
         if resp['status'] == '200':
             body = json.loads(body)
@@ -446,6 +443,33 @@ class OrchestrationClient(rest_client.RestClient):
 
         """Returns the template from fusion for template_id."""
         url = "templates/%s?with_metadata=True" % template_id
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
+    def get_rax_templates(self, region):
+
+        """Returns only rackspace templates from fusion"""
+        url = "templates?templates_type=RAX"
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
+    def get_custom_templates(self, region):
+
+        """Returns only custom templates from fusion"""
+        url = "templates?templates_type=CUSTOM"
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
+    def get_all_templates(self, region):
+
+        """Returns all templates (Rax & Custom) from fusion"""
+        url = "templates?templates_type=ALL"
         resp, body = self.get(url, region)
         if resp['status'] == '200':
             body = json.loads(body)

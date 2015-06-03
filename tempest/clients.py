@@ -12,7 +12,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import pdb
 from tempest import config
 from tempest import exceptions
 from tempest.openstack.common import log as logging
@@ -190,6 +189,7 @@ from tempest.services.database.json.flavors_client import \
     DatabaseFlavorsClientJSON
 from tempest.services.orchestration.json.dns_client import DnsClient
 from tempest.services.orchestration.json.backup_client import BackupClient
+from tempest.services.orchestration.json.swift_client import SwiftClient
 from tempest.services.loadbalancer.json.loadbalancer_client import  \
     Loadbalancerclient
 
@@ -559,6 +559,7 @@ class Manager(object):
         self.dns_client = DnsClient(*client_args)
         self.loadbalancer_client = Loadbalancerclient(*client_args)
         self.backup_client = BackupClient(*client_args)
+        self.swift_client = SwiftClient(*client_args)
 
 
 class AltManager(Manager):
@@ -673,10 +674,27 @@ class BackupManager(object):
         self.tenant_name = tenant_name or self.config.identity.tenant_name
         self.auth_url = self.config.identity.uri
         self.token_url = self.config.identity.uri_token
-        #self.backup = self.config.backup.url
         client_args = (self.config, self.username, self.password,
                        self.auth_url, self.token_url, self.tenant_name)
         self.backup_client = BackupClient(*client_args)
+
+class SwiftManager(object):
+    """
+    Swift Manager
+    """
+    def __init__(self,
+                 username=None,
+                 password=None,
+                 tenant_name=None):
+        self.config = config.TempestConfigPrivate()
+        self.username = username or self.config.identity.username
+        self.password = password or self.config.identity.password
+        self.tenant_name = tenant_name or self.config.identity.tenant_name
+        self.auth_url = self.config.identity.uri
+        self.token_url = self.config.identity.uri_token
+        client_args = (self.config, self.username, self.password,
+                       self.auth_url, self.token_url, self.tenant_name)
+        self.swift_client = SwiftClient(*client_args)
 
 class DatabaseManager(object):
     """

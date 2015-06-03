@@ -31,6 +31,8 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         cls.dns = dns
         backup = clients.BackupManager()
         cls.backup = backup
+        swift = clients.SwiftManager()
+        cls.swift = swift
 
         os = clients.OrchestrationManager()
         cls.orchestration_cfg = os.config.orchestration
@@ -48,6 +50,7 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         cls.database_client = os.database_client
         cls.dns_client = dns.dns_client
         cls.backup_client = backup.backup_client
+        cls.swift_client = swift.swift_client
         cls.loadbalancer_client = os.loadbalancer_client
         cls.stacks = []
         cls.keypairs = []
