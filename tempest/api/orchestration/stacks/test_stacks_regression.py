@@ -129,6 +129,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         stack_name = rand_name("qe_"+template+region)
                         domain = "iloveheat%s.com" %datetime.now().microsecond
                         params = self._set_parameters(yaml_template, template, region, image, domain)
+                        import ipdb
+                        ipdb.set_trace()
                         csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
                         if stack_identifier == 0:
                             print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
