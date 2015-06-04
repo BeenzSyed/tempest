@@ -17,7 +17,6 @@ from tempest.api.orchestration import base
 from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
 import yaml
-import ipdb
 
 
 LOG = logging.getLogger(__name__)
@@ -298,13 +297,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         template_id = body['template_id']
         print "Template stored. ID = " + str(template_id) + "\n\nGetting the template we just stored...ID = " + str(template_id)
 
-        #check swift
-        ipdb.set_trace()
-        resp, body = self.swift_client.list_swift_object(
-            storage_id=template_id,
-            region=region)
-        if resp['status'] == ('200'):
-            print "Swift has the template."
+        # #check swift
+        # ipdb.set_trace()
+        # resp, body = self.swift_client.list_auth_swift_object(
+        #     storage_id=template_id,
+        #     region=region)
+        # if resp['status'] == ('200'):
+        #     print "Swift has the template."
 
         #verify existence and contents:
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
