@@ -13,21 +13,9 @@
 #    under the License.
 
 from tempest.api.orchestration import base
-from tempest.common.utils.data_utils import rand_name
 from tempest.openstack.common import log as logging
-from datetime import datetime
 from tempest.test import attr
-import yaml
-import json
-import time
 import os
-import re
-import pdb
-import requests
-from testconfig import config
-import paramiko
-from urlparse import urlparse
-from tempest.common import rest_client
 import ast
 
 
@@ -56,7 +44,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         account = self.config.identity['username']
 
         #get the resource list
-
         resp, body = self.get_resource_types()
         body = ast.literal_eval(body)
 
@@ -66,7 +53,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def verify_resources(self, resources_returned):
         resources_expected = {}
-        resource_list = ['Rackspace::Cloud::BackupConfig', "AWS::EC2::Instance", "Rackspace::RackConnect::PublicIP", "Rackspace::CloudMonitoring::Entity", "OS::Heat::SoftwareDeployment", "OS::Heat::SwiftSignal", "OS::Heat::ChefSolo", "Rackspace::Cloud::WinServer", "Rackspace::RackConnect::PoolNode", "OS::Heat::SoftwareDeployments", "AWS::CloudFormation::WaitConditionHandle", "OS::Cinder::VolumeAttachment", "OS::Trove::Instance", "OS::Heat::CloudConfig", "DockerInc::Docker::Container", "OS::Cinder::Volume", "OS::Heat::SoftwareConfig", "Rackspace::CloudMonitoring::AgentToken", "Rackspace::Cloud::LoadBalancer", "AWS::CloudFormation::WaitCondition", "Rackspace::CloudMonitoring::Alarm", "OS::Heat::SwiftSignalHandle", "OS::Neutron::Port", "OS::Heat::RandomString", "OS::Nova::KeyPair", "OS::Heat::MultipartMime", "OS::Nova::Server", "OS::Neutron::Net", "Rackspace::Cloud::ChefSolo", "Rackspace::AutoScale::WebHook", "Rackspace::CloudMonitoring::Notification", "Rackspace::Cloud::DNS", "Rackspace::Cloud::Network", "OS::Swift::Container", "Rackspace::Cloud::Server", "OS::Zaqar::Queue", "OS::Heat::Stack", "OS::Heat::ResourceGroup", "Rackspace::CloudMonitoring::Check", "Rackspace::CloudMonitoring::NotificationPlan", "OS::Neutron::Subnet", "Rackspace::CloudMonitoring::PlanNotifications", "Rackspace::AutoScale::ScalingPolicy", "AWS::ElasticLoadBalancing::LoadBalancer", "Rackspace::AutoScale::Group", "OS::Heat::SoftwareDeploymentGroup"]
+        resource_list = ['Rackspace::Cloud::BackupConfig', "AWS::EC2::Instance", "Rackspace::RackConnect::PublicIP", "Rackspace::CloudMonitoring::Entity", "OS::Heat::SoftwareDeployment", "OS::Heat::SwiftSignal", "OS::Heat::ChefSolo", "Rackspace::Cloud::WinServer", "Rackspace::RackConnect::PoolNode", "OS::Heat::SoftwareDeployments", "AWS::CloudFormation::WaitConditionHandle", "OS::Cinder::VolumeAttachment", "OS::Trove::Instance", "OS::Heat::CloudConfig", "DockerInc::Docker::Container", "OS::Cinder::Volume", "OS::Heat::SoftwareConfig", "Rackspace::CloudMonitoring::AgentToken", "Rackspace::Cloud::LoadBalancer", "AWS::CloudFormation::WaitCondition", "Rackspace::CloudMonitoring::Alarm", "OS::Heat::SwiftSignalHandle", "OS::Neutron::Port", "OS::Heat::RandomString", "OS::Nova::KeyPair", "OS::Heat::MultipartMime", "OS::Nova::Server", "OS::Neutron::Net", "Rackspace::Cloud::ChefSolo", "Rackspace::AutoScale::WebHook", "Rackspace::CloudMonitoring::Notification", "Rackspace::Cloud::DNS", "Rackspace::Cloud::Network", "OS::Swift::Container", "Rackspace::Cloud::Server", "OS::Zaqar::Queue", "OS::Heat::Stack", "OS::Heat::ResourceGroup", "Rackspace::CloudMonitoring::Check", "Rackspace::CloudMonitoring::NotificationPlan", "OS::Neutron::Subnet", "Rackspace::CloudMonitoring::PlanNotifications", "Rackspace::AutoScale::ScalingPolicy", "AWS::ElasticLoadBalancing::LoadBalancer", "Rackspace::AutoScale::Group", "OS::Heat::SoftwareDeploymentGroup", "OS::Heat::SoftwareDeploymentGroup"]
         resources_expected["resource_types"] = resource_list
         print "Comparing list returned and expected list"
         resources_returned['resource_types'] = sorted(resources_returned['resource_types'])
@@ -93,5 +80,4 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             print resp['status']
             self.fail('Bad response from resource list')
             print "Something went wrong with the resource list"
-
         return resp, body
