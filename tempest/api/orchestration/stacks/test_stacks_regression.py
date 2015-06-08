@@ -176,9 +176,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             print "The deployment took %s minutes" % count
                             self._send_deploy_time_graphite(env, region, template, count, "buildtime")
 
-                            resource_dict = self._get_resource_id(stack_name, stack_id, region)
-                            print "Checking downstream api's to ensure resources are up."
-                            self._verify_resources(resource_dict, region, domain)
+                            # resource_dict = self._get_resource_id(stack_name, stack_id, region)
+                            # print "Checking downstream api's to ensure resources are up."
+                            # self._verify_resources(resource_dict, region, domain)
 
                             #for wordpress an http call is made to ensure it is up
                             resp, body = self.get_stack(stack_id, region)
@@ -433,6 +433,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             resource = key
             if resource == resource_server:
                 server_id = value
+                import ipdb
+                ipdb.set_trace()
                 resp, body = self.servers_client.get_server(server_id, region)
                 self._check_status_for_resource(resp['status'], resource_server)
 

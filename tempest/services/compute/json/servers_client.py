@@ -124,8 +124,8 @@ class ServersClientJSON(RestClient):
 
     def get_server(self, server_id , region):
         """Returns the details of an existing server."""
-        url = "https://%s.servers.api.rackspacecloud.com/v2/%s/servers/%s"%(region , self.tenant_name,server_id )
-        resp, body = self.get(url,region)
+        url = "https://%s.servers.api.rackspacecloud.com/v2/%s/servers/%s"%(region, self.tenant_name, server_id)
+        resp, body = self.get(url, region)
         if resp['status']=='200':
             body = json.loads(body)
         return resp, body
