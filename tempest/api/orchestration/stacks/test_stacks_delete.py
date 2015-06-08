@@ -70,12 +70,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         for region in regions:
             resp, stacks = self.client.list_stacks(region)
             #go through one stack at a time and delete
-            for stack in stacks:
-                if not (re.search('CREATE_*', stack['stack_name']) or re.search('ADOPT_*', stack['stack_name']) or re.search('UPDATE_*', stack['stack_name']) or re.search('DONOTDELETE*', stack['stack_name'])):
-                    print stack['stack_name']
-                    print stack['id']
-                    resp = self.client.delete_stack(stack['stack_name'], stack['id'], region)
-                    print resp
+            if resp['status'] == '200':
+                for stack in stacks:
+                    if not (re.search('CREATE_*', stack['stack_name']) or re.search('ADOPT_*', stack['stack_name']) or re.search('UPDATE_*', stack['stack_name']) or re.search('DONOTDELETE*', stack['stack_name'])):
+                        print stack['stack_name']
+                        print stack['id']
+                        resp = self.client.delete_stack(stack['stack_name'], stack['id'], region)
+                        print resp
 
     @attr(type='smoke')
     def test_stack_list(self):
