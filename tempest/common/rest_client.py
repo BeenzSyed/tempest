@@ -213,15 +213,15 @@ class RestClient(object):
                 raise exceptions.AuthenticationFailure(user=user,
                                                        password=password,tenant=tenant_name)
         #inactive node endpoints
-        elif re.search('https://inactive*', auth_url):
-            mgmt_url = []
-            url = auth_url.split(",")
-            num_elements = len(url)
-            for num in range(0, num_elements):
-                #get region from the url
-                reg = url[num].split(".")
-                mgmt_url.append({'region': reg[1], 'publicURL': url[num] + "/" + tenant_name})
-            return mgmt_url
+        # elif re.search('https://inactive.[a-z]{3}.*', auth_url):
+        #     mgmt_url = []
+        #     url = auth_url.split(",")
+        #     num_elements = len(url)
+        #     for num in range(0, num_elements):
+        #         #get region from the url
+        #         reg = url[num].split(".")
+        #         mgmt_url.append({'region': reg[1], 'publicURL': url[num] + "/" + tenant_name})
+        #     return mgmt_url
 
         #prod endpoints to run without hitting the catalog
         elif re.search('https://[a-z]{3}.orchestration.api.rackspacecloud.com*', auth_url):
