@@ -30,15 +30,20 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         super(StacksTestJSON, cls).setUpClass()
         cls.client = cls.orchestration_client
 
+    def test_buildinfo(self):
+        region = "IAD"
+        respbi, bodybi = self.orchestration_client.get_build_info(region)
+        print "\nThe build info is: %s\n" % bodybi
+
     def test_get_template_catalog(self):
-        region = "DFW"
+        region = "IAD"
         resp, body = self.orchestration_client.get_template_catalog\
                 (region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
     def test_get_rax_templates(self):
-        region = "DFW"
+        region = "IAD"
         resp, body = self.orchestration_client.get_all_templates(region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
@@ -54,17 +59,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                             "but actual was %s"%resp['status'])
 
     def test_get_template_catalog_with_metadata(self):
-        region = "DFW"
+        region = "IAD"
         resp, body = self.orchestration_client.\
             get_template_catalog_with_metadata(region=region)
         for template in body['templates']:
             if 'rackspace-metadata' in template:
-                print"Templates  %s have metadata" % template['id']
+                print"Templates %s have metadata" % template['id']
             else:
-                print "Templates  %s does not have metadata" % template['id']
+                print "Templates %s does not have metadata" % template['id']
 
     def test_get_single_template_with_metadata(self):
-        region = "DFW"
+        region = "IAD"
         template_id = "wordpress-single"
         resp, body = self.orchestration_client.\
             get_single_template_with_metadata(template_id=template_id,
@@ -75,7 +80,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             print "Test fail to get metadata of %s" % template_id
 
     def test_get_list_of_stacks(self):
-        region = "DFW"
+        region = "IAD"
         resp, body = self.orchestration_client.get_list_of_stacks_fusion\
                 (region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
@@ -88,7 +93,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #Use default
             template_id = "wordpress-single"
 
-        region = "DFW"
+        region = "IAD"
         parameters = {}
         # parameters= {"ssh_keypair_name": "foo",
         #             "ssh_sync_keypair_name": "foo"}
@@ -115,7 +120,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def test_create_stack_with_supported_template(self):
         # Unsupported Template with flag as False
-        region = "DFW"
+        region = "IAD"
         resp, body = self.orchestration_client.get_template_catalog(
             region=region)
         for template in body['templates']:
@@ -150,7 +155,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                          region=region)
 
     def test_stack_show_call(self):
-        region = "DFW"
+        region = "IAD"
         url = "stacks?with_support_info"
         resp, body = self.orchestration_client.get_stack_info_for_fusion(
                 url, region)
@@ -170,7 +175,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                      " no application name")
 
     def test_stack_show_call_with_details(self):
-        region = "DFW"
+        region = "IAD"
         url = "stacks/detail?with_support_info"
         resp, body = self.orchestration_client.get_stack_info_for_fusion(
                 url, region)
@@ -213,7 +218,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def test_stack_preview(self):
         template_id = "wordpress-single"
-        region = "DFW"
+        region = "IAD"
         parameters = {}
         # parameters= {"ssh_keypair_name": "foo",
         #             "ssh_sync_keypair_name": "foo"}
@@ -281,7 +286,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def test_templates_in_fusion(self):
         '''todo: Add a call to Swift'''
-        region = "DFW"
+        region = "IAD"
 
         template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
         new_template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}

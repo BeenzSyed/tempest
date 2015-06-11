@@ -477,7 +477,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 or apiname == 'schema for resource type':
                 if re.search('20*', resp['status']):
                     print "User %s for %s got %s " %(user, apiname, resp['status'])
-                elif re.search('405', resp['status']):
+                elif re.search('40*', resp['status']):
                     print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
                     self.fail_flag += 1
                 else:
