@@ -213,15 +213,15 @@ class RestClient(object):
                 raise exceptions.AuthenticationFailure(user=user,
                                                        password=password,tenant=tenant_name)
         #inactive node endpoints
-        # elif re.search('https://inactive.[a-z]{3}.*', auth_url):
-        #     mgmt_url = []
-        #     url = auth_url.split(",")
-        #     num_elements = len(url)
-        #     for num in range(0, num_elements):
-        #         #get region from the url
-        #         reg = url[num].split(".")
-        #         mgmt_url.append({'region': reg[1], 'publicURL': url[num] + "/" + tenant_name})
-        #     return mgmt_url
+        elif re.search('https://inactive.[a-z]{3}.*', auth_url):
+            mgmt_url = []
+            url = auth_url.split(",")
+            num_elements = len(url)
+            for num in range(0, num_elements):
+                #get region from the url
+                reg = url[num].split(".")
+                mgmt_url.append({'region': reg[1], 'publicURL': url[num] + "/" + tenant_name})
+            return mgmt_url
 
         #prod endpoints to run without hitting the catalog
         elif re.search('https://[a-z]{3}.orchestration.api.rackspacecloud.com*', auth_url):
@@ -537,7 +537,7 @@ class RestClient(object):
             req_url = url
         else:
             req_url = "%s/%s" % (self.base_url, url)
-            #print "Request url: %s" % req_url
+            print "%s: %s" % (method, req_url)
         resp, resp_body = self.http_obj.request(req_url, method,
                                                 headers=headers, body=body)
         #uncomment below to see responses

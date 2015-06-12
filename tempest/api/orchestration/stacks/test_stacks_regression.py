@@ -92,9 +92,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #regions = regions_temp.split(",")
         for region in regions:
 
-            respbi, bodybi = self.orchestration_client.get_build_info(region)
-            print "\nThe build info is: %s\n" % bodybi
-
             stack_name = rand_name("qe_"+template+region)
             domain = "iloveheat%s.com" %datetime.now().microsecond
             if 'parameters' in yaml_template:
