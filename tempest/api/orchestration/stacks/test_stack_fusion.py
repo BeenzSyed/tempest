@@ -34,6 +34,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         regionsConfig = self.config.orchestration['regions']
         regions = regionsConfig.split(",")
         for region in regions:
+            self._test_templates_in_fusion(region)
             self._test_buildinfo(region)
             self._test_get_template_catalog(region)
             self._test_get_rax_templates(region)
@@ -50,7 +51,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             self._test_stack_show_call_checkmate_migration(region)
             self._test_stack_preview(region)
             self._test_stack_update(region)
-            self._test_templates_in_fusion(region)
 
     def _test_buildinfo(self, region):
         account = self.config.identity['username']
@@ -301,7 +301,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                             region)
 
     def _test_templates_in_fusion(self, region):
-        '''todo: Add a call to Swift'''
+        '''todo: Change assert in get_all_templates after fusion modification'''
 
         template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
         new_template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance with an updated description to test", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
@@ -340,6 +340,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print "The update request was successful, and the template still exists after update."
         self.assertEqual(new_template, gbody['template'], "Template we sent should equal the one we get back")
         #self.comp_stored_template(new_template, gbody)
+
+        #fetch all templates
+        aresp, abody = self.orchestration_client.get_all_templates(region)
+        for template in abody['templates']:
+            if template_id in template['id']:
+                self.assertEqual(new_template['description'], template['description'], "Updated template verified")
 
         #deleting the template we added to fusion earlier and check status code
         print "The changes to the template have happened correctly." "\n\nDeleting the template we have stored...ID = " + str(template_id)
