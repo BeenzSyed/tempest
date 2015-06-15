@@ -27,55 +27,55 @@ done
 
 
 if [[ $environment == "dev" ]]; then
-    uri=https://api.dev.rs-heat.com/v1,
+    uri=https://api.dev.rs-heat.com/v1
     regions=Dev
 elif [[ $environment == "qa" ]]; then
-    uri=https://api.qa.rs-heat.com/v1,
+    uri=https://api.qa.rs-heat.com/v1
     regions=QA
 elif [[ $environment == "staging" ]]; then
-    uri=https://api.staging.rs-heat.com/v1,
+    uri=https://api.staging.rs-heat.com/v1
     regions=Staging
 elif [[ $environment == "inactive-staging" ]]; then
-    uri=https://inactive.staging.rs-heat.com/v1,
+    uri=https://inactive.staging.rs-heat.com/v1
     regions=Staging
 elif [[ $environment == "prod-dfw prod-iad prod-ord prod-syd prod-hkg" ]]; then
     uri=https://identity.api.rackspacecloud.com/v2.0/
     regions=DFW,IAD,ORD,SYD,HKG
 elif [[ $environment == "prod-dfw" ]]; then
-    uri=https://dfw.orchestration.api.rackspacecloud.com/v1,
+    uri=https://dfw.orchestration.api.rackspacecloud.com/v1
     regions=DFW
 elif [[ $environment == "prod-iad" ]]; then
-    uri=https://iad.orchestration.api.rackspacecloud.com/v1,
+    uri=https://iad.orchestration.api.rackspacecloud.com/v1
     regions=IAD
 elif [[ $environment == "prod-ord" ]]; then
-    uri=https://ord.orchestration.api.rackspacecloud.com/v1,
+    uri=https://ord.orchestration.api.rackspacecloud.com/v1
     regions=ORD
 elif [[ $environment == "prod-syd" ]]; then
-    uri=https://syd.orchestration.api.rackspacecloud.com/v1,
+    uri=https://syd.orchestration.api.rackspacecloud.com/v1
     regions=SYD
 elif [[ $environment == "prod-hkg" ]]; then
-    uri=https://hkg.orchestration.api.rackspacecloud.com/v1,
+    uri=https://hkg.orchestration.api.rackspacecloud.com/v1
     regions=HKG
 elif [[ $environment == "prod-lon" ]]; then
-    uri=https://lon.orchestration.api.rackspacecloud.com/v1,
+    uri=https://lon.orchestration.api.rackspacecloud.com/v1
     regions=LON
 elif [[ $environment == "inactive-prod-dfw inactive-prod-iad inactive-prod-ord inactive-prod-syd inactive-prod-hkg" ]]; then
     uri=https://inactive.dfw.orchestration.api.rackspacecloud.com/v1,https://inactive.iad.orchestration.api.rackspacecloud.com/v1,https://inactive.ord.orchestration.api.rackspacecloud.com/v1,https://inactive.syd.orchestration.api.rackspacecloud.com/v1,https://inactive.hkg.orchestration.api.rackspacecloud.com/v1,
     regions=DFW,IAD,ORD,SYD,HKG
 elif [[ $environment == "inactive-prod-dfw" ]]; then
-    uri=https://inactive.dfw.orchestration.api.rackspacecloud.com/v1,
+    uri=https://inactive.dfw.orchestration.api.rackspacecloud.com/v1
     regions=DFW
 elif [[ $environment == "inactive-prod-iad" ]]; then
-    uri=https://inactive.iad.orchestration.api.rackspacecloud.com/v1,
+    uri=https://inactive.iad.orchestration.api.rackspacecloud.com/v1
     regions=IAD
 elif [[ $environment == "inactive-prod-ord" ]]; then
-    uri=https://inactive.ord.orchestration.api.rackspacecloud.com/v1,
+    uri=https://inactive.ord.orchestration.api.rackspacecloud.com/v1
     regions=ORD
 elif [[ $environment == "inactive-prod-syd" ]]; then
-    uri=https://inactive.syd.orchestration.api.rackspacecloud.com/v1,
+    uri=https://inactive.syd.orchestration.api.rackspacecloud.com/v1
     regions=SYD
 elif [[ $environment == "inactive-prod-hkg" ]]; then
-    uri=https://inactive.hkg.orchestration.api.rackspacecloud.com/v1,
+    uri=https://inactive.hkg.orchestration.api.rackspacecloud.com/v1
     regions=HKG
 elif [[ $environment == "inactive-prod-lon" ]]; then
     uri=https://inactive.lon.orchestration.api.rackspacecloud.com/v1
@@ -156,7 +156,6 @@ image_ref = ubuntu-vm-heat-cfntools
 key_name = sabeen
 env = ${environment}
 regions = ${regions}
-host = api.staging.dfw.rs-heat.com, api.staging.iad.rs-heat.com
 
 
 [service_available]
