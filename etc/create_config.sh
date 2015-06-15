@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 usage="Usage: ./create_config -e ENVIRONMENT -a ACCOUNT
 
