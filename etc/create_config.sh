@@ -100,7 +100,7 @@ elif [[ $account == "managed_UK" ]]; then
     tenantid=10041694
 fi
 
-cat > foo.conf << EOF
+cat > etc/test_config.conf << EOF
 
 [identity]
 # This section contains configuration options that a variety of Tempest
