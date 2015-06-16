@@ -98,6 +98,10 @@ elif [[ $account == "managed_UK" ]]; then
     username=heatlonmanop
     password=Panda789!
     tenantid=10041694
+elif [[ $account == "rackconnect_v3_dfw" ]]; then
+    username=rcheatdfwv3
+    password=Panda789!
+    tenantid=935179
 fi
 
 cat > etc/test_config.conf << EOF
