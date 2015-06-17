@@ -24,6 +24,7 @@ import re
 import requests
 from testconfig import config
 import paramiko
+import json
 
 LOG = logging.getLogger(__name__)
 
@@ -148,11 +149,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         elif body['stack_status'] == 'CREATE_FAILED' and retry < 4:
                             print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                             ssresp, ssbody = self.orchestration_client.show_stack(stack_name, stack_id, region)
-                            print "Stack show output: %s" % ssbody
+                            print "Stack show: %s" % json.dumps(ssbody, indent=4, sort_keys=True)
                             rlresp, rlbody = self.orchestration_client.list_resources(stack_name, stack_id, region)
-                            print "Resource list: %s" % rlbody
+                            print "Resource list: %s" % json.dumps(rlbody, indent=4, sort_keys=True)
                             elresp, elbody = self.orchestration_client.list_events(stack_name, stack_id, region)
-                            print "Event list: %s" % elbody
+                            print "Event list: %s" % json.dumps(elbody, indent=4, sort_keys=True)
                             #print "Deleting stack now"
                             self._delete_stack(stack_name, stack_id, region)
 

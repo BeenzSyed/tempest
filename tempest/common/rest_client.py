@@ -212,6 +212,15 @@ class RestClient(object):
             elif resp.status == 401:
                 raise exceptions.AuthenticationFailure(user=user,
                                                        password=password,tenant=tenant_name)
+
+        #inactive staging endpoints
+        elif re.search('https://inactive.staging.*', auth_url):
+            url = auth_url.split(",")
+            num_elements = len(url)
+            for num in range(0, num_elements):
+                mgmt_url = [{'region': region, 'publicURL': url[num] + "/" + tenant_name}]
+            return mgmt_url
+
         #inactive node endpoints
         elif re.search('https://inactive.[a-z]{3}.*', auth_url):
             mgmt_url = []
