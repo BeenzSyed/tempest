@@ -53,8 +53,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             self.get_list_of_stacks(region)
 
     def buildinfo(self, region):
-        import ipdb
-        ipdb.set_trace()
         account = self.config.identity['username']
         print "\nTest using %s" % account
         respbi, bodybi = self.orchestration_client.get_build_info(region)
