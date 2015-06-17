@@ -53,7 +53,54 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
     def verify_resources(self, resources_returned):
         resources_expected = {}
-        resource_list = ['Rackspace::Cloud::BackupConfig', "AWS::EC2::Instance", "Rackspace::RackConnect::PublicIP", "Rackspace::CloudMonitoring::Entity", "OS::Heat::SoftwareDeployment", "OS::Heat::SwiftSignal", "OS::Heat::ChefSolo", "Rackspace::Cloud::WinServer", "Rackspace::RackConnect::PoolNode", "OS::Heat::SoftwareDeployments", "AWS::CloudFormation::WaitConditionHandle", "OS::Cinder::VolumeAttachment", "OS::Trove::Instance", "OS::Heat::CloudConfig", "DockerInc::Docker::Container", "OS::Cinder::Volume", "OS::Heat::SoftwareConfig", "Rackspace::CloudMonitoring::AgentToken", "Rackspace::Cloud::LoadBalancer", "AWS::CloudFormation::WaitCondition", "Rackspace::CloudMonitoring::Alarm", "OS::Heat::SwiftSignalHandle", "OS::Neutron::Port", "OS::Heat::RandomString", "OS::Nova::KeyPair", "OS::Heat::MultipartMime", "OS::Nova::Server", "OS::Neutron::Net", "Rackspace::Cloud::ChefSolo", "Rackspace::AutoScale::WebHook", "Rackspace::CloudMonitoring::Notification", "Rackspace::Cloud::DNS", "Rackspace::Cloud::Network", "OS::Swift::Container", "Rackspace::Cloud::Server", "OS::Zaqar::Queue", "OS::Heat::Stack", "OS::Heat::ResourceGroup", "Rackspace::CloudMonitoring::Check", "Rackspace::CloudMonitoring::NotificationPlan", "OS::Neutron::Subnet", "Rackspace::CloudMonitoring::PlanNotifications", "Rackspace::AutoScale::ScalingPolicy", "AWS::ElasticLoadBalancing::LoadBalancer", "Rackspace::AutoScale::Group", "OS::Heat::SoftwareDeploymentGroup"]
+        resource_list = [
+            'Rackspace::Cloud::BackupConfig', 
+            'AWS::EC2::Instance', 
+            'Rackspace::RackConnect::PublicIP', 
+            'Rackspace::CloudMonitoring::Entity', 
+            'OS::Heat::SoftwareDeployment', 
+            'OS::Heat::SwiftSignal', 
+            'OS::Heat::ChefSolo', 
+            'Rackspace::Cloud::WinServer', 
+            'Rackspace::RackConnect::PoolNode', 
+            'OS::Heat::SoftwareDeployments', 
+            'AWS::CloudFormation::WaitConditionHandle', 
+            'OS::Cinder::VolumeAttachment', 
+            'OS::Trove::Instance', 
+            'OS::Heat::CloudConfig', 
+            'DockerInc::Docker::Container', 
+            'OS::Cinder::Volume', 
+            'OS::Heat::SoftwareConfig', 
+            'Rackspace::CloudMonitoring::AgentToken', 
+            'Rackspace::Cloud::LoadBalancer', 
+            'AWS::CloudFormation::WaitCondition', 
+            'Rackspace::CloudMonitoring::Alarm', 
+            'OS::Heat::SwiftSignalHandle', 
+            'OS::Neutron::Port', 
+            'OS::Heat::RandomString', 
+            'OS::Nova::KeyPair', 
+            'OS::Heat::MultipartMime', 
+            'OS::Nova::Server', 
+            'OS::Neutron::Net', 
+            'Rackspace::Cloud::ChefSolo', 
+            'Rackspace::AutoScale::WebHook', 
+            'Rackspace::CloudMonitoring::Notification', 
+            'Rackspace::Cloud::DNS', 
+            'Rackspace::Cloud::Network', 
+            'OS::Swift::Container', 
+            'Rackspace::Cloud::Server', 
+            'OS::Zaqar::Queue', 
+            'OS::Heat::Stack', 
+            'OS::Heat::ResourceGroup', 
+            'Rackspace::CloudMonitoring::Check', 
+            'Rackspace::CloudMonitoring::NotificationPlan', 
+            'OS::Neutron::Subnet', 
+            'Rackspace::CloudMonitoring::PlanNotifications', 
+            'Rackspace::AutoScale::ScalingPolicy', 
+            'AWS::ElasticLoadBalancing::LoadBalancer', 
+            'Rackspace::AutoScale::Group', 
+            'OS::Heat::SoftwareDeploymentGroup'
+        ]
         resources_expected["resource_types"] = resource_list
         print "Comparing list returned and expected list"
         resources_returned['resource_types'] = sorted(resources_returned['resource_types'])
