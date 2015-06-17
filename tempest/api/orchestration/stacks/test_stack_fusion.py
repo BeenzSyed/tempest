@@ -34,60 +34,61 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         regionsConfig = self.config.orchestration['regions']
         regions = regionsConfig.split(",")
         for region in regions:
-            self.test_templates_in_fusion(region)
-            self.test_buildinfo(region)
-            self.test_get_template_catalog(region)
-            self.test_get_rax_templates(region)
-            self.test_get_all_templates(region)
-            self.test_get_custom_templates(region)
-            self.test_get_single_template(region)
-            self.test_get_template_catalog_with_metadata(region)
-            self.test_get_single_template_with_metadata(region)
-            self.test_create_stack_with_supported_template_id(region)
-            self.test_create_stack_with_supported_template(region)
-            self.test_stack_show_call(region)
-            self.test_stack_show_call_with_details(region)
-            self.test_stack_show_call_checkmate_migration(region)
-            self.test_stack_preview(region)
-            self.test_stack_update(region)
-            self.test_get_list_of_stacks(region)
+            self.templates_in_fusion(region)
+            self.buildinfo(region)
+            self.get_template_catalog(region)
+            self.get_rax_templates(region)
+            self.get_all_templates(region)
+            self.get_custom_templates(region)
+            self.get_single_template(region)
+            self.get_template_catalog_with_metadata(region)
+            self.get_single_template_with_metadata(region)
+            self.create_stack_with_supported_template_id(region)
+            self.create_stack_with_supported_template(region)
+            self.stack_show_call(region)
+            self.stack_show_call_with_details(region)
+            self.stack_show_call_checkmate_migration(region)
+            self.stack_preview(region)
+            self.stack_update(region)
+            self.get_list_of_stacks(region)
 
-    def test_buildinfo(self, region):
+    def buildinfo(self, region):
+        import ipdb
+        ipdb.set_trace()
         account = self.config.identity['username']
         print "\nTest using %s" % account
-
         respbi, bodybi = self.orchestration_client.get_build_info(region)
         print "The build info is: %s" % bodybi
 
-    def test_get_template_catalog(self, region):
+    def get_template_catalog(self, region):
         resp, body = self.orchestration_client.get_template_catalog(
             region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
-    def test_get_rax_templates(self, region):
+    def get_rax_templates(self, region):
         resp, body = self.orchestration_client.get_rax_templates(region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
-    def test_get_all_templates(self, region):
+    def get_all_templates(self, region):
         resp, body = self.orchestration_client.get_all_templates(region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
-    def test_get_custom_templates(self, region):
+    def get_custom_templates(self, region):
         resp, body = self.orchestration_client.get_custom_templates(region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
-    def test_get_single_template(self, region):
+    def get_single_template(self, region):
         template_id = "wordpress-single"
         resp, body = self.orchestration_client.get_single_template(
             template_id=template_id, region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
-    def test_get_template_catalog_with_metadata(self, region):
+    def get_template_catalog_with_metadata(self, region):
         resp, body = self.orchestration_client.\
             get_template_catalog_with_metadata(region=region)
         for template in body['templates']:
@@ -96,7 +97,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             else:
                 print "Templates %s does not have metadata" % template['id']
 
-    def test_get_single_template_with_metadata(self, region):
+    def get_single_template_with_metadata(self, region):
         template_id = "wordpress-single"
         resp, body = self.orchestration_client.\
             get_single_template_with_metadata(template_id=template_id,
@@ -106,15 +107,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         else:
             print "Test fail to get metadata of %s" % template_id
 
-    def test_get_list_of_stacks(self, region):
-        import ipdb
-        ipdb.set_trace()
+    def get_list_of_stacks(self, region):
         resp, body = self.orchestration_client.get_list_of_stacks_fusion\
                 (region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s"%resp['status'])
 
-    def test_create_stack_with_supported_template_id(self, region, template=None):
+    def create_stack_with_supported_template_id(self, region, template=None):
         template_id = self.config.orchestration['template']
 
         if template_id == None:
@@ -142,7 +141,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                          stackid=stack_identifier,
                                          region=region)
 
-    def test_create_stack_with_supported_template(self, region):
+    def create_stack_with_supported_template(self, region):
         # Unsupported Template with flag as False
         resp, body = self.orchestration_client.get_template_catalog(
             region=region)
@@ -177,7 +176,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                          stackid=stack_identifier,
                                          region=region)
 
-    def test_stack_show_call(self, region):
+    def stack_show_call(self, region):
         url = "stacks?with_support_info"
         resp, body = self.orchestration_client.get_stack_info_for_fusion(
                 url, region)
@@ -196,7 +195,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                      "Expected was WordPress but has "
                                      " no application name")
 
-    def test_stack_show_call_with_details(self, region):
+    def stack_show_call_with_details(self, region):
         url = "stacks/detail?with_support_info"
         resp, body = self.orchestration_client.get_stack_info_for_fusion(
                 url, region)
@@ -216,7 +215,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                      "Expected was not specified but has "
                                      "application name")
 
-    def test_stack_show_call_checkmate_migration(self, region):
+    def stack_show_call_checkmate_migration(self, region):
         url = "stacks/detail?with_support_info=1"
         resp, body = self.orchestration_client.get_stack_info_for_fusion(
                 url, region)
@@ -236,7 +235,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                      "Expected was not specified but has "
                                      "application name")
 
-    def test_stack_preview(self, region):
+    def stack_preview(self, region):
         template_id = "wordpress-single"
         parameters = {}
         # parameters= {"ssh_keypair_name": "foo",
@@ -260,7 +259,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         template_resource_list.sort()
         self.comp_list(response_resource_list, template_resource_list)
 
-    def test_stack_update(self, region):
+    def stack_update(self, region):
         template_id = "wordpress-single"
         parameters = {}
         # parameters= {"ssh_keypair_name": "OMG",
@@ -302,7 +301,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
              dresp, dbody = self.delete_stack(stack_name, stack_identifier,
                                             region)
 
-    def test_templates_in_fusion(self, region):
+    def templates_in_fusion(self, region):
         '''todo: Change assert in get_all_templates after fusion modification'''
 
         template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
