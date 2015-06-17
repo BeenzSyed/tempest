@@ -52,8 +52,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print "Lists matched."
 
     def verify_resources(self, resources_returned):
-        resources_expected = {}
-        resource_list = [
+        returned_list = resources_returned['resource_types']
+        expected_list = [
             'AWS::CloudFormation::WaitCondition',
             'AWS::CloudFormation::WaitConditionHandle',
             'AWS::EC2::Instance',
@@ -101,19 +101,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             'Rackspace::RackConnect::PoolNode',
             'Rackspace::RackConnect::PublicIP',
         ]
-        resources_expected["resource_types"] = resource_list
-        print "Comparing list returned and expected list"
-        resources_returned['resource_types'] = sorted(resources_returned['resource_types'])
-        resources_expected['resource_types'] = sorted(resources_expected['resource_types'])
-        if (resources_returned['resource_types'] != resources_expected['resource_types']):
-            list_diff_1 = [item for item in resources_expected["resource_types"] if item not in resources_returned['resource_types']]
-            list_diff_2 = [item for item in resources_returned['resource_types'] if item not in resources_expected["resource_types"]]
-            print "Difference in lists: \n"
-            print "Items in test list that aren't in actual list: " + str(list_diff_1)
-            print "Items in actual list that aren't in test list: " + str(list_diff_2)
-        self.assertEqual(resources_returned['resource_types'], resources_expected["resource_types"], "Expected resource type list does not match what we get.")
-        resources_returned['eric'] = 'Eric'
-        self.assertNotEqual(resources_returned['resource_types'], resources_expected, "Make sure things don't have false positives")
+
+        print "Making sure returned list matches\n" + '\n'.join(expected_list)
+        self.assertEqual(set(returned_list) ^ set(expected_list),
+                         [],
+                         "Resource list has differences from expected")
 
     def get_resource_types(self):
         url = "resource_types"
