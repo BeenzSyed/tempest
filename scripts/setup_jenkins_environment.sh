@@ -2,6 +2,13 @@
 
 export PYTHONUNBUFFERED=1
 
+if [ ! -d ".env" ]; then
+    echo "creating virtualenv"
+    virtualenv .env
+fi
+
+source .env/bin/activate
+
 pip install \
     babel \
     boto \
