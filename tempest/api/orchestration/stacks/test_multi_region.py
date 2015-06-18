@@ -145,7 +145,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                     global_pf += 1
 
                     else:
-                        print "This stack is crazy"
+                        print "The stack is in this status: %s" % body['stack_status']
             self._delete_stack(stack_name, stack_id, region)
         if global_pf > 0:
             self.fail("Looks like %s stacks failed to build." % global_pf)

@@ -88,7 +88,7 @@ if [[ $account == "unmanaged" ]]; then
     tenantid=883286
 elif [[ $account == "managed" ]]; then
     username=heatqe
-    password=4cC:{fs3\^atP!KD
+    password=4cC:{fs3\\^atP!KD
     tenantid=862456
 elif [[ $account == "unmanaged_UK" ]]; then
     username=heatlon
