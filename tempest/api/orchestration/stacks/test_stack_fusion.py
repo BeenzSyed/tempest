@@ -35,7 +35,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         regions = regionsConfig.split(",")
         for region in regions:
             self.buildinfo(region)
-            self.create_stack_with_supported_template(region)
             self.templates_in_fusion(region)
             self.stack_preview(region)
             self.get_template_catalog(region)
@@ -51,6 +50,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             self.get_single_template_with_metadata(region)
             self.stack_update(region)
             self.create_stack_with_supported_template_id(region)
+            self.create_stack_with_supported_template(region)
 
     def buildinfo(self, region):
         account = self.config.identity['username']
