@@ -35,7 +35,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         regions = regionsConfig.split(",")
         for region in regions:
             self.buildinfo(region)
-            self.stack_preview(region)
+            self.templates_in_fusion(region)
             self.get_template_catalog(region)
             self.get_rax_templates(region)
             self.get_all_templates(region)
@@ -48,9 +48,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             self.create_stack_with_supported_template(region)
             self.stack_show_call(region)
             self.stack_show_call_with_details(region)
-            self.stack_show_call_checkmate_migration(region)
-            self.templates_in_fusion(region)
+            #self.stack_show_call_checkmate_migration(region)
             self.stack_update(region)
+            self.stack_preview(region)
 
     def buildinfo(self, region):
         account = self.config.identity['username']
@@ -63,25 +63,25 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp, body = self.orchestration_client.get_template_catalog(
             region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s"%resp['status'])
+                                            "but actual was %s. Body %s" % (resp['status'], body))
 
     def get_rax_templates(self, region):
         print "\nTest get rax templates:"
         resp, body = self.orchestration_client.get_rax_templates(region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s"%resp['status'])
+                                            "but actual was %s. Body %s" % (resp['status'], body))
 
     def get_all_templates(self, region):
         print "\nTest get all templates:"
         resp, body = self.orchestration_client.get_all_templates(region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s"%resp['status'])
+                                            "but actual was %s. Body %s" % (resp['status'], body))
 
     def get_custom_templates(self, region):
         print "\nTest get custom templates:"
         resp, body = self.orchestration_client.get_custom_templates(region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s"%resp['status'])
+                                            "but actual was %s. Body %s" % (resp['status'], body))
 
     def get_single_template(self, region):
         print "\nTest get a single template:"
@@ -89,7 +89,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp, body = self.orchestration_client.get_single_template(
             template_id=template_id, region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s"%resp['status'])
+                                            "but actual was %s. Body %s" % (resp['status'], body))
 
     def get_template_catalog_with_metadata(self, region):
         print "\nTest get template catalog with metadata:"
@@ -265,7 +265,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp, body = self.orchestration_client.stack_preview(
             stack_name, region, template_id, parameters=parameters)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s"%resp['status'])
+                                            "but actual was %s. Body: %s "% (resp['status'], body))
         response_resource_list = []
         for resource in body['stack']['resources']:
             response_resource_list.append(resource['resource_type'])
