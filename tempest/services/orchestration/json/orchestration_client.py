@@ -21,6 +21,7 @@ import datetime
 
 from tempest.common import rest_client
 from tempest import exceptions
+from tempest.common.utils.data_utils import rand_name
 
 
 class OrchestrationClient(rest_client.RestClient):
@@ -487,9 +488,10 @@ class OrchestrationClient(rest_client.RestClient):
                                           template_id=None,
                                           template={}):
         post_body = {
-            "stack_name": name,
+            "template_name": name,
             "parameters": parameters,
-            "timeout_mins": "120"
+            "timeout_mins": "120",
+            "stack_name": name
         }
         if template_id:
             post_body['template_id'] = template_id

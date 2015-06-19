@@ -115,8 +115,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 should_restart = True
                 while should_restart:
                     resp, body = self.get_stack(stack_id, region)
-                    if retry == 4:
-                        print "Retried 4 times! Stack create failed."
+                    if retry == config['num_retries']:
+                        print "Retried %s times! Stack create failed." % config['num_retries']
                         self._send_deploy_time_graphite(env, region, template, count, "failtime")
                         global global_pf
                         global_pf += 1
@@ -146,7 +146,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             global_pf += 1
                             should_restart = False
 
-                        elif body['stack_status'] == 'CREATE_FAILED' and retry < 4:
+                        elif body['stack_status'] == 'CREATE_FAILED' and retry < config['num_retries']:
                             print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                             ssresp, ssbody = self.orchestration_client.show_stack(stack_name, stack_id, region)
                             print "Stack show: %s" % json.dumps(ssbody, indent=4, sort_keys=True)
@@ -212,12 +212,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                         print "Output %s does not exist" % temp_output
                                         global_pf += 1
 
+                            should_restart = False
+
                             #update stack
-                            self._update_stack(stack_id, stack_name, region, params, yaml_template)
+                            if config['update_stack'] == True:
+                                self._update_stack(stack_id, stack_name, region, params, yaml_template)
 
                             #delete stack
-                            self._delete_stack(stack_name, stack_id, region)
-                            should_restart = False
+                            if config['delete_stack'] == True:
+                                self._delete_stack(stack_name, stack_id, region)
 
                         else:
                             print "Stack in %s state" % body['stack_status']

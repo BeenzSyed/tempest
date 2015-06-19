@@ -34,27 +34,27 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         regionsConfig = self.config.orchestration['regions']
         regions = regionsConfig.split(",")
         for region in regions:
-            self.templates_in_fusion(region)
             self.buildinfo(region)
+            self.create_stack_with_supported_template(region)
+            self.templates_in_fusion(region)
+            self.stack_preview(region)
             self.get_template_catalog(region)
             self.get_rax_templates(region)
             self.get_all_templates(region)
             self.get_custom_templates(region)
             self.get_single_template(region)
-            self.get_template_catalog_with_metadata(region)
-            self.get_single_template_with_metadata(region)
-            self.create_stack_with_supported_template_id(region)
-            self.create_stack_with_supported_template(region)
             self.stack_show_call(region)
             self.stack_show_call_with_details(region)
             self.stack_show_call_checkmate_migration(region)
-            self.stack_preview(region)
-            self.stack_update(region)
             self.get_list_of_stacks(region)
+            self.get_template_catalog_with_metadata(region)
+            self.get_single_template_with_metadata(region)
+            self.stack_update(region)
+            self.create_stack_with_supported_template_id(region)
 
     def buildinfo(self, region):
         account = self.config.identity['username']
-        print "\nTest using %s" % account
+        print "\nTest using %s in region %s" % (account, region)
         respbi, bodybi = self.orchestration_client.get_build_info(region)
         print "The build info is: %s" % bodybi
 
@@ -144,18 +144,18 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp, body = self.orchestration_client.get_template_catalog(
             region=region)
         for template in body['templates']:
-             if template['id'] == "wordpress-single":
-                 yaml_template = template
-                 yaml_template.pop("version", None)
-                 yaml_template.pop("id", None)
-                 yaml_template.pop("metadata", None)
-                 parameters={}
-                 break
-
+            if template['id'] == "lamp":
+                yaml_template = template
+                yaml_template.pop("version", None)
+                yaml_template.pop("id", None)
+                yaml_template.pop("metadata", None)
+                parameters={}
+                break
         stack_name = rand_name("Fusion_")
         resp, body = self.orchestration_client.create_stack_fusion(
-            name=stack_name, region=region, template_id = None,
-            template = yaml.safe_dump(yaml_template),
+            name=stack_name, region=region, template_id=None,
+            #template=template,
+            template=yaml.safe_dump(yaml_template),
             parameters=parameters)
         self.assertIn(resp['status'], ['200', '201'])
         stack_identifier = body['stack']['id']
@@ -267,7 +267,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             stack_name, region, template_id, parameters=parameters)
         self.assertEqual(resp['status'], '201', "expected response was 201 "
                                             "but actual was %s"%resp['status'])
-
         stack_identifier = body['stack']['id']
         stack_id = "%s/%s" % (stack_name, stack_identifier)
         resp, body = self.get_stack(stack_id, region)
@@ -341,11 +340,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #self.comp_stored_template(new_template, gbody)
 
         #fetch all templates
-        aresp, abody = self.orchestration_client.get_all_templates(region)
+        aresp, abody = self.orchestration_client.get_custom_templates(region)
         for template in abody['templates']:
-            if template_id in template['id']:
+            if template_id == template['id']:
                 self.assertEqual(new_template['description'], template['description'], "Updated template verified")
-                #self.assertEqual(new_template, template['body'], "Templates match")
+                self.assertEqual(new_template, template['template'], "Templates match")
 
         #deleting the template we added to fusion earlier and check status code
         print "The changes to the template have happened correctly." "\n\nDeleting the template we have stored...ID = " + str(template_id)
