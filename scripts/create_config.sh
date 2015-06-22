@@ -25,7 +25,6 @@ while getopts "e:a:" opt; do
     esac
 done
 
-
 if [[ $environment == "dev" ]]; then
     uri=https://api.dev.rs-heat.com/v1
     regions=Dev
@@ -59,9 +58,6 @@ elif [[ $environment == "prod-hkg" ]]; then
 elif [[ $environment == "prod-lon" ]]; then
     uri=https://lon.orchestration.api.rackspacecloud.com/v1
     regions=LON
-elif [[ $environment == "inactive-prod-dfw inactive-prod-iad inactive-prod-ord inactive-prod-syd inactive-prod-hkg" ]]; then
-    uri=https://inactive.dfw.orchestration.api.rackspacecloud.com/v1,https://inactive.iad.orchestration.api.rackspacecloud.com/v1,https://inactive.ord.orchestration.api.rackspacecloud.com/v1,https://inactive.syd.orchestration.api.rackspacecloud.com/v1,https://inactive.hkg.orchestration.api.rackspacecloud.com/v1,
-    regions=DFW,IAD,ORD,SYD,HKG
 elif [[ $environment == "inactive-prod-dfw" ]]; then
     uri=https://inactive.dfw.orchestration.api.rackspacecloud.com/v1
     regions=DFW
@@ -80,6 +76,9 @@ elif [[ $environment == "inactive-prod-hkg" ]]; then
 elif [[ $environment == "inactive-prod-lon" ]]; then
     uri=https://inactive.lon.orchestration.api.rackspacecloud.com/v1
     regions=LON
+elif [[ $environment == "inactive-prod-dfw inactive-prod-iad inactive-prod-ord inactive-prod-syd inactive-prod-hkg" ]]; then
+    uri=https://inactive.dfw.orchestration.api.rackspacecloud.com/v1,https://inactive.iad.orchestration.api.rackspacecloud.com/v1,https://inactive.ord.orchestration.api.rackspacecloud.com/v1,https://inactive.syd.orchestration.api.rackspacecloud.com/v1,https://inactive.hkg.orchestration.api.rackspacecloud.com/v1,
+    regions=DFW,IAD,ORD,SYD,HKG
 fi
 
 if [[ $account == "unmanaged" ]]; then
@@ -102,6 +101,10 @@ elif [[ $account == "rackconnect_v3_dfw" ]]; then
     username=rcheatdfwv3
     password=Panda789!
     tenantid=935179
+elif [[ $account == "heatdev" ]]; then
+    username=heatdev
+    password=U{B?ZJMe:8CVge4AL
+    tenantid=836933
 fi
 
 cat > etc/test_config.conf << EOF

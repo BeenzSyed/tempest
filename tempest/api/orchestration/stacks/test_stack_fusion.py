@@ -44,13 +44,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             self.get_list_of_stacks(region)
             self.get_template_catalog_with_metadata(region)
             self.get_single_template_with_metadata(region)
-            self.create_stack_with_supported_template_id(region)
-            self.create_stack_with_supported_template(region)
             self.stack_show_call(region)
             self.stack_show_call_with_details(region)
             #self.stack_show_call_checkmate_migration(region)
             self.stack_update(region)
             self.stack_preview(region)
+            self.create_stack_with_supported_template(region)
+            self.create_stack_with_supported_template_id(region)
 
     def buildinfo(self, region):
         account = self.config.identity['username']
@@ -167,6 +167,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #template=template,
             template=yaml.safe_dump(yaml_template),
             parameters=parameters)
+        if resp['status'] != '200':
+            print "This is the template being used:\n %s" % yaml.safe_dump(yaml_template)
+            print "These are the parameters:\n %s" % parameters
         self.assertIn(resp['status'], ['200', '201'])
         stack_identifier = body['stack']['id']
         if resp['status'] == '200':
