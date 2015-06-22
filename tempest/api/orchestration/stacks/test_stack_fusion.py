@@ -117,7 +117,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp, body = self.orchestration_client.get_list_of_stacks_fusion\
                 (region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s"%resp['status'])
+                                            "but actual was %s. Body %s" % (resp['status'], body))
 
     def create_stack_with_supported_template_id(self, region, template=None):
         print "\nTest create stack with supported template id:"
@@ -135,7 +135,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             name=stack_name, region=region, template_id=template_id,
             parameters=parameters)
         self.assertEqual(resp['status'], '201', "expected response was 201 "
-                                            "but actual was %s"%resp['status'])
+                                            "but actual was %s. Body %s" % (resp['status'], body))
         stack_identifier = body['stack']['id']
         if resp['status'] == '201':
             stack_id = body['stack']['id']
@@ -288,7 +288,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp, body = self.orchestration_client.create_stack_fusion(
             stack_name, region, template_id, parameters=parameters)
         self.assertEqual(resp['status'], '201', "expected response was 201 "
-                                            "but actual was %s"%resp['status'])
+                                            "but actual was %s. Body %s" % (resp['status'], body))
         stack_identifier = body['stack']['id']
         stack_id = "%s/%s" % (stack_name, stack_identifier)
         resp, body = self.get_stack(stack_id, region)
@@ -315,8 +315,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                        .update_stack_fusion(stack_identifier,stack_name,region,
                                    template_id=template_id,template={},parameters=parameters)
              self.assertEqual(resp_update['status'], '202',
-                              "expected response was"
-                        " 202 but actual was %s"%resp_update['status'])
+                              "expected response was 202"
+                        "but actual was %s. Body %s" % (resp['status'], body))
              dresp, dbody = self.delete_stack(stack_name, stack_identifier,
                                             region)
 
@@ -355,9 +355,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         #testing PUT on an existing template (the one we added with POST) and check status code
         uresp, ubody = self.orchestration_client.update_template(template_id, new_template, region, stack_name)
-        self.assertEqual('200', uresp['status'], "Response to put should be 200")
+        self.assertEqual('200', uresp['status'], "Body %s" % ubody)
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
-        self.assertEqual('200', gresp['status'], "Response to get should be 200")
+        self.assertEqual('200', gresp['status'], "Body %s" % gbody)
         print "The update request was successful, and the template still exists after update."
         self.assertEqual(new_template, gbody['template'], "Template we sent should equal the one we get back")
         #self.comp_stored_template(new_template, gbody)
@@ -372,12 +372,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #deleting the template we added to fusion earlier and check status code
         print "The changes to the template have happened correctly." "\n\nDeleting the template we have stored...ID = " + str(template_id)
         dresp, dbody = self.orchestration_client.delete_template(template_id, region)
-        self.assertEqual('200', dresp['status'], "Response to delete should be 200")
+        self.assertEqual('200', dresp['status'], "Body %s" % dbody)
         print "Template deleted?" + "\n\nMaking sure a GET on the deleted template fails...ID = " + str(template_id)
 
         #verify non-existence
         gresp, gbody = self.orchestration_client.get_template(template_id, region)
-        self.assertEqual('404', gresp['status'], "Template should not exist after deletion")
+        self.assertEqual('404', gresp['status'], "Body %s" % gbody)
         print "GET failed like it should."
 
     def comp_stored_template(self, template_sent, template_from_get):
