@@ -422,7 +422,6 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def get_template_catalog_with_metadata(self, region):
-
         """Returns the template_catalog from fusion."""
         url = "templates?with_metadata=True"
 
@@ -432,7 +431,6 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def get_single_template(self, template_id, region):
-
         """Returns the template from fusion for template_id."""
         url = "templates/%s" % template_id
         resp, body = self.get(url, region)
@@ -441,7 +439,14 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def get_single_template_with_metadata(self, template_id, region):
+        """Returns the template from fusion for template_id."""
+        url = "templates/%s?with_metadata=True" % template_id
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
 
+    def get_single_template_with_metadata(self, template_id, region):
         """Returns the template from fusion for template_id."""
         url = "templates/%s?with_metadata=True" % template_id
         resp, body = self.get(url, region)
@@ -450,7 +455,6 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def get_rax_templates(self, region):
-
         """Returns only rackspace templates from fusion"""
         url = "templates?templates_type=RAX"
         resp, body = self.get(url, region)
@@ -459,9 +463,16 @@ class OrchestrationClient(rest_client.RestClient):
         return resp, body
 
     def get_custom_templates(self, region):
-
         """Returns only custom templates from fusion"""
         url = "templates?templates_type=CUSTOM"
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
+    def get_custom_templates_with_metadata(self, region):
+        """Returns only custom templates from fusion"""
+        url = "templates?templates_type=CUSTOM&with_metadata=True"
         resp, body = self.get(url, region)
         if resp['status'] == '200':
             body = json.loads(body)

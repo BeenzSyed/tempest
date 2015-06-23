@@ -28,6 +28,9 @@ done
 if [[ $environment == "dev" ]]; then
     uri=https://api.dev.rs-heat.com/v1
     regions=Dev
+elif [[ $environment == "dev-fusion" ]]; then
+    uri=https://fusion.dev.rs-heat.com/v1
+    regions=Dev
 elif [[ $environment == "qa" ]]; then
     uri=https://api.qa.rs-heat.com/v1
     regions=QA

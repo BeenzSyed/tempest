@@ -363,7 +363,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         self.assertEqual('200', gresp['status'], "Body %s" % gbody)
         print "The update request was successful, and the template still exists after update."
         self.assertEqual(new_template, gbody['template'], "Template we sent should equal the one we get back")
-        #self.comp_stored_template(new_template, gbody)
+
 
         #fetch all templates
         aresp, abody = self.orchestration_client.get_custom_templates(region)
@@ -372,8 +372,20 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 self.assertEqual(new_template['description'], template['description'], "Updated template verified")
                 self.assertEqual(new_template, template['template'], "Templates match")
 
+        #fetch all templates with metadata
+        print "\nTest get CUSTOM template catalog with metadata:"
+        resp, body = self.orchestration_client.\
+            get_custom_templates_with_metadata(region=region)
+        for template in body['templates']:
+            if 'rackspace-metadata' in template:
+                print"Templates %s have metadata" % template['id']
+                self.assertEqual(True, template['rackspace-metadata']['custom-template'], "Custom template should be set to True")
+            else:
+                raise ValueError("rackspace-metadata does not exist")
+                print "Templates %s does not have metadata" % template['id']
+
         #deleting the template we added to fusion earlier and check status code
-        print "The changes to the template have happened correctly." "\n\nDeleting the template we have stored...ID = " + str(template_id)
+        print "\nThe changes to the template have happened correctly." "\n\nDeleting the template we have stored...ID = " + str(template_id)
         dresp, dbody = self.orchestration_client.delete_template(template_id, region)
         self.assertEqual('200', dresp['status'], "Body %s" % dbody)
         print "Template deleted?" + "\n\nMaking sure a GET on the deleted template fails...ID = " + str(template_id)
