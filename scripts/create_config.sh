@@ -108,6 +108,18 @@ elif [[ $account == "heatdev" ]]; then
     username=heatdev
     password=U{B?ZJMe:8CVge4AL
     tenantid=836933
+elif [[ $account == "admin" ]]; then
+    username=heat.admin
+    password=ryp6ivyKyhun
+    tenantid=883286
+elif [[ $account == "creator" ]]; then
+    username=heat.creator
+    password=edrucolful6I
+    tenantid=883286
+elif [[ $account == "observer" ]]; then
+    username=heat.observer
+    password=Nabrareant8r
+    tenantid=883286
 fi
 
 cat > etc/test_config.conf << EOF
