@@ -49,8 +49,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             #self.stack_show_call_checkmate_migration(region)
             self.stack_update(region)
             self.stack_preview(region)
-            self.create_stack_with_supported_template(region)
             self.create_stack_with_supported_template_id(region)
+            self.create_stack_with_supported_template(region)
 
     def buildinfo(self, region):
         account = self.config.identity['username']
