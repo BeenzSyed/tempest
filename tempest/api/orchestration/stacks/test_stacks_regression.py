@@ -158,9 +158,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             self._delete_stack(stack_name, stack_id, region)
 
                             #Retry
+                            print "\nRetrying stack create."
                             stack_name = rand_name("qe_"+template+region)
                             domain = "iloveheat%s.com" %datetime.now().microsecond
-                            params = self._set_parameters(yaml_template, template, region, image, domain)
+                            if 'parameters' in yaml_template:
+                                params = self._set_parameters(yaml_template, template, region, image, domain)
+                            else:
+                                params = []
                             csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
                             if stack_identifier == 0:
                                 print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
