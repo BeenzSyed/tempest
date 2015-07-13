@@ -22,6 +22,7 @@ import re
 from testconfig import config
 from datetime import datetime
 
+import ipdb
 
 LOG = logging.getLogger(__name__)
 
@@ -266,6 +267,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     @attr(type='smoke')
     def _test_stack(self, template=None, image=None):
 
+        ipdb.set_trace()
         print os.environ.get('TEMPEST_CONFIG')
         if os.environ.get('TEMPEST_CONFIG') == None:
             print "Set the environment varible TEMPEST_CONFIG to a config file."
@@ -285,16 +287,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         yaml_template = yaml.safe_load(response_templates.content)
 
         parameters = {}
-        if 'key_name' in yaml_template['parameters']:
-                parameters['key_name'] = 'sabeen'
-        if 'domain_name' in yaml_template['parameters']:
-                parameters['domain_name'] = "example%s.com" % datetime.now().microsecond
-        if 'git_url' in yaml_template['parameters']:
-                parameters['git_url'] = "https://github.com/timductive/phphelloworld"
-
         region = "Staging"
-        rstype = "Rackspace::Cloud::Server"
-        rsname = "db"
 
         usertype = self.config.identity['username']
         print "User is: %s" % usertype
@@ -314,13 +307,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         #update stack
         apiname = "update stack"
-        parameters = {}
-        if 'key_name' in yaml_template['parameters']:
-                parameters['key_name'] = 'sabeen'
-        if 'domain_name' in yaml_template['parameters']:
-                parameters['domain_name'] = "example%s.com" % datetime.now().microsecond
-        if 'flavor' in yaml_template['parameters']:
-                parameters['flavor'] = '1GB Standard Instance'
         updateStackName, updateStackId = self._get_stacks("UPDATE_", stacklist)
         if updateStackName == 0:
             updateStackName = "BlankStack"
@@ -340,6 +326,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         deleteStackName, deleteStackId = self._get_stacks("CREATE_", stacklist)
         dsresp, dsbody = self.orchestration_client.delete_stack(deleteStackName, deleteStackId, region)
         self._test_RBAC(usertype, apiname, dsresp)
+        ipdb.set_trace()
 
         #abandon stack
         apiname = "abandon stack"
@@ -412,9 +399,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #event show
         apiname = "show event"
         if updateStackName != 0:
-            #event_id = self._get_event_id(evbody)
-            event_id, rs_name_event = self._get_event_id(evbody)
-            #event_id = "180"
+            event_id, rs_name = self._get_resource_event(evbody)
             esresp, esbody = self.orchestration_client.show_event(updateStackName, updateStackId, rs_name, event_id, region)
             self._test_RBAC(usertype, apiname, esresp)
 
@@ -448,9 +433,9 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print "Could not find a stack named %s" %typestack
         return 0, 0
 
-    def _get_event_id(self, body):
-        for stackname in body:
-            return stackname['id'], stackname['resource_name']
+    def _get_resource_event(self, body):
+        for event in body:
+            return event['id'], event['resource_name']
 
     def _get_resource_name(self, body):
         for resource in body:
