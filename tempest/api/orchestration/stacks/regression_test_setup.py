@@ -23,8 +23,6 @@ import time
 from testconfig import config
 from datetime import datetime
 
-import ipdb
-
 LOG = logging.getLogger(__name__)
 
 class RegressionTestSetup(base.BaseOrchestrationTest):
@@ -67,7 +65,6 @@ class RegressionTestSetup(base.BaseOrchestrationTest):
 
         # #-------  Create Prerequisite Stacks  --------------
 
-        ipdb.set_trace()
         create_stack_name = "CREATE_%s" %datetime.now().microsecond
         csresp, csbody, csid = self.create_stack(create_stack_name, region, yaml_template, parameters)
 
@@ -78,7 +75,6 @@ class RegressionTestSetup(base.BaseOrchestrationTest):
         asresp, asbody, asid = self.create_stack(adopt_stack_name, region, yaml_template, parameters)
 
         # #-------  Wait for completed creation  --------------
-        ipdb.set_trace()
 
         self._wait_for_create(csid, region)
         self._wait_for_create(usid, region)
@@ -103,7 +99,6 @@ class RegressionTestSetup(base.BaseOrchestrationTest):
             elif sleep_count == 90:
                 print "Stack create has taken over 90 minutes. Force failing now."
                 self.fail(resp)
-        ipdb.set_trace()
         if check_status:
             if body['stack_status'] == 'CREATE_FAILED':
                 print "Stack create failed. Here's why: %s" % body['stack_status_reason']

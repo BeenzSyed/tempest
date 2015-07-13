@@ -22,8 +22,6 @@ import re
 from testconfig import config
 from datetime import datetime
 
-import ipdb
-
 LOG = logging.getLogger(__name__)
 
 adopt_data = """
@@ -267,7 +265,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     @attr(type='smoke')
     def _test_stack(self, template=None, image=None):
 
-        ipdb.set_trace()
         print os.environ.get('TEMPEST_CONFIG')
         if os.environ.get('TEMPEST_CONFIG') == None:
             print "Set the environment varible TEMPEST_CONFIG to a config file."
@@ -326,7 +323,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         deleteStackName, deleteStackId = self._get_stacks("CREATE_", stacklist)
         dsresp, dsbody = self.orchestration_client.delete_stack(deleteStackName, deleteStackId, region)
         self._test_RBAC(usertype, apiname, dsresp)
-        ipdb.set_trace()
 
         #abandon stack
         apiname = "abandon stack"

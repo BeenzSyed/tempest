@@ -23,8 +23,6 @@ import time
 from testconfig import config
 from datetime import datetime
 
-import ipdb
-
 LOG = logging.getLogger(__name__)
 
 class RegressionTestTearDown(base.BaseOrchestrationTest):
@@ -49,7 +47,6 @@ class RegressionTestTearDown(base.BaseOrchestrationTest):
         usertype = self.config.identity['username']
         print "User is: %s" % usertype
 
-        ipdb.set_trace()
         slresp, stacklist = self.orchestration_client.list_stacks(region)
         if stacklist:
             for stack in stacklist:
