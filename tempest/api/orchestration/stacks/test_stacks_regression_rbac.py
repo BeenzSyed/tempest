@@ -326,15 +326,29 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         #abandon stack
         apiname = "abandon stack"
-        abandonStackName, abandonStackId = self._get_stacks("ADOPT_", stacklist)
-        asresp, asbody, = self.abandon_stack(abandonStackId, abandonStackName, region)
-        self._test_RBAC(usertype, apiname, asresp)
-        #print "Data for adopt stack data %s" %asbody
+        abandonStackName, abandonStackId = self._get_stacks_with_status("ADOPT_", stacklist, "ADOPT_COMPLETE")
 
-        adopt_stack_name = "ADOPT_%s" %datetime.now().microsecond
-        apiname = "adopt stack"
-        asresp, asbody, stack_identifier = self.adopt_stack(adopt_stack_name, region, asbody, yaml_template, parameters)
-        self._test_RBAC(usertype, apiname, asresp)
+        if abandonStackId:
+            asresp, asbody, = self.abandon_stack(abandonStackId, abandonStackName, region)
+            self._test_RBAC(usertype, apiname, asresp)
+            #print "Data for adopt stack data %s" %asbody
+
+            adopt_stack_name = "ADOPT_%s" %datetime.now().microsecond
+            apiname = "adopt stack"
+            asresp, asbody, stack_identifier = self.adopt_stack(adopt_stack_name, region, asbody, yaml_template, parameters)
+            self._test_RBAC(usertype, apiname, asresp)
+        else:
+            abandonStackName, abandonStackId = self._get_stacks_with_status("ADOPT_", stacklist, "CREATE_COMPLETE")
+            if abandonStackId:
+                asresp, asbody, = self.abandon_stack(abandonStackId, abandonStackName, region)
+                self._test_RBAC(usertype, apiname, asresp)
+                #print "Data for adopt stack data %s" %asbody
+                adopt_stack_name = "ADOPT_%s" %datetime.now().microsecond
+                apiname = "adopt stack"
+                asresp, asbody, stack_identifier = self.adopt_stack(adopt_stack_name, region, asbody, yaml_template, parameters)
+                self._test_RBAC(usertype, apiname, asresp)
+            else:
+                print "Skipping check of abandon/adopt api because no ADOPT_COMPLETE stack was found."
 
 
         #-------  Templates  -------------
@@ -429,6 +443,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print "Could not find a stack named %s" %typestack
         return 0, 0
 
+    def _get_stacks_with_status(self, typestack, body, status):
+        for stackname in body:
+            match = re.search(typestack + '_*', stackname['stack_name'])
+            if match and stackname['stack_status']==status:
+                return stackname['stack_name'], stackname['id']
+        print "Could not find a stack named %s* with status of %s" % (typestack,status)
+        return 0, 0
+
     def _get_resource_event(self, body):
         for event in body:
             return event['id'], event['resource_name']
@@ -457,17 +479,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 or apiname == 'template resource types' \
                 or apiname == 'schema for resource type':
                 if re.search('20*', resp['status']):
-                    print "User %s for %s got %s " %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s " %(user, apiname, resp['status'])
                 elif re.search('40*', resp['status']):
-                    print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s -- INCORRECT!" %(user, apiname, resp['status'])
                     self.fail_flag += 1
                 else:
-                    print "User %s for %s got %s " %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s " %(user, apiname, resp['status'])
             else:
                 print "This is calling an api that does not exist in the test."
 
         elif user == 'heat.creator':
-            if apiname == 'stack list' or apiname == 'stack create' \
+            if apiname == 'stack list' or apiname == 'create stack' \
                 or apiname == 'update stack' or apiname == 'show stack' \
                 or apiname == 'adopt stack' or apiname == 'list event' \
                 or apiname == 'show event' or apiname == 'template show'\
@@ -481,15 +503,15 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 if re.search('20*', resp['status'])\
                     or re.search('404', resp['status']) \
                     or re.search('400', resp['status']):
-                    print "User %s for %s got %s" %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s" %(user, apiname, resp['status'])
                 else:
-                    print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s -- INCORRECT!" %(user, apiname, resp['status'])
                     self.fail_flag += 1
             elif apiname == 'delete stack' or apiname == 'abandon stack':
                 if re.search('405', resp['status']):
-                    print "User %s for %s got %s" %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s" %(user, apiname, resp['status'])
                 else:
-                    print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s -- INCORRECT!  Expecting 405" %(user, apiname, resp['status'])
                     self.fail_flag += 1
 
         elif user == 'heat.observer':
@@ -505,17 +527,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 if re.search('20*', resp['status']) \
                     or re.search('404', resp['status']) \
                     or re.search('400', resp['status']):
-                    print "User %s for %s got %s" %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s" %(user, apiname, resp['status'])
                 else:
-                    print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s -- INCORRECT!" %(user, apiname, resp['status'])
                     self.fail_flag += 1
                 #self.assertTrue(re.search('20*', resp['status']))
-            elif apiname == 'stack create' or apiname == 'delete stack' or apiname == 'abandon stack' or apiname == 'update stack' or apiname == 'adopt stack'\
+            elif apiname == 'create stack' or apiname == 'delete stack' or apiname == 'abandon stack' or apiname == 'update stack' or apiname == 'adopt stack'\
                 or apiname == 'template validate' :
                 if re.search('405', resp['status']):
-                    print "User %s for %s got %s" %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s" %(user, apiname, resp['status'])
                 else:
-                    print "User %s for %s got %s -- INCORRECT!" %(user, apiname, resp['status'])
+                    print "User %s for \"%s\" got %s -- INCORRECT!  Expecting 405" %(user, apiname, resp['status'])
                     self.fail_flag += 1
 
         else:
