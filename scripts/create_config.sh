@@ -92,6 +92,10 @@ elif [[ $account == "managed" ]]; then
     username=heatqe
     password=4cC:{fs3\\^atP!KD
     tenantid=862456
+elif [[ $account == "managed_operations" ]]; then
+    username=heatqemanop
+    password=Panda789!
+    tenantid=925273
 elif [[ $account == "infrastructure" ]]; then
     username=heatqe6
     password=VjQPBU@JF4uf*u6M
