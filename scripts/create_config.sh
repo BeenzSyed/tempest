@@ -96,10 +96,18 @@ elif [[ $account == "heatqe5" ]]; then
     username=heatqe5
     password=uz9&K&hhU*_YkvWM
     tenantid=960893
-elif [[ $account == "heatqe6" ]]; then
+elif [[ $account == "managed_operations" ]]; then
+    username=heatqemanop
+    password=Panda789!
+    tenantid=925273
+elif [[ $account == "infrastructure" ]]; then
     username=heatqe6
     password=VjQPBU@JF4uf*u6M
     tenantid=960899
+elif [[ $account == "managed_infrastructure" ]]; then
+    username=heatqeman
+    password=Panda789!
+    tenantid=925272
 elif [[ $account == "unmanaged_UK" ]]; then
     username=heatlon
     password=Panda789!
