@@ -25,6 +25,7 @@ import requests
 from testconfig import config
 import paramiko
 import json
+import distutils
 
 LOG = logging.getLogger(__name__)
 
@@ -110,12 +111,14 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 stack_id = stack_identifier.split('/')[1]
                 print "Stack ID is: %s" % stack_id
                 count = 0
-                retry = 0
-
+                retry = -1
+                
                 should_restart = True
                 while should_restart:
                     resp, body = self.get_stack(stack_id, region)
-                    if retry == config['num_retries']:
+                    print "config[num_retries] = %s" % config['num_retries']
+                    print "retry = %s" % retry
+                    if retry == int(config['num_retries']):
                         print "Retried %s times! Stack create failed." % config['num_retries']
                         self._send_deploy_time_graphite(env, region, template, count, "failtime")
                         global global_pf
@@ -146,7 +149,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             global_pf += 1
                             should_restart = False
 
-                        elif body['stack_status'] == 'CREATE_FAILED' and retry < config['num_retries']:
+                        elif body['stack_status'] == 'CREATE_FAILED' and retry < int(config['num_retries']):
                             print "Stack create failed. Here's why: %s" % body['stack_status_reason']
                             ssresp, ssbody = self.orchestration_client.show_stack(stack_name, stack_id, region)
                             print "Stack show: %s" % json.dumps(ssbody, indent=4, sort_keys=True)
@@ -219,11 +222,11 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             should_restart = False
 
                             #update stack
-                            if config['update_stack'] == True:
+                            if distutils.util.strtobool(config['update_stack']) == True:
                                 self._update_stack(stack_id, stack_name, region, params, yaml_template)
 
                             #delete stack
-                            if config['delete_stack'] == True:
+                            if distutils.util.strtobool(config['delete_stack']) == True:
                                 self._delete_stack(stack_name, stack_id, region)
 
                         else:
@@ -438,8 +441,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             resource = key
             if resource == resource_server:
                 server_id = value
-                import ipdb
-                ipdb.set_trace()
                 resp, body = self.servers_client.get_server(server_id, region)
                 self._check_status_for_resource(resp['status'], resource_server)
 
