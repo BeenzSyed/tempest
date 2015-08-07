@@ -31,14 +31,38 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def test_compliance(self):
         regionsConfig = self.config.orchestration['regions']
         regions = regionsConfig.split(",")
+
+        rackspace_templates_failed = False
+        custom_templates_failed = False
+        stacks_check_failed = False
+
         for region in regions:
-            self.check_rackspace_templates(region)
-            #self.check_all_templates(region)
-            self.check_custom_templates(region)
-            self.check_stacks_metadata(region)
+            try:
+                self.check_rackspace_templates(region)
+            except AssertionError:
+                print "** Error: Compliance check on rackspace templates has failed."
+                rackspace_templates_failed = True
+
+            try:
+                self.check_custom_templates(region)
+            except AssertionError, msg:
+                print "** Error: Compliance check on custom templates has failed: %s" % msg
+                custom_templates_failed = True
+
+            try:
+                self.check_stacks_metadata(region)
+            except AssertionError:
+                print "** Error: Compliance check on stacks metadata has failed."
+                stacks_check_failed = True
+
+        if rackspace_templates_failed or custom_templates_failed or stacks_check_failed:
+            self.fail("Reach compatiblity tests have failed:"
+                      "\n\t\t\trackspace_templates_failed:%s"
+                      "\n\t\t\tcustom_templates_failed:%s"
+                      "\n\t\t\tstacks_check_failed:%s" % (rackspace_templates_failed, custom_templates_failed, stacks_check_failed))
 
     def check_rackspace_templates(self, region):
-        print "\nChecking for Reach compliance against the rackspace-orchestration-templates..."
+        print "\nChecking Reach compatiblity of the rackspace-orchestration-templates..."
         resp, body = self.orchestration_client.get_rax_templates_with_metadata(region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s. Body %s" % (resp['status'], body))
@@ -46,91 +70,40 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         expected_rackspace_metadata = ["abstract", "reach-info", "description", "application-family"]
         expected_reach_info = ["tattoo", "icon-20x20"]
 
+        template_key_error = False
+        rackspace_metadata_key_error = False
+
         for template in body['templates']:
             template_keys = template.keys()
             for expected_template_key in expected_template_keys:
-                self.assertTrue(expected_template_key in template_keys, "Key not found in template %s: %s" % (template['id'], expected_template_key))
-                """
-                if expected_template_key not in template_keys:
-                    print "Template %s does not have key %s" % (template['id'], expected_template_key)
-                """
+                try:
+                    self.assertTrue(expected_template_key in template_keys, "Key not found in template %s: %s" % (template['id'], expected_template_key))
+                except AssertionError:
+                    print "** Error: Template key \"%s\" was not present. templateID=%s" % (expected_template_key, template['id'])
+                    template_key_error = True
+
             # Now check the meta data
             rackspace_metadata = template['rackspace-metadata']
 
-            for data in expected_rackspace_metadata:
-                #self.assertTrue(data in template_meta_data.keys(), "Meta data not found in template %s: %s" % (template['id'], data))
-                if data not in rackspace_metadata.keys():
-                    print "** Error: %s was not in the metadata for template %s" % (data, template['id'])
+            for expected_metadata_key in expected_rackspace_metadata:
+                try:
+                    self.assertTrue(expected_metadata_key in rackspace_metadata.keys(), "rackspace-metadata not found in template %s: %s" % (template['id'], expected_metadata_key))
+                except AssertionError:
+                    print "** Error: rackspace-metadata key \"%s\" was not present. templateID=%s" % (expected_metadata_key, template['id'])
+                    rackspace_metadata_key_error = True
             reach_info = rackspace_metadata['reach-info']
             for item in expected_reach_info:
-                #self.assertTrue(reach_info in reach_meta.keys(), "Reach-info %s not found in template %s." % (reach_info, template['id']))
-                if item not in reach_info.keys():
-                    print "** Error: %s was not in the reach-info metadata for template %s" % (item, template['id'])
+                try:
+                    self.assertTrue(item in reach_info.keys(), "reach-info %s not found in template %s." % (item, template['id']))
+                except AssertionError:
+                    print "** Error: reach-info metadata \"%s\" was not present. templateID=%s" % (item, template['id'])
+                    rackspace_metadata_key_error = True
 
-
-    def check_all_templates(self, region):
-        print "\nChecking for Reach compliance against the rackspace-orchestration-templates..."
-
-        # Create a custom template and post it (in case none are present)
-        template = {"heat_template_version": "2013-05-23", "description": "Simple template to deploy a single compute instance", "resources": {"my_instance": {"type": "OS::Nova::Server", "properties": {"key_name": "primkey", "image": "CentOS 6.5", "flavor": "m1.small"}}}}
-
-        parameters = {}
-        stack_name = rand_name("fusion_"+region)
-        resp, body = self.orchestration_client.store_stack_fusion(
-            stack_name, region, template=template, parameters=parameters)
-        self.assertIn(resp['status'], ['200', '201'])
-        template_id = body['template_id']
-        print "Template stored. ID = " + str(template_id)
-        print "Getting template with metadata for the one just stored...ID = " + str(template_id)
-
-
-        # Perform the api call to get all templates (rax and custom) with metadata
-        resp, body = self.orchestration_client.get_all_templates_with_metadata(region=region)
-        self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s. Body %s" % (resp['status'], body))
-        expected_template_keys = ["description", "parameters", "parameter_groups", "rackspace-metadata"]
-        expected_rackspace_metadata = ["abstract", "reach-info", "description", "custom-template", "application-family"]
-        expected_reach_info = ["tattoo", "icon-20x20"]
-
-        for template in body['templates']:
-            template_keys = template.keys()
-            for expected_template_key in expected_template_keys:
-                #self.assertTrue(expected_template_key in template_keys, "Key not found in template %s: %s" % (template['id'], expected_template_key))
-                if expected_template_key not in template_keys:
-                    print "Template %s does not have key %s" % (template['id'], expected_template_key)
-            # Now check the meta data
-            rackspace_metadata = template['rackspace-metadata']
-
-            for data in expected_rackspace_metadata:
-                #self.assertTrue(data in template_meta_data.keys(), "Meta data not found in template %s: %s" % (template['id'], data))
-                if data not in rackspace_metadata.keys():
-                    print "** Error: %s was not in the rackspace-metadata for template %s" % (data, template['id'])
-            try:
-                reach_info = rackspace_metadata['reach-info']
-            except KeyError:
-                print "unable to get reach-info for template %s." % template['id']
-
-            for item in expected_reach_info:
-                #self.assertTrue(reach_info in reach_meta.keys(), "Reach-info %s not found in template %s." % (reach_info, template['id']))
-                if item not in reach_info.keys():
-                    print "** Error: %s was not in the reach-info metadata for template %s" % (item, template['id'])
-
-        # Clean up
-        """
-        print "Deleting template ID=%s..." % template_id
-        dresp, dbody = self.orchestration_client.delete_template(template_id, region)
-        self.assertEqual('200', dresp['status'], "Body %s" % dbody)
-        print "Template deleted?" + "\n\nMaking sure a GET on the deleted template fails...ID = " + str(template_id)
-
-        #verify non-existence
-        gresp, gbody = self.orchestration_client.get_template(template_id, region)
-        self.assertEqual('404', gresp['status'], "Body %s" % gbody)
-        print "GET failed like it should."
-        """
-
+        if template_key_error or rackspace_metadata_key_error:
+            self.fail("Rackspace template check failed: template_key_error:%s, rackspace_metadata_key_error:%s" % (template_key_error,rackspace_metadata_key_error))
 
     def check_custom_templates(self, region):
-        print "\nCheck reach compatiblity of custom templates..."
+        print "\nChecking Reach compatiblity of custom templates..."
 
         metadata_key = "rackspace-metadata"
         template_key = "template"
@@ -146,53 +119,48 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             stack_name, region, template=template, parameters=parameters)
         self.assertIn(resp['status'], ['200', '201'])
         template_id = body['template_id']
-        print "Template stored. ID = " + str(template_id)
-        print "Getting template with metadata for the one just stored...ID = " + str(template_id)
+        print "New template stored. ID = " + str(template_id)
 
         # Verify existance of posted template and expected meta attributes
+        print "Checking for metadata in new custom template..."
         sresp, sbody = self.orchestration_client.get_single_template_with_metadata(template_id, region)
-        self.assertEqual('200', sresp['status'], "Response to get should be 200")
-        self.assertTrue(template_key in sbody.keys(), "Key not found in template %s: %s" % (template_id, template_key))
-        self.assertNotEqual(template, sbody[template_key], "Template we posted was equal to the one posted (returned version should have metadata)")
-        self.assertTrue(metadata_key in sbody.keys(), "Key not found in template %s: %s" % (template_id, metadata_key))
-        rackspace_meta_data = sbody[metadata_key]
-        for data in expected_rackspace_metadata:
-            self.assertTrue(data in rackspace_meta_data.keys(), "Meta data not found in template %s: %s" % (template_id, data))
-            """
-            if data not in template_meta_data.keys():
-                print "** Error: %s was not in the metadata for template %s" % (data, template_id)
-            """
 
-        # Check for metadata in api call for all custom templates with metadata
-        print "Checking for metadata in all current custom templates..."
-        aresp, abody = self.orchestration_client.get_custom_templates_with_metadata(region)
-        for template in abody['templates']:
-            print "Checking template %s..." % template['id']
-            template_keys = template.keys()
-            for expected_template_key in expected_template_keys:
-                self.assertTrue(expected_template_key in template_keys, "Key not found in template %s: %s" % (template['id'], expected_template_key))
-                """
-                if expected_template_key not in template_keys:
-                    print "Template %s does not have key %s" % (template['id'], expected_template_key)
-                """
-            # Now check the meta data
-            rackspace_meta_data = template[metadata_key]
-
+        try:
+            self.assertEqual('200', sresp['status'], "Response to get should be 200")
+            self.assertTrue(template_key in sbody.keys(), "Key not found in template %s: %s" % (template_id, template_key))
+            self.assertNotEqual(template, sbody[template_key], "Template we posted was equal to the one posted (returned version should have metadata)")
+            self.assertTrue(metadata_key in sbody.keys(), "Key not found in template %s: %s" % (template_id, metadata_key))
+            rackspace_meta_data = sbody[metadata_key]
             for data in expected_rackspace_metadata:
-                self.assertTrue(data in rackspace_meta_data.keys(), "Meta data not found in template %s: %s" % (template['id'], data))
-                """
-                if data not in template_meta_data.keys():
-                    print "** Error: %s was not in the metadata for template %s" % (data, template['id'])
-                """
-        print "Deleting template ID=%s..." % template_id
-        dresp, dbody = self.orchestration_client.delete_template(template_id, region)
-        self.assertEqual('200', dresp['status'], "Body %s" % dbody)
-        #verify non-existence
-        gresp, gbody = self.orchestration_client.get_template(template_id, region)
-        self.assertEqual('404', gresp['status'], "Body %s" % gbody)
+                self.assertTrue(data in rackspace_meta_data.keys(), "rackspace_meta_data \"%s\" not found in template %s" % (data, template_id))
+
+            # Check for metadata in api call for all custom templates with metadata
+            print "Checking for metadata in all current custom templates..."
+            aresp, abody = self.orchestration_client.get_custom_templates_with_metadata(region)
+            for template in abody['templates']:
+                print "Checking template %s..." % template['id']
+                template_keys = template.keys()
+                for expected_template_key in expected_template_keys:
+                    self.assertTrue(expected_template_key in template_keys, "Key \"%s\" not found in template %s" % (expected_template_key, template['id']))
+
+                # Now check the meta data
+                rackspace_meta_data = template[metadata_key]
+
+                for data in expected_rackspace_metadata:
+                    self.assertTrue(data in rackspace_meta_data.keys(), "rackspace_meta_data \"%s\" not found in template %s" % (data, template['id']))
+
+        except AssertionError, msg:
+            self.fail(msg)
+        finally:
+            print "Deleting template ID=%s..." % template_id
+            dresp, dbody = self.orchestration_client.delete_template(template_id, region)
+            self.assertEqual('200', dresp['status'], "Body %s" % dbody)
+            #verify non-existence
+            gresp, gbody = self.orchestration_client.get_template(template_id, region)
+            self.assertEqual('404', gresp['status'], "Body %s" % gbody)
 
     def check_stacks_metadata(self, region):
-        print "\nTest get stack with support info:"
+        print "\nChecking Reach compatiblity of stacks metadata..."
 
         template_id = "lamp"
         #template_id = "wordpress-single"
