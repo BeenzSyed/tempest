@@ -37,6 +37,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         stacks_check_failed = False
 
         for region in regions:
+            """
             try:
                 self.check_rackspace_templates(region)
             except AssertionError:
@@ -48,11 +49,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             except AssertionError, msg:
                 print "** Error: Compliance check on custom templates has failed: %s" % msg
                 custom_templates_failed = True
+            """
 
             try:
                 self.check_stacks_metadata(region)
-            except AssertionError:
-                print "** Error: Compliance check on stacks metadata has failed."
+            except AssertionError, msg:
+                print "** Error. Compliance check on stacks metadata has failed: %s" % msg
                 stacks_check_failed = True
 
         if rackspace_templates_failed or custom_templates_failed or stacks_check_failed:
@@ -162,75 +164,87 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def check_stacks_metadata(self, region):
         print "\nChecking Reach compatiblity of stacks metadata..."
 
-        template_id = "lamp"
-        #template_id = "wordpress-single"
-        #template_id = "wordpress-multi"
-        #template_id = "ansible-tower"
+        # Get at the rackspace templates
+        resp, body = self.orchestration_client.get_rax_templates_with_metadata(region=region)
+        self.assertEqual(resp['status'], '200', "expected response was 200 "
+                                            "but actual was %s. Body %s" % (resp['status'], body))
 
-        parameters = {}
-        stack_name = rand_name("fusion_"+template_id+region)
-        resp, body = self.orchestration_client.create_stack_fusion(
-            name=stack_name, region=region, template_id=template_id,
-            parameters=parameters)
-        self.assertEqual(resp['status'], '201', "expected response was 201 on create stack "
-                                                "but actual was %s. Body: %s" % (resp['status'], body))
+        import ipdb
+        ipdb.set_trace()
 
-        stack_identifier = body['stack']['id']
+        for template in body['templates']:
 
-        expected_stack_keys = ['stack_name','stack_status','stack_status_reason','creation_time','updated_time','template_id',
-                               'application_name','application_version','outputs','rackspace_template','is_checkmate_migrated',
-                               'rackspace-metadata']
-        expected_resource_keys = ['resource_name','resource_type','resource_status','resource_status_reason','physical_resource_id','links']
+            template_id = template['id']
 
-        url = "stacks/%s/%s?with_support_info=1" % (stack_name, stack_identifier)
-        resp, body = self.orchestration_client.get_stack_info_for_fusion(url, region)
-        if resp['status'] == '200':
-            # For 'outputs', we need to wait for stack creation to complete
-            count = 0
-            while body['stack']['stack_status'] == 'CREATE_IN_PROGRESS' and count < 20:
-                print "Deployment in %s status. Checking again in 1 minute" % body['stack']['stack_status']
-                time.sleep(60)
-                count += 1
-                resp, body = self.orchestration_client.get_stack_info_for_fusion(url, region)
-                if resp['status'] == '200':
-                    if body['stack']['stack_status'] == 'CREATE_FAILED':
-                        print "Stack create failed. Here's why: %s" % body['stack']['stack_status_reason']
-                    if count == 20:
-                        print "Stack create has taken over 20 minutes. Deleting " \
-                              "attempted stack for %s" % template_id
-                        self._delete_stack(stack_name, stack_identifier, region)
-                else:
-                    print "Something went wrong. Here's what: %s, %s" % (resp, body)
-        else:
-            print "Something went wrong. Here's what: %s, %s" % (resp, body)
-            self.fail("Something went wrong. Here's what: %s, %s" % (resp,body))
+            parameters = {}
+            stack_name = rand_name("fusion_"+template_id+region)
+            print "Creating stack using template %s" % template_id
+            resp, body = self.orchestration_client.create_stack_fusion(
+                name=stack_name, region=region, template_id=template_id,
+                parameters=parameters)
+            if resp['status'] != '201':
+                print "** Failure: Expected response on stack creation was 201, but was %s. Body: %s" % (resp['status'], body)
+                print "** Failure: Skipping template for %s." % template_id
+                continue
 
-        stack = body['stack']
-        if stack['stack_status'] == 'CREATE_COMPLETE':
-            # block in exception handler so if a test fails in the assertion we can still cleanup in the 'finally' block
+            stack_identifier = body['stack']['id']
+
+            expected_stack_keys = ['stack_name','stack_status','stack_status_reason','creation_time','updated_time','template_id',
+                                   'application_name','application_version','outputs','rackspace_template','is_checkmate_migrated',
+                                   'rackspace-metadata']
+            expected_resource_keys = ['resource_name','resource_type','resource_status','resource_status_reason','physical_resource_id','links']
+
+            url = "stacks/%s/%s?with_support_info=1" % (stack_name, stack_identifier)
+            resp, body = self.orchestration_client.get_stack_info_for_fusion(url, region)
+            total_minutes_to_attempt = 25
+            if resp['status'] == '200':
+                # For 'outputs', we need to wait for stack creation to complete
+                count = 0
+                while body['stack']['stack_status'] == 'CREATE_IN_PROGRESS' and count < total_minutes_to_attempt:
+                    print "Deployment in %s status. Checking again in 1 minute" % body['stack']['stack_status']
+                    time.sleep(60)
+                    count += 1
+                    resp, body = self.orchestration_client.get_stack_info_for_fusion(url, region)
+                    if resp['status'] == '200':
+                        if body['stack']['stack_status'] == 'CREATE_FAILED':
+                            print "** Failure: Stack create failed. Here's why: %s" % body['stack']['stack_status_reason']
+                        if count == total_minutes_to_attempt:
+                            print "** Failure: Stack create has taken over %s minutes for template %s" % (total_minutes_to_attempt, template_id)
+                            print "** Failure: Skipping metadata check for template %s " % template_id
+                            #self.delete_stack(stack_name, stack_identifier, region)
+                    else:
+                        print "Something went wrong. Here's what: %s, %s" % (resp, body)
+            else:
+                print "Something went wrong. Here's what: %s, %s" % (resp, body)
+                self.fail("Something went wrong. Here's what: %s, %s" % (resp,body))
+
+            stack = body['stack']
             resource_key_error = False
             stack_key_error = False
-            for key in expected_stack_keys:
-                try:
-                    self.assertTrue(key in stack.keys(), "Stack key \"%s\" not present. id=%s, application_name=%s" % (key, stack['id'], stack['application_name']))
-                except AssertionError:
-                    print "** Error: Stack key \"%s\" was not present. id=%s, application_name=%s" % (key, stack['id'], stack['application_name'])
-                    stack_key_error = True
-            # Check the expected attributes of the resources associated with this stack
-            rresp, rbody = self.orchestration_client.list_resources(stack['stack_name'], stack['id'], region)
-            for resource in rbody:
-                for key in expected_resource_keys:
-                    try:
-                        self.assertTrue(key in resource.keys(), "Resource key \"%s\" not present for stack=%s, resource=%s" % (key, stack_name, resource['resource_type']))
-                        if key not in resource.keys():
-                            print "** Error: Resource key \"%s\" was not present for stack=%s, resource=%s" % (key, stack_name,resource['resource_type'])
-                    except AssertionError:
-                        print "** Error: Resource key \"%s\" was not present for stack=%s, resource=%s" % (key, stack_name,resource['resource_type'])
-                        resource_key_error = True
+            if stack['stack_status'] == 'CREATE_COMPLETE':
+                # block in exception handler so if a test fails in the assertion we can still cleanup in the 'finally' block
 
-        dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
-        if resource_key_error or stack_key_error:
-            self.fail("Stacks metadata check failed: stack_key_error:%s, resource_key_error:%s" % (stack_key_error,resource_key_error))
+                for key in expected_stack_keys:
+                    try:
+                        self.assertTrue(key in stack.keys(), "Stack key \"%s\" not present. id=%s, application_name=%s" % (key, stack['id'], stack['application_name']))
+                    except AssertionError:
+                        print "** Error: Stack key \"%s\" was not present. id=%s, application_name=%s" % (key, stack['id'], stack['application_name'])
+                        stack_key_error = True
+                # Check the expected attributes of the resources associated with this stack
+                rresp, rbody = self.orchestration_client.list_resources(stack['stack_name'], stack['id'], region)
+                for resource in rbody:
+                    for key in expected_resource_keys:
+                        try:
+                            self.assertTrue(key in resource.keys(), "Resource key \"%s\" not present for stack=%s, resource=%s" % (key, stack_name, resource['resource_type']))
+                            if key not in resource.keys():
+                                print "** Error: Resource key \"%s\" was not present for stack=%s, resource=%s" % (key, stack_name,resource['resource_type'])
+                        except AssertionError:
+                            print "** Error: Resource key \"%s\" was not present for stack=%s, resource=%s" % (key, stack_name,resource['resource_type'])
+                            resource_key_error = True
+
+            dresp, dbody = self.delete_stack(stack_name, stack_identifier, region)
+            if resource_key_error or stack_key_error:
+                self.fail("Stacks metadata check failed: stack_key_error:%s, resource_key_error:%s" % (stack_key_error,resource_key_error))
 
 
 
