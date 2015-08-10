@@ -243,29 +243,3 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 self.fail("Stacks metadata check failed: stack_key_error:%s, resource_key_error:%s" % (stack_key_error,resource_key_error))
 
 
-
-    def stack_preview(self, region):
-        print "\nTest get stack preview"
-        template_id = "wordpress-single"
-        parameters = {}
-        # parameters= {"ssh_keypair_name": "foo",
-        #             "ssh_sync_keypair_name": "foo"}
-        stack_name = rand_name("fusion_"+template_id+region)
-        resp_temp, body_temp = self.orchestration_client.get_single_template(
-            template_id,region)
-        resp, body = self.orchestration_client.stack_preview(
-            stack_name, region, template_id, parameters=parameters)
-        self.assertEqual(resp['status'], '200', "expected response was 200 "
-                                            "but actual was %s. Body: %s "% (resp['status'], body))
-        response_resource_list = []
-        for resource in body['stack']['resources']:
-            response_resource_list.append(resource['resource_type'])
-        response_resource_list.sort()
-        template_resource_list = []
-        resources_temp = body_temp['template']['resources']
-        for key, value in resources_temp.iteritems():
-            resource = value['type']
-            template_resource_list.append(resource)
-        template_resource_list.sort()
-        self.comp_list(response_resource_list, template_resource_list)
-
