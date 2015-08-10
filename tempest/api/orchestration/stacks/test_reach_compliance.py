@@ -37,7 +37,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         stacks_check_failed = False
 
         for region in regions:
-            """
+
             try:
                 self.check_rackspace_templates(region)
             except AssertionError:
@@ -49,7 +49,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             except AssertionError, msg:
                 print "** Error: Compliance check on custom templates has failed: %s" % msg
                 custom_templates_failed = True
-            """
 
             try:
                 self.check_stacks_metadata(region)
@@ -168,9 +167,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         resp, body = self.orchestration_client.get_rax_templates_with_metadata(region=region)
         self.assertEqual(resp['status'], '200', "expected response was 200 "
                                             "but actual was %s. Body %s" % (resp['status'], body))
-
-        import ipdb
-        ipdb.set_trace()
 
         for template in body['templates']:
 
