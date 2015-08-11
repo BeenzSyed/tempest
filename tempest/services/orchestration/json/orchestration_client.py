@@ -462,6 +462,14 @@ class OrchestrationClient(rest_client.RestClient):
             body = json.loads(body)
         return resp, body
 
+    def get_rax_templates_with_metadata(self, region):
+        """Returns only rackspace templates from fusion"""
+        url = "templates?templates_type=RAX&with_metadata=True"
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
     def get_custom_templates(self, region):
         """Returns only custom templates from fusion"""
         url = "templates?templates_type=CUSTOM"
@@ -482,6 +490,15 @@ class OrchestrationClient(rest_client.RestClient):
 
         """Returns all templates (Rax & Custom) from fusion"""
         url = "templates?templates_type=ALL"
+        resp, body = self.get(url, region)
+        if resp['status'] == '200':
+            body = json.loads(body)
+        return resp, body
+
+    def get_all_templates_with_metadata(self, region):
+
+        """Returns all templates (Rax & Custom) from fusion"""
+        url = "templates?with_metadata=True&templates_type=ALL"
         resp, body = self.get(url, region)
         if resp['status'] == '200':
             body = json.loads(body)
