@@ -12,16 +12,4 @@ source .env/bin/activate
 pip install \
     hot \
     colorama \
-    github3.py \
-    httplib2 \
-    jsonschema \
-    lxml \
-    nose \
-    nose-testconfig \
-    paramiko \
-    pyOpenSSL \
-    python-keystoneclient \
-    python-neutronclient \
-    pyyaml \
-    testresources \
-    testtools
+    github3.py
