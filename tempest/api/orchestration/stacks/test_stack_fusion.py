@@ -364,7 +364,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print "The update request was successful, and the template still exists after update."
         self.assertEqual(new_template, gbody['template'], "Template we sent should equal the one we get back")
 
-
         #fetch all templates
         aresp, abody = self.orchestration_client.get_custom_templates(region)
         for template in abody['templates']:
