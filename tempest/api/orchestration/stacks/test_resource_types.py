@@ -75,6 +75,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             'OS::Heat::SwiftSignalHandle',
             'OS::Neutron::Net',
             'OS::Neutron::Port',
+            'OS::Neutron::SecurityGroup',
             'OS::Neutron::Subnet',
             'OS::Nova::KeyPair',
             'OS::Nova::Server',
@@ -98,6 +99,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             'Rackspace::CloudMonitoring::Notification',
             'Rackspace::CloudMonitoring::NotificationPlan',
             'Rackspace::CloudMonitoring::PlanNotifications',
+            'Rackspace::Neutron::SecurityGroupAttachment',
             'Rackspace::RackConnect::PoolNode',
             'Rackspace::RackConnect::PublicIP',
         ]
