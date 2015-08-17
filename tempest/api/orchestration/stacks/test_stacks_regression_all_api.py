@@ -321,7 +321,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         match = re.search('5[0-9][0-9]', resp['status']) or \
             re.search('404', resp['status'])
         if match:
-            print "%s did not work. The response is: %s %s" % (apiname,
+            print "ERROR: %s did not work. The response is: %s %s" % (apiname,
                                                     resp['status'], body)
             self.fail_flag += 1
         else:
