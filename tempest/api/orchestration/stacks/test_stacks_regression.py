@@ -72,7 +72,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         else:
             yaml_template = yaml.safe_load(response_templates.content)
 
-        if 'env_url' in config:
+        if 'env_url' in config and config['env_url'] != 'none':
             env_url = config['env_url']
             response_env = requests.get(env_url, timeout=10)
             if response_env.status_code != requests.codes.ok:
