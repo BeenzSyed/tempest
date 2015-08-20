@@ -89,9 +89,9 @@ if [[ $account == "unmanaged" ]]; then
     password=TS?+4SL@V@?fc9*#
     tenantid=883286
 elif [[ $account == "managed" ]]; then
-    username=heatqe
-    password=4cC:{fs3\\^atP!KD
-    tenantid=862456
+    username=heatcm2
+    password=Panda789!
+    tenantid=917525
 elif [[ $account == "heatqe5" ]]; then
     username=heatqe5
     password=VjQPBU@JF4uf*u6M
