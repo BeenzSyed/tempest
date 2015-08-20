@@ -84,11 +84,11 @@ class BaseOrchestrationTest(tempest.test.BaseTestCase):
         )
 
     @classmethod
-    def create_stack(cls, stack_name, region, template_data, parameters={}):
+    def create_stack(cls, stack_name, region, template_data, parameters={}, environment=None):
         resp, body = cls.client.create_stack(
-            stack_name,
-            region,
-            #template_url='https://raw.github.com/heat-ci/heat-templates/master/staging/wordpress-multi.template',
+            name=stack_name,
+            region=region,
+            environment=environment,
             template=template_data,
             parameters=parameters)
         #print "resp is %s" % resp

@@ -65,29 +65,31 @@ class OrchestrationClient(rest_client.RestClient):
             return resp, body
 
     def create_stack(self, name, region, disable_rollback=True, parameters={},
-                     timeout_mins=120, template=None, template_url=None):
+                     timeout_mins=120, template=None, template_url=None,
+                     environment=None):
         headers, body = self._prepare_update_create(
             name,
             disable_rollback,
             parameters,
             timeout_mins,
             template,
-            template_url)
+            template_url,
+            environment)
         uri = 'stacks'
         resp, body = self.post(uri, region, headers=headers, body=body)
         return resp, body
 
     def update_stack(self, stack_identifier, name, region, disable_rollback=True,
                      parameters={}, timeout_mins=60, template=None,
-                     template_url=None):
+                     template_url=None, environment=None):
         headers, body = self._prepare_update_create(
             name,
             disable_rollback,
             parameters,
             timeout_mins,
             template,
-            template_url)
-
+            template_url,
+            environment)
         uri = "stacks/%s/%s" % (name, stack_identifier)
         resp, body = self.put(uri, region, headers=headers, body=body)
         return resp, body
@@ -124,12 +126,13 @@ class OrchestrationClient(rest_client.RestClient):
 
     def _prepare_update_create(self, name, disable_rollback=True,
                                parameters={}, timeout_mins=120,
-                               template=None, template_url=None):
+                               template=None, template_url=None, environment=None):
         post_body = {
             "stack_name": name,
             "disable_rollback": disable_rollback,
             "parameters": parameters,
-            "timeout_mins": timeout_mins
+            "timeout_mins": timeout_mins,
+            "environment": environment
             #"template": "HeatTemplateFormatVersion: '2013-05-23'\n"
         }
         if template:

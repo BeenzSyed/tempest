@@ -53,7 +53,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         print os.environ.get('TEMPEST_CONFIG')
         if os.environ.get('TEMPEST_CONFIG') == None:
             print "Set the environment varible TEMPEST_CONFIG to a config file."
-            self.fail("Environment variable is not set.")
+            self.fail("Environment variable (TEMPEST_CONFIG) is not set.")
 
         env = self.config.orchestration['env']
         account = self.config.identity['username']
@@ -71,6 +71,17 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             self.fail("The template does not exist.")
         else:
             yaml_template = yaml.safe_load(response_templates.content)
+
+        if 'env_url' in config:
+            env_url = config['env_url']
+            response_env = requests.get(env_url, timeout=10)
+            if response_env.status_code != requests.codes.ok:
+                print "This environment url does not exist: %s" % env_url
+                self.fail("The environment url does not exist.")
+            else:
+                env_url_yaml = yaml.safe_load(response_env.content)
+        else:
+            env_url_yaml = None
 
         #0 if no failures occur, adds 1 every time a stack fails
         #global global_pf
@@ -102,7 +113,13 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                 params = []
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
-            csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
+            csresp, csbody, stack_identifier = self.create_stack(
+                stack_name=stack_name,
+                region=region,
+                template_data=yaml_template,
+                parameters=params,
+                environment=env_url_yaml)
+            #csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
 
             if stack_identifier == 0:
                 print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
@@ -130,7 +147,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         stack_name = rand_name("qe_"+template+region)
                         domain = "iloveheat%s.com" %datetime.now().microsecond
                         params = self._set_parameters(yaml_template, template, region, image, domain)
-                        csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
+                        csresp, csbody, stack_identifier = self.create_stack(
+                            stack_name=stack_name,
+                            region=region,
+                            template_data=yaml_template,
+                            parameters=params,
+                            environment=env_url_yaml)
                         if stack_identifier == 0:
                             print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
                             self.fail("Stack build failed.")
@@ -168,7 +190,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                 params = self._set_parameters(yaml_template, template, region, image, domain)
                             else:
                                 params = []
-                            csresp, csbody, stack_identifier = self.create_stack(stack_name, region, yaml_template, params)
+                            csresp, csbody, stack_identifier = self.create_stack(
+                                stack_name=stack_name,
+                                region=region,
+                                template_data=yaml_template,
+                                parameters=params,
+                                environment=env_url_yaml)
                             if stack_identifier == 0:
                                 print "Stack create failed. Here's why: %s, %s" % (csresp, csbody)
                                 self.fail("Stack build failed.")
@@ -223,7 +250,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
                             #update stack
                             if distutils.util.strtobool(config['update_stack']) == True:
-                                self._update_stack(stack_id, stack_name, region, params, yaml_template)
+                                self._update_stack(stack_id, stack_name, region, params, yaml_template, env_url_yaml)
 
                             #delete stack
                             if distutils.util.strtobool(config['delete_stack']) == True:
@@ -319,14 +346,16 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             print "ssh did not work!"
             client.close()
 
-    def _update_stack(self, stack_id, stack_name, region, params, yaml_template):
+    def _update_stack(self, stack_id, stack_name, region, params, yaml_template, env_url_yaml=None):
         print "Updating Stack"
         resp_update, body_update = self.orchestration_client.update_stack(
             stack_identifier=stack_id,
             name=stack_name,
             region=region,
             parameters=params,
-            template=yaml_template)
+            template=yaml_template,
+            environment=env_url_yaml
+            )
         if resp_update['status'] =='202':
             print "Update request sent"
         else:
