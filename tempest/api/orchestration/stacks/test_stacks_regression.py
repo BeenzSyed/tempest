@@ -107,10 +107,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             stack_name = rand_name("qe_"+template+region)
             domain = "iloveheat%s.com" %datetime.now().microsecond
-            if 'parameters' in yaml_template:
+            import ipdb
+            ipdb.set_trace()
+            if 'parameters' in yaml_template and yaml_template['parameters'] != None:
                 params = self._set_parameters(yaml_template, template, region, image, domain)
             else:
-                params = []
+                params = {}
 
             print "\nDeploying %s in %s using account %s" % (template, region, account)
             csresp, csbody, stack_identifier = self.create_stack(
@@ -146,7 +148,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         #Retry
                         stack_name = rand_name("qe_"+template+region)
                         domain = "iloveheat%s.com" %datetime.now().microsecond
-                        params = self._set_parameters(yaml_template, template, region, image, domain)
+                        import ipdb
+                        ipdb.set_trace()
+                        if 'parameters' in yaml_template and yaml_template['parameters'] != None:
+                            params = self._set_parameters(yaml_template, template, region, image, domain)
+                        else:
+                            params = {}
                         csresp, csbody, stack_identifier = self.create_stack(
                             stack_name=stack_name,
                             region=region,
@@ -186,10 +193,12 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             print "\nRetrying stack create."
                             stack_name = rand_name("qe_"+template+region)
                             domain = "iloveheat%s.com" %datetime.now().microsecond
-                            if 'parameters' in yaml_template:
+                            import ipdb
+                            ipdb.set_trace()
+                            if 'parameters' in yaml_template and yaml_template['parameters'] != None:
                                 params = self._set_parameters(yaml_template, template, region, image, domain)
                             else:
-                                params = []
+                                params = {}
                             csresp, csbody, stack_identifier = self.create_stack(
                                 stack_name=stack_name,
                                 region=region,
@@ -232,7 +241,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                     #self._ssh_call(output)
 
                             #Checking stack outputs
-                            if 'outputs' in yaml_template:
+                            if 'outputs' in yaml_template and yaml_template['outputs'] != None:
                                 print "Checking stack outputs."
                                 template_outputs = yaml_template['outputs']
                                 for temp_output in template_outputs:
@@ -245,6 +254,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                                     if output_exists == 0:
                                         print "Output %s does not exist" % temp_output
                                         global_pf += 1
+                            else:
+                                print "** Warning: No outputs in template to test **"
 
                             should_restart = False
 
@@ -270,7 +281,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #domain_name = "example%s.com" %datetime.now().microsecond
         email_address = "heattest@rs.com"
         domain_record_type = "A"
-
+        import ipdb
+        ipdb.set_trace()
         parameters = {}
         if 'ssh_keypair_name' in yaml_template['parameters']:
             keypair_name = rand_name("heat")
