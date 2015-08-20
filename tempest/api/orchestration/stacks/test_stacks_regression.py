@@ -107,8 +107,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             stack_name = rand_name("qe_"+template+region)
             domain = "iloveheat%s.com" %datetime.now().microsecond
-            import ipdb
-            ipdb.set_trace()
             if 'parameters' in yaml_template and yaml_template['parameters'] != None:
                 params = self._set_parameters(yaml_template, template, region, image, domain)
             else:
@@ -148,8 +146,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                         #Retry
                         stack_name = rand_name("qe_"+template+region)
                         domain = "iloveheat%s.com" %datetime.now().microsecond
-                        import ipdb
-                        ipdb.set_trace()
                         if 'parameters' in yaml_template and yaml_template['parameters'] != None:
                             params = self._set_parameters(yaml_template, template, region, image, domain)
                         else:
@@ -193,8 +189,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             print "\nRetrying stack create."
                             stack_name = rand_name("qe_"+template+region)
                             domain = "iloveheat%s.com" %datetime.now().microsecond
-                            import ipdb
-                            ipdb.set_trace()
                             if 'parameters' in yaml_template and yaml_template['parameters'] != None:
                                 params = self._set_parameters(yaml_template, template, region, image, domain)
                             else:
@@ -281,8 +275,6 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         #domain_name = "example%s.com" %datetime.now().microsecond
         email_address = "heattest@rs.com"
         domain_record_type = "A"
-        import ipdb
-        ipdb.set_trace()
         parameters = {}
         if 'ssh_keypair_name' in yaml_template['parameters']:
             keypair_name = rand_name("heat")
