@@ -85,9 +85,9 @@ elif [[ $environment == "inactive-prod-dfw inactive-prod-iad inactive-prod-ord i
 fi
 
 if [[ $account == "unmanaged" ]]; then
-    username=heatqe2
-    password=TS?+4SL@V@?fc9*#
-    tenantid=883286
+    username=heatcm3
+    password=Panda789!
+    tenantid=918722
 elif [[ $account == "managed" ]]; then
     username=heatcm2
     password=Panda789!
