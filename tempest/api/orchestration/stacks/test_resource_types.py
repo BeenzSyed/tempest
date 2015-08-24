@@ -108,7 +108,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
         print "Making sure returned list matches\n" + '\n'.join(expected_list)
         self.assertEqual(set(returned_list) ^ set(expected_list),
-                         [],
+                         set([]),
                          "Resource list has differences from expected")
 
     def get_resource_types(self):
