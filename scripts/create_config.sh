@@ -80,7 +80,7 @@ elif [[ $environment == "inactive-prod-lon" ]]; then
     uri=https://inactive.lon.orchestration.api.rackspacecloud.com/v1
     regions=LON
 elif [[ $environment == "inactive-prod-dfw inactive-prod-iad inactive-prod-ord inactive-prod-syd inactive-prod-hkg" ]]; then
-    uri=https://inactive.dfw.orchestration.api.rackspacecloud.com/v1,https://inactive.iad.orchestration.api.rackspacecloud.com/v1,https://inactive.ord.orchestration.api.rackspacecloud.com/v1,https://inactive.syd.orchestration.api.rackspacecloud.com/v1,https://inactive.hkg.orchestration.api.rackspacecloud.com/v1,
+    uri=https://inactive.dfw.orchestration.api.rackspacecloud.com/v1,https://inactive.iad.orchestration.api.rackspacecloud.com/v1,https://inactive.ord.orchestration.api.rackspacecloud.com/v1,https://inactive.syd.orchestration.api.rackspacecloud.com/v1,https://inactive.hkg.orchestration.api.rackspacecloud.com/v1
     regions=DFW,IAD,ORD,SYD,HKG
 fi
 
