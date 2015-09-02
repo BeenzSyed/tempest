@@ -87,6 +87,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
             'Rackspace::AutoScale::ScalingPolicy',
             'Rackspace::AutoScale::WebHook',
             'Rackspace::Cloud::BackupConfig',
+            'Rackspace::Cloud::BigData',
             'Rackspace::Cloud::ChefSolo',
             'Rackspace::Cloud::CloudFilesCDN',
             'Rackspace::Cloud::DNS',
