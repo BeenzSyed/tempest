@@ -144,6 +144,14 @@ elif [[ $account == "heatqe2" ]]; then
     username=heatqe2
     password=TS?+4SL@V@?fc9*#
     tenantid=883286
+elif [[ $account == "heatdevunmanaged" ]]; then
+    username=heatdevunmanaged
+    password=Panda789!
+    tenantid=897686
+elif [[ $account == "managed_devops" ]]; then
+    username=heatqemandevop
+    password=Panda789!
+    tenantid=925284
 fi
 
 cat > etc/test_config.conf << EOF
