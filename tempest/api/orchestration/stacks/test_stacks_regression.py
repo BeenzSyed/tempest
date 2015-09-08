@@ -183,7 +183,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
                             elresp, elbody = self.orchestration_client.list_events(stack_name, stack_id, region)
                             print "Event list: %s" % json.dumps(elbody, indent=4, sort_keys=True)
                             #print "Deleting stack now"
-                            self._delete_stack(stack_name, stack_id, region)
+                            if distutils.util.strtobool(config['delete_stack']) == True:
+                                self._delete_stack(stack_name, stack_id, region)
 
                             #Retry
                             print "\nRetrying stack create."
