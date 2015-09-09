@@ -21,6 +21,7 @@ import os
 import re
 from testconfig import config
 from datetime import datetime
+import time
 
 LOG = logging.getLogger(__name__)
 
@@ -258,12 +259,59 @@ class StacksTestJSON(base.BaseOrchestrationTest):
     def setUpClass(cls):
         super(StacksTestJSON, cls).setUpClass()
         cls.client = cls.orchestration_client
+        region = cls.config.orchestration['region']
+        yaml_template = config['template_url']
+        parameters = {}
 
-    def test_all(self):
-        self._test_stack()
+        #Create 3 stacks - CREATE, UPDATE, ADOPT
+        create_stack_name = "CREATE_%s" %datetime.now().microsecond
+        csresp, cdbody, csid = cls.create_stack(create_stack_name, region, yaml_template, parameters)
+        cls.csid = csid
+
+        update_stack_name = "UPDATE_%s" %datetime.now().microsecond
+        usresp, usbody, usid = cls.create_stack(update_stack_name, region, yaml_template, parameters)
+        cls.usid = usid
+
+        adopt_stack_name = "ADOPT_%s" %datetime.now().microsecond
+        asresp, asbody, asid = cls.create_stack(adopt_stack_name, region, yaml_template, parameters)
+        cls.asid = asid
+
+        cls._wait_for_create(csid, region)
+        cls._wait_for_create(usid, region)
+        cls._wait_for_create(asid, region, True)
+
+    def _wait_for_create(self, stack_id, region, check_status=False):
+        sleep_count=0
+        pf=0
+        resp, body = self.get_stack(stack_id, region)
+        if resp['status'] != '200':
+            print "The response is: %s" % resp
+            self.fail(resp)
+        while body['stack_status'] == 'CREATE_IN_PROGRESS' and sleep_count < 90:
+            print "Deployment in %s status. Checking again in 1 minute" % body['stack_status']
+            time.sleep(60)
+            sleep_count += 1
+            resp, body = self.get_stack(stack_id, region)
+            if resp['status'] != '200':
+                print "The response is: %s" % resp
+                self.fail(resp)
+            elif sleep_count == 90:
+                print "Stack create has taken over 90 minutes. Force failing now."
+                self.fail(resp)
+        if check_status:
+            if body['stack_status'] == 'CREATE_FAILED':
+                print "Stack create failed. Here's why: %s" % body['stack_status_reason']
+                self.fail(resp)
+
+    # def test_all(self):
+    #     self._test_stack()
 
     @attr(type='smoke')
-    def _test_stack(self, template=None, image=None):
+    def test_rbac(self, template=None, image=None):
+
+        print self.asid
+        print self.csid
+        print self.usid
 
         print os.environ.get('TEMPEST_CONFIG')
         if os.environ.get('TEMPEST_CONFIG') == None:
@@ -284,7 +332,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         yaml_template = yaml.safe_load(response_templates.content)
 
         parameters = {}
-        region = self.config.orchestration['regions']
+        region = "Staging"
 
         usertype = self.config.identity['username']
         print "User is: %s" % usertype
