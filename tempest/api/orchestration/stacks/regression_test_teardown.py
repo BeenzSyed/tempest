@@ -42,7 +42,7 @@ class RegressionTestTearDown(base.BaseOrchestrationTest):
         env = self.config.orchestration['env']
         account = self.config.identity['username']
 
-        region = "Staging"
+        region = self.config.orchestration['regions']
 
         usertype = self.config.identity['username']
         print "User is: %s" % usertype

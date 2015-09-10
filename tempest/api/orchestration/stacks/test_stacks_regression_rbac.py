@@ -284,7 +284,7 @@ class StacksTestJSON(base.BaseOrchestrationTest):
         yaml_template = yaml.safe_load(response_templates.content)
 
         parameters = {}
-        region = "Staging"
+        region = self.config.orchestration['regions']
 
         usertype = self.config.identity['username']
         print "User is: %s" % usertype
