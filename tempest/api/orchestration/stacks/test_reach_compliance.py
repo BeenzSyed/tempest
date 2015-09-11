@@ -40,8 +40,8 @@ class StacksTestJSON(base.BaseOrchestrationTest):
 
             try:
                 self.check_rackspace_templates(region)
-            except AssertionError:
-                print "** Error: Compliance check on rackspace templates has failed."
+            except AssertionError, msg:
+                print "** Error: Compliance check on rackspace templates has failed: %s" % msg
                 rackspace_templates_failed = True
 
             try:
