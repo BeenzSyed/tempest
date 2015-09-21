@@ -58,7 +58,6 @@ class RegressionTestSetup(base.BaseOrchestrationTest):
         else:
             self.fail("Referenced template is missing parameter database_name.")
 
-        #region = "Staging"
         region = self.config.orchestration['regions']
 
         usertype = self.config.identity['username']
